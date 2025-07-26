@@ -1,7 +1,9 @@
 {
   "name": "chess-analysis",
   "version": "1.0.0",
+  "author": "Peter van der Zee",
   "description": "Chess analysis web application using Stockfish",
+  "keywords": ["chess", "stockfish", "analysis", "web"],
   "main": "index.html",
   "scripts": {
     "dev": "tsc --watch",
@@ -10,12 +12,9 @@
     "serve": "node server.js"
   },
   "dependencies": {
-    "stockfish": "^15.0.0"
+    "stockfish": "16.0.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
-  },
-  "keywords": ["chess", "stockfish", "analysis", "web"],
-  "author": "",
-  "license": "MIT"
+  }
 }
