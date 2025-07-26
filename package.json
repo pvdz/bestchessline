@@ -1,12 +1,16 @@
 {
   "name": "chess-analysis",
   "version": "1.0.0",
-  "description": "Chess analysis web app with Stockfish integration",
+  "description": "Chess analysis web application using Stockfish",
   "main": "index.html",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc",
-    "serve": "npx http-server -p 8000 -c-1"
+    "build": "tsc && npm run copy-stockfish",
+    "copy-stockfish": "cp node_modules/stockfish/src/stockfish-nnue-16.js dist/stockfish.js && cp node_modules/stockfish/src/stockfish-nnue-16.wasm dist/stockfish-nnue-16.wasm && echo 'Stockfish files copied'",
+    "serve": "node server.js"
+  },
+  "dependencies": {
+    "stockfish": "^15.0.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

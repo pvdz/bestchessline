@@ -35,6 +35,33 @@ export interface StockfishOptions {
     hash?: number;
     multiPV?: number;
 }
+export interface StockfishConfig {
+    locateFile?: (filename: string) => string | null;
+    ready?: Promise<void>;
+}
+export interface StockfishInstance {
+    postMessage(message: string): void;
+    postCustomMessage?(message: string): void;
+    addMessageListener(listener: (message: string) => void): void;
+    removeMessageListener(listener: (message: string) => void): void;
+    onCustomMessage?: (message: string) => void;
+    terminate(): void;
+    print(message: string): void;
+    printErr(message: string): void;
+    __IS_SINGLE_THREADED__?: boolean;
+    _origOnCustomMessage?: (message: string) => void;
+    pauseQueue(): void;
+    unpauseQueue(): void;
+    ready: Promise<void>;
+}
+export interface StockfishConstructor {
+    (config?: StockfishConfig): Promise<StockfishInstance>;
+}
+declare global {
+    interface Window {
+        Stockfish: StockfishConstructor;
+    }
+}
 export interface AnalysisConfig {
     maxDepth: number;
     whiteMoves: number;

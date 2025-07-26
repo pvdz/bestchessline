@@ -1,5 +1,5 @@
-import { ChessPosition, BoardState, ChessMove, Color, PieceType } from './types';
-import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType } from './utils';
+import { ChessPosition, BoardState, ChessMove, Color, PieceType } from './types.js';
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType } from './utils.js';
 
 export class ChessBoard {
   private element: HTMLElement;

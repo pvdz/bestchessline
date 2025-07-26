@@ -1,0 +1,11 @@
+# Dependencies (web runtime should not depend on any of these)
+node_modules/
+
+# Build output (actually, keep this for GitHub Pages)
+#dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage directory used by tools like istanbul
+coverage/

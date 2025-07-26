@@ -40,6 +40,50 @@ export interface StockfishOptions {
   multiPV?: number;
 }
 
+// Stockfish API types based on the source code
+export interface StockfishConfig {
+  locateFile?: (filename: string) => string | null;
+  ready?: Promise<void>;
+}
+
+export interface StockfishInstance {
+  // Core methods
+  postMessage(message: string): void;
+  postCustomMessage?(message: string): void;
+  addMessageListener(listener: (message: string) => void): void;
+  removeMessageListener(listener: (message: string) => void): void;
+  
+  // Single-threaded specific
+  onCustomMessage?: (message: string) => void;
+  
+  // Utility methods
+  terminate(): void;
+  print(message: string): void;
+  printErr(message: string): void;
+  
+  // Internal properties
+  __IS_SINGLE_THREADED__?: boolean;
+  _origOnCustomMessage?: (message: string) => void;
+  
+  // Queue management
+  pauseQueue(): void;
+  unpauseQueue(): void;
+  
+  // Ready state
+  ready: Promise<void>;
+}
+
+export interface StockfishConstructor {
+  (config?: StockfishConfig): Promise<StockfishInstance>;
+}
+
+// Global window interface
+declare global {
+  interface Window {
+    Stockfish: StockfishConstructor;
+  }
+}
+
 export interface AnalysisConfig {
   maxDepth: number;
   whiteMoves: number;

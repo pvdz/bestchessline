@@ -1,4 +1,4 @@
-import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType } from './utils';
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType } from './utils.js';
 export class ChessBoard {
     constructor(element, initialFEN) {
         this.dragElement = null;

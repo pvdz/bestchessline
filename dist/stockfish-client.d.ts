@@ -1,18 +1,14 @@
-import { AnalysisResult, StockfishOptions } from './types';
-declare global {
-    interface Window {
-        Stockfish: any;
-    }
-}
+import { AnalysisResult, StockfishOptions } from './types.js';
 export declare class StockfishClient {
-    private stockfish;
+    private worker;
     private isReady;
     private isAnalyzing;
     private currentAnalysis;
     private analysisCallbacks;
+    private engineStatus;
     constructor();
-    private loadStockfish;
     private initializeStockfish;
+    private uciCmd;
     private handleMessage;
     private parseInfoMessage;
     private handleBestMove;

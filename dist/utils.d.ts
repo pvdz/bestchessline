@@ -1,4 +1,4 @@
-import { ChessPosition, PieceType, Color } from './types';
+import { ChessPosition, PieceType, Color } from './types.js';
 export declare function parseFEN(fen: string): ChessPosition;
 export declare function toFEN(position: ChessPosition): string;
 export declare function squareToCoords(square: string): [number, number];

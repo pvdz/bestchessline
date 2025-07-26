@@ -1,65 +1,74 @@
-import { AnalysisMove, AnalysisResult, StockfishOptions, ChessMove } from './types';
-import { parseFEN, toFEN, squareToCoords, coordsToSquare } from './utils';
-
-declare global {
-  interface Window {
-    Stockfish: any;
-  }
-}
+import { AnalysisMove, AnalysisResult, StockfishOptions, ChessMove } from './types.js';
+import { parseFEN, toFEN, squareToCoords, coordsToSquare } from './utils.js';
 
 export class StockfishClient {
-  private stockfish: any = null;
+  private worker: Worker | null = null;
   private isReady = false;
   private isAnalyzing = false;
   private currentAnalysis: AnalysisResult | null = null;
   private analysisCallbacks: ((result: AnalysisResult) => void)[] = [];
+  private engineStatus = { engineLoaded: false, engineReady: false };
 
   constructor() {
-    this.loadStockfish();
-  }
-
-  private async loadStockfish(): Promise<void> {
-    try {
-      // Load Stockfish from CDN
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/stockfish@15.0.0/stockfish.js';
-      script.onload = () => {
-        this.initializeStockfish();
-      };
-      document.head.appendChild(script);
-    } catch (error) {
-      console.error('Failed to load Stockfish:', error);
-    }
+    this.initializeStockfish();
   }
 
   private initializeStockfish(): void {
-    if (typeof window.Stockfish === 'undefined') {
-      console.error('Stockfish not available');
-      return;
+    try {
+      console.log('Initializing Stockfish with Web Worker...');
+      
+      // Create Web Worker for Stockfish
+      this.worker = new Worker('dist/stockfish.js');
+      
+      // Set up message handler
+      this.worker.onmessage = (event) => {
+        const message = event.data;
+        console.log('Received message from Stockfish:', message);
+        this.handleMessage(message);
+      };
+      
+      // Set up error handler
+      this.worker.onerror = (error) => {
+        console.error('Stockfish worker error:', error);
+      };
+      
+      // Initialize with UCI protocol
+      console.log('Starting UCI protocol...');
+      this.uciCmd('uci');
+      
+    } catch (error) {
+      console.error('Failed to initialize Stockfish:', error);
     }
+  }
 
-    this.stockfish = window.Stockfish();
-    
-    this.stockfish.addMessageListener((message: string) => {
-      this.handleMessage(message);
-    });
-
-    // Initialize Stockfish
-    this.stockfish.postMessage('uci');
-    this.stockfish.postMessage('isready');
+  private uciCmd(cmd: string): void {
+    console.log('UCI Command:', cmd);
+    if (this.worker) {
+      this.worker.postMessage(cmd);
+    }
   }
 
   private handleMessage(message: string): void {
+    console.log('Stockfish message:', message);
+    
     if (message === 'uciok') {
-      this.stockfish.postMessage('setoption name MultiPV value 1');
-      this.stockfish.postMessage('setoption name Threads value 1');
-      this.stockfish.postMessage('setoption name Hash value 32');
+      console.log('UCI protocol ready, engine loaded');
+      this.engineStatus.engineLoaded = true;
+      this.uciCmd('isready');
     } else if (message === 'readyok') {
+      console.log('Stockfish is ready!');
+      this.engineStatus.engineReady = true;
       this.isReady = true;
-    } else if (message.startsWith('info')) {
-      this.parseInfoMessage(message);
     } else if (message.startsWith('bestmove')) {
+      console.log('Received bestmove:', message);
       this.handleBestMove(message);
+    } else if (message.startsWith('info')) {
+      console.log('Received info:', message);
+      this.parseInfoMessage(message);
+    } else if (message.startsWith('Stockfish')) {
+      console.log('Received Stockfish version info');
+    } else {
+      console.log('Unhandled message:', message);
     }
   }
 
@@ -191,15 +200,32 @@ export class StockfishClient {
     options: StockfishOptions = {},
     onUpdate?: (result: AnalysisResult) => void
   ): Promise<AnalysisResult> {
+    console.log('Starting analysis for position:', fen);
+    console.log('Options:', options);
+    console.log('Stockfish ready state:', this.isReady);
+    
+    // Wait for Stockfish to be ready
+    let attempts = 0;
+    while (!this.isReady && attempts < 50) {
+      console.log(`Waiting for Stockfish to be ready... attempt ${attempts + 1}`);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
     if (!this.isReady) {
-      throw new Error('Stockfish not ready');
+      console.error('Stockfish not ready after waiting');
+      throw new Error('Stockfish not ready after waiting');
     }
 
+    console.log('Stockfish is ready, starting analysis...');
+
     if (this.isAnalyzing) {
+      console.log('Stopping previous analysis...');
       this.stopAnalysis();
     }
 
     return new Promise((resolve, reject) => {
+      console.log('Creating new analysis...');
       this.currentAnalysis = {
         moves: [],
         position: fen,
@@ -212,6 +238,7 @@ export class StockfishClient {
       }
 
       const finalCallback = (result: AnalysisResult) => {
+        console.log('Analysis completed:', result);
         if (result.completed) {
           this.analysisCallbacks = this.analysisCallbacks.filter(cb => cb !== finalCallback);
           if (onUpdate) {
@@ -224,36 +251,54 @@ export class StockfishClient {
       this.analysisCallbacks.push(finalCallback);
 
       // Set position
-      this.stockfish.postMessage(`position fen ${fen}`);
+      console.log('Setting position:', fen);
+      this.uciCmd(`position fen ${fen}`);
 
       // Set options
+      console.log('Setting options...');
       if (options.depth) {
-        this.stockfish.postMessage(`setoption name MultiPV value 1`);
+        console.log('Setting depth:', options.depth);
+        this.uciCmd(`setoption name MultiPV value 1`);
       }
       if (options.threads) {
-        this.stockfish.postMessage(`setoption name Threads value ${options.threads}`);
+        console.log('Setting threads:', options.threads);
+        this.uciCmd(`setoption name Threads value ${options.threads}`);
       }
       if (options.hash) {
-        this.stockfish.postMessage(`setoption name Hash value ${options.hash}`);
+        console.log('Setting hash:', options.hash);
+        this.uciCmd(`setoption name Hash value ${options.hash}`);
       }
 
       // Start analysis
       this.isAnalyzing = true;
+      console.log('Starting analysis with options:', options);
       if (options.depth) {
-        this.stockfish.postMessage(`go depth ${options.depth}`);
+        console.log('Sending go depth command:', options.depth);
+        this.uciCmd(`go depth ${options.depth}`);
       } else if (options.movetime) {
-        this.stockfish.postMessage(`go movetime ${options.movetime}`);
+        console.log('Sending go movetime command:', options.movetime);
+        this.uciCmd(`go movetime ${options.movetime}`);
       } else if (options.nodes) {
-        this.stockfish.postMessage(`go nodes ${options.nodes}`);
+        console.log('Sending go nodes command:', options.nodes);
+        this.uciCmd(`go nodes ${options.nodes}`);
       } else {
-        this.stockfish.postMessage('go infinite');
+        console.log('Sending go infinite command');
+        this.uciCmd('go infinite');
       }
+      
+      // Add timeout for analysis
+      setTimeout(() => {
+        if (this.isAnalyzing) {
+          console.log('Analysis timeout reached, stopping...');
+          this.uciCmd('stop');
+        }
+      }, 10000); // 10 second timeout
     });
   }
 
   public stopAnalysis(): void {
-    if (this.isAnalyzing) {
-      this.stockfish.postMessage('stop');
+    if (this.isAnalyzing && this.worker) {
+      this.uciCmd('stop');
       this.isAnalyzing = false;
       if (this.currentAnalysis) {
         this.currentAnalysis.completed = true;
@@ -270,10 +315,10 @@ export class StockfishClient {
   }
 
   public destroy(): void {
-    if (this.stockfish) {
+    if (this.worker) {
       this.stopAnalysis();
-      this.stockfish.postMessage('quit');
-      this.stockfish = null;
+      this.worker.terminate();
+      this.worker = null;
     }
   }
 } 

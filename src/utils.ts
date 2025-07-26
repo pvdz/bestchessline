@@ -1,4 +1,4 @@
-import { ChessPosition, ChessMove, PieceType, Color } from './types';
+import { ChessPosition, ChessMove, PieceType, Color } from './types.js';
 
 export function parseFEN(fen: string): ChessPosition {
   const parts = fen.split(' ');
