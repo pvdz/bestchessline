@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Analysis Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background: #d4edda; color: #155724; }
+        .fail { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Chess Analysis App Test</h1>
+    <div id="test-results"></div>
+
+    <script type="module">
+        import { ChessAnalysisApp } from './dist/app.js';
+        
+        const results = document.getElementById('test-results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        // Test 1: Check if app initializes
+        try {
+            const app = new ChessAnalysisApp();
+            addResult('✓ App initialization: PASS', 'pass');
+        } catch (error) {
+            addResult(`✗ App initialization: FAIL - ${error.message}`, 'fail');
+        }
+        
+        // Test 2: Check if Stockfish loads
+        setTimeout(() => {
+            if (typeof window.Stockfish !== 'undefined') {
+                addResult('✓ Stockfish engine: PASS', 'pass');
+            } else {
+                addResult('✗ Stockfish engine: FAIL - Engine not loaded', 'fail');
+            }
+        }, 2000);
+        
+        // Test 3: Check if DOM elements exist
+        const requiredElements = [
+            'chess-board',
+            'start-analysis',
+            'max-depth',
+            'white-results',
+            'black-results'
+        ];
+        
+        let domTestPass = true;
+        requiredElements.forEach(id => {
+            if (!document.getElementById(id)) {
+                addResult(`✗ DOM element '${id}': FAIL - Not found`, 'fail');
+                domTestPass = false;
+            }
+        });
+        
+        if (domTestPass) {
+            addResult('✓ DOM elements: PASS', 'pass');
+        }
+        
+        // Test 4: Check responsive design
+        const isMobile = window.innerWidth <= 768;
+        addResult(`ℹ Viewport: ${isMobile ? 'Mobile' : 'Desktop'} (${window.innerWidth}x${window.innerHeight})`, 'info');
+        
+        // Test 5: Check WebAssembly support
+        if (typeof WebAssembly === 'object') {
+            addResult('✓ WebAssembly support: PASS', 'pass');
+        } else {
+            addResult('✗ WebAssembly support: FAIL', 'fail');
+        }
+        
+        addResult('ℹ Tests completed. Open http://localhost:8000 to use the app.', 'info');
+    </script>
+</body>
+</html> 

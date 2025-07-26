@@ -1,0 +1,124 @@
+export function parseFEN(fen) {
+    const parts = fen.split(' ');
+    const boardPart = parts[0];
+    const turn = parts[1];
+    const castling = parts[2];
+    const enPassant = parts[3] === '-' ? null : parts[3];
+    const halfMoveClock = parseInt(parts[4]);
+    const fullMoveNumber = parseInt(parts[5]);
+    const board = Array(8).fill(null).map(() => Array(8).fill(''));
+    const ranks = boardPart.split('/');
+    for (let rank = 0; rank < 8; rank++) {
+        let file = 0;
+        for (const char of ranks[rank]) {
+            if (char >= '1' && char <= '8') {
+                file += parseInt(char);
+            }
+            else {
+                board[rank][file] = char;
+                file++;
+            }
+        }
+    }
+    return {
+        board,
+        turn,
+        castling,
+        enPassant,
+        halfMoveClock,
+        fullMoveNumber
+    };
+}
+export function toFEN(position) {
+    let fen = '';
+    // Board
+    for (let rank = 0; rank < 8; rank++) {
+        let emptyCount = 0;
+        for (let file = 0; file < 8; file++) {
+            const piece = position.board[rank][file];
+            if (piece === '') {
+                emptyCount++;
+            }
+            else {
+                if (emptyCount > 0) {
+                    fen += emptyCount;
+                    emptyCount = 0;
+                }
+                fen += piece;
+            }
+        }
+        if (emptyCount > 0) {
+            fen += emptyCount;
+        }
+        if (rank < 7)
+            fen += '/';
+    }
+    // Turn
+    fen += ` ${position.turn}`;
+    // Castling
+    fen += ` ${position.castling}`;
+    // En passant
+    fen += ` ${position.enPassant || '-'}`;
+    // Half move clock
+    fen += ` ${position.halfMoveClock}`;
+    // Full move number
+    fen += ` ${position.fullMoveNumber}`;
+    return fen;
+}
+export function squareToCoords(square) {
+    const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rank = 8 - parseInt(square[1]);
+    return [rank, file];
+}
+export function coordsToSquare(rank, file) {
+    const fileChar = String.fromCharCode('a'.charCodeAt(0) + file);
+    const rankChar = (8 - rank).toString();
+    return fileChar + rankChar;
+}
+export function isValidSquare(square) {
+    if (square.length !== 2)
+        return false;
+    const file = square[0];
+    const rank = square[1];
+    return file >= 'a' && file <= 'h' && rank >= '1' && rank <= '8';
+}
+export function getPieceColor(piece) {
+    if (!piece)
+        return null;
+    return piece === piece.toUpperCase() ? 'w' : 'b';
+}
+export function getPieceType(piece) {
+    if (!piece)
+        return null;
+    const upperPiece = piece.toUpperCase();
+    if (['P', 'R', 'N', 'B', 'Q', 'K'].includes(upperPiece)) {
+        return upperPiece;
+    }
+    return null;
+}
+export function formatScore(score) {
+    if (Math.abs(score) < 100) {
+        return `${score >= 0 ? '+' : ''}${score}`;
+    }
+    const mate = Math.abs(score) > 9000;
+    if (mate) {
+        const mateMoves = Math.ceil((10000 - Math.abs(score)) / 2);
+        return score > 0 ? `M${mateMoves}` : `-M${mateMoves}`;
+    }
+    return `${score >= 0 ? '+' : ''}${(score / 100).toFixed(1)}`;
+}
+export function formatTime(ms) {
+    if (ms < 1000)
+        return `${ms}ms`;
+    if (ms < 60000)
+        return `${(ms / 1000).toFixed(1)}s`;
+    return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+}
+export function debounce(func, wait) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+}
+//# sourceMappingURL=utils.js.map

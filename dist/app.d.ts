@@ -1,0 +1,32 @@
+export declare class ChessAnalysisApp {
+    private board;
+    private stockfish;
+    private config;
+    private isAnalyzing;
+    private analysisStartTime;
+    private currentAnalysis;
+    private whiteResults;
+    private blackResults;
+    constructor();
+    private initializeComponents;
+    private setupEventListeners;
+    private updateConfig;
+    private validateFEN;
+    private startAnalysis;
+    private analyzePosition;
+    private onAnalysisUpdate;
+    private pauseAnalysis;
+    private stopAnalysis;
+    private onPositionChange;
+    private clearResults;
+    private updateResults;
+    private updateWhiteResults;
+    private updateBlackResults;
+    private createMoveResultHTML;
+    private switchTab;
+    private updateUI;
+    private updateStatus;
+    private updateProgress;
+    private updateAnalysisInfo;
+    destroy(): void;
+}

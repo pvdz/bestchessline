@@ -1,0 +1,11 @@
+import { ChessPosition, PieceType, Color } from './types';
+export declare function parseFEN(fen: string): ChessPosition;
+export declare function toFEN(position: ChessPosition): string;
+export declare function squareToCoords(square: string): [number, number];
+export declare function coordsToSquare(rank: number, file: number): string;
+export declare function isValidSquare(square: string): boolean;
+export declare function getPieceColor(piece: string): Color | null;
+export declare function getPieceType(piece: string): PieceType | null;
+export declare function formatScore(score: number): string;
+export declare function formatTime(ms: number): string;
+export declare function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void;

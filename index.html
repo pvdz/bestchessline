@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>Chess Analysis</h1>
+            <p>Analyze positions with Stockfish engine</p>
+        </header>
+
+        <main class="main">
+            <div class="board-section">
+                <div class="board-container">
+                    <div id="chess-board"></div>
+                </div>
+                
+                <div class="board-controls">
+                    <button id="reset-board" class="btn btn-secondary">Reset Board</button>
+                    <button id="clear-board" class="btn btn-secondary">Clear Board</button>
+                    <div class="fen-input">
+                        <label for="fen-input">FEN Position:</label>
+                        <input type="text" id="fen-input" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
+                        <button id="load-fen" class="btn btn-primary">Load</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-section">
+                <div class="analysis-controls">
+                    <div class="control-group">
+                        <label for="max-depth">Max Depth:</label>
+                        <input type="number" id="max-depth" min="1" max="50" value="20">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="white-moves">White Moves:</label>
+                        <input type="number" id="white-moves" min="1" max="20" value="5">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="black-moves">Black Moves:</label>
+                        <input type="number" id="black-moves" min="1" max="20" value="5">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="threads">Threads:</label>
+                        <input type="number" id="threads" min="1" max="8" value="1">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="hash-size">Hash Size (MB):</label>
+                        <input type="number" id="hash-size" min="1" max="1024" value="32">
+                    </div>
+                </div>
+
+                <div class="analysis-buttons">
+                    <button id="start-analysis" class="btn btn-primary">Start Analysis</button>
+                    <button id="pause-analysis" class="btn btn-warning" disabled>Pause</button>
+                    <button id="stop-analysis" class="btn btn-danger" disabled>Stop</button>
+                </div>
+
+                <div class="analysis-status">
+                    <div id="status-message">Ready</div>
+                    <div id="progress-bar" class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>Analysis Results</h2>
+                    <div class="results-info">
+                        <span id="current-depth">Depth: 0</span>
+                        <span id="nodes-searched">Nodes: 0</span>
+                        <span id="time-elapsed">Time: 0ms</span>
+                    </div>
+                </div>
+
+                <div class="results-tabs">
+                    <button class="tab-btn active" data-tab="white">White Moves</button>
+                    <button class="tab-btn" data-tab="black">Black Moves</button>
+                </div>
+
+                <div class="results-content">
+                    <div id="white-results" class="results-panel active">
+                        <div class="no-results">No analysis results yet</div>
+                    </div>
+                    
+                    <div id="black-results" class="results-panel">
+                        <div class="no-results">No analysis results yet</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Powered by Stockfish Chess Engine</p>
+        </footer>
+    </div>
+
+    <script type="module" src="dist/app.js"></script>
+</body>
+</html> 

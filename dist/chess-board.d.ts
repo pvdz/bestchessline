@@ -1,0 +1,30 @@
+import { ChessPosition } from './types';
+export declare class ChessBoard {
+    private element;
+    private state;
+    private onPositionChange?;
+    private dragElement;
+    private dragOffset;
+    private isDragging;
+    constructor(element: HTMLElement, initialFEN?: string);
+    private render;
+    private createPieceElement;
+    private getPieceSymbol;
+    private setupEventListeners;
+    private handleMouseDown;
+    private handleTouchStart;
+    private startDrag;
+    private handleMouseMove;
+    private handleTouchMove;
+    private handleMouseUp;
+    private handleTouchEnd;
+    private endDrag;
+    private findSquareAtPosition;
+    private makeMove;
+    private isValidMove;
+    setPosition(fen: string): void;
+    getPosition(): ChessPosition;
+    getFEN(): string;
+    setOnPositionChange(callback: (position: ChessPosition) => void): void;
+    destroy(): void;
+}

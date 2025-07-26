@@ -1,0 +1,17 @@
+{
+  "name": "chess-analysis",
+  "version": "1.0.0",
+  "description": "Chess analysis web app with Stockfish integration",
+  "main": "index.html",
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "serve": "npx http-server -p 8000 -c-1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["chess", "stockfish", "analysis", "web"],
+  "author": "",
+  "license": "MIT"
+}
