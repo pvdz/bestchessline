@@ -4,6 +4,7 @@ export class ChessBoard {
         this.dragElement = null;
         this.dragOffset = { x: 0, y: 0 };
         this.isDragging = false;
+        this.currentDropTarget = null;
         this.element = element;
         const fen = initialFEN || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
         this.state = {
@@ -119,14 +120,18 @@ export class ChessBoard {
         if (!square)
             return;
         this.isDragging = true;
-        this.dragElement = pieceElement.cloneNode(true);
-        this.dragElement.classList.add('dragging');
-        const rect = pieceElement.getBoundingClientRect();
-        this.dragOffset.x = clientX - rect.left;
-        this.dragOffset.y = clientY - rect.top;
+        // Create a simple drag element with just the piece symbol
+        this.dragElement = document.createElement('div');
+        this.dragElement.className = 'drag-ghost';
+        this.dragElement.innerHTML = pieceElement.innerHTML;
         this.dragElement.style.position = 'fixed';
         this.dragElement.style.pointerEvents = 'none';
         this.dragElement.style.zIndex = '1000';
+        this.dragElement.style.transform = 'scale(1.1)';
+        this.dragElement.style.opacity = '0.9';
+        const rect = pieceElement.getBoundingClientRect();
+        this.dragOffset.x = clientX - rect.left;
+        this.dragOffset.y = clientY - rect.top;
         this.dragElement.style.left = `${clientX - this.dragOffset.x}px`;
         this.dragElement.style.top = `${clientY - this.dragOffset.y}px`;
         document.body.appendChild(this.dragElement);
@@ -141,6 +146,8 @@ export class ChessBoard {
             return;
         this.dragElement.style.left = `${event.clientX - this.dragOffset.x}px`;
         this.dragElement.style.top = `${event.clientY - this.dragOffset.y}px`;
+        // Update drop target highlighting
+        this.updateDropTarget(event.clientX, event.clientY);
     }
     handleTouchMove(event) {
         if (!this.isDragging || !this.dragElement)
@@ -149,6 +156,8 @@ export class ChessBoard {
         const touch = event.touches[0];
         this.dragElement.style.left = `${touch.clientX - this.dragOffset.x}px`;
         this.dragElement.style.top = `${touch.clientY - this.dragOffset.y}px`;
+        // Update drop target highlighting
+        this.updateDropTarget(touch.clientX, touch.clientY);
     }
     handleMouseUp(event) {
         this.endDrag(event.clientX, event.clientY);
@@ -175,7 +184,26 @@ export class ChessBoard {
         this.state.selectedSquare = null;
         this.state.draggedPiece = null;
         this.state.legalMoves = [];
+        this.currentDropTarget = null;
         this.render();
+    }
+    updateDropTarget(clientX, clientY) {
+        const newDropTarget = this.findSquareAtPosition(clientX, clientY);
+        // Remove highlighting from previous drop target
+        if (this.currentDropTarget && this.currentDropTarget !== newDropTarget) {
+            const prevSquare = this.element.querySelector(`[data-square="${this.currentDropTarget}"]`);
+            if (prevSquare) {
+                prevSquare.classList.remove('dragover');
+            }
+        }
+        // Add highlighting to new drop target
+        if (newDropTarget && newDropTarget !== this.currentDropTarget) {
+            const newSquare = this.element.querySelector(`[data-square="${newDropTarget}"]`);
+            if (newSquare) {
+                newSquare.classList.add('dragover');
+            }
+        }
+        this.currentDropTarget = newDropTarget;
     }
     findSquareAtPosition(clientX, clientY) {
         const boardRect = this.element.querySelector('.board')?.getBoundingClientRect();
@@ -280,6 +308,56 @@ export class ChessBoard {
     }
     setOnPositionChange(callback) {
         this.onPositionChange = callback;
+    }
+    showMoveArrow(from, to, piece) {
+        // Remove any existing arrows
+        this.hideMoveArrow();
+        // Create arrow element
+        const arrow = document.createElement('div');
+        arrow.className = 'move-arrow';
+        arrow.dataset.from = from;
+        arrow.dataset.to = to;
+        // Position the arrow
+        this.positionArrow(arrow, from, to);
+        // Add to board
+        const board = this.element.querySelector('.board');
+        if (board) {
+            board.appendChild(arrow);
+        }
+    }
+    hideMoveArrow() {
+        const existingArrow = this.element.querySelector('.move-arrow');
+        if (existingArrow) {
+            existingArrow.remove();
+        }
+    }
+    positionArrow(arrow, from, to) {
+        const fromSquare = this.element.querySelector(`[data-square="${from}"]`);
+        const toSquare = this.element.querySelector(`[data-square="${to}"]`);
+        if (!fromSquare || !toSquare)
+            return;
+        const boardRect = this.element.querySelector('.board')?.getBoundingClientRect();
+        if (!boardRect)
+            return;
+        const fromRect = fromSquare.getBoundingClientRect();
+        const toRect = toSquare.getBoundingClientRect();
+        // Calculate arrow position and rotation
+        const fromCenter = {
+            x: fromRect.left + fromRect.width / 2 - boardRect.left,
+            y: fromRect.top + fromRect.height / 2 - boardRect.top
+        };
+        const toCenter = {
+            x: toRect.left + toRect.width / 2 - boardRect.left,
+            y: toRect.top + toRect.height / 2 - boardRect.top
+        };
+        // Position arrow at the center of the board
+        arrow.style.position = 'absolute';
+        arrow.style.left = `${boardRect.width / 2}px`;
+        arrow.style.top = `${boardRect.height / 2}px`;
+        arrow.style.transform = 'translate(-50%, -50%)';
+        // Calculate angle
+        const angle = Math.atan2(toCenter.y - fromCenter.y, toCenter.x - fromCenter.x) * 180 / Math.PI;
+        arrow.style.transform += ` rotate(${angle}deg)`;
     }
     destroy() {
         // Clean up event listeners

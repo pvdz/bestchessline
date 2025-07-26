@@ -1,4 +1,4 @@
-import { ChessPosition, PieceType, Color } from './types.js';
+import { ChessPosition, ChessMove, PieceType, Color } from './types.js';
 export declare function parseFEN(fen: string): ChessPosition;
 export declare function toFEN(position: ChessPosition): string;
 export declare function squareToCoords(square: string): [number, number];
@@ -9,3 +9,6 @@ export declare function getPieceType(piece: string): PieceType | null;
 export declare function formatScore(score: number): string;
 export declare function formatTime(ms: number): string;
 export declare function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void;
+export declare function moveToNotation(move: ChessMove, format?: 'short' | 'long', pieceFormat?: 'unicode' | 'english', fen?: string): string;
+export declare function getPieceSymbol(type: PieceType, color: Color, format?: 'unicode' | 'english'): string;
+export declare function pvToNotation(pv: ChessMove[], format?: 'short' | 'long', pieceFormat?: 'unicode' | 'english', fen?: string): string;

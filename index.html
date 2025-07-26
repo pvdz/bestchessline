@@ -9,7 +9,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>Chess Analysis</h1>
+        <h1>Chess Best Line Discovery</h1>
+        <p>A simple tool to discover the next best move using Stockfish (v16). You can select how many lines Stockfish should report, which may be different for the current player (only the best move for white but best 5 responses for black, etc.).</p>
         
         <div class="main-content">
             <!-- Chess Board -->
@@ -64,15 +65,36 @@
             <!-- Analysis Results -->
             <div class="results-section">
                 <h2>Analysis Results</h2>
-                <div class="results-tabs">
-                    <button class="tab-btn active" data-tab="white">White Moves</button>
-                    <button class="tab-btn" data-tab="black">Black Moves</button>
+                <div class="results-controls">
+                    <div class="radio-header">
+                        <label>Notation:</label>
+                        <label>Pieces:</label>
+                    </div>
+                    <div class="radio-options">
+                        <div class="radio-column">
+                            <label class="radio-label">
+                                <input type="radio" name="notation-format" value="short" checked>
+                                <span>Short (e4, Nf3)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="notation-format" value="long">
+                                <span>Long (e2-e4, Ng1-f3)</span>
+                            </label>
+                        </div>
+                        <div class="radio-column">
+                            <label class="radio-label">
+                                <input type="radio" name="piece-format" value="unicode" checked>
+                                <span>Unicode (♔♕♖♗♘♙)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="piece-format" value="english">
+                                <span>English (KQRBNP)</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <div class="results-content">
-                    <div id="white-results" class="results-panel active">
-                        <p>No analysis results yet.</p>
-                    </div>
-                    <div id="black-results" class="results-panel">
+                    <div id="analysis-results" class="results-panel">
                         <p>No analysis results yet.</p>
                     </div>
                 </div>

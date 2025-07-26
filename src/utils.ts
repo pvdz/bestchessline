@@ -137,3 +137,109 @@ export function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(() => func(...args), wait);
   };
 } 
+
+// Chess notation utilities
+export function moveToNotation(move: ChessMove, format: 'short' | 'long' = 'short', pieceFormat: 'unicode' | 'english' = 'unicode', fen?: string): string {
+  const piece = getPieceType(move.piece);
+  const color = getPieceColor(move.piece);
+  
+  if (!piece || !color) return `${move.from}-${move.to}`;
+  
+  const pieceSymbol = getPieceSymbol(piece, color, pieceFormat);
+  
+  if (format === 'long') {
+    return `${pieceSymbol}${move.from}-${move.to}`;
+  } else {
+    // Standard algebraic notation
+    if (piece === 'P') {
+      // Pawn moves
+      if (move.from.charAt(0) === move.to.charAt(0)) {
+        // Same file (e.g., e2e4 -> e4)
+        return move.to;
+      } else {
+        // Capture (e.g., e2d3 -> exd3)
+        return `${move.from.charAt(0)}x${move.to}`;
+      }
+    } else {
+      // Piece moves
+      const pieceChar = pieceFormat === 'unicode' ? pieceSymbol : piece;
+      // Check if it's a capture by looking at the target square
+      const position = fen ? parseFEN(fen) : parseFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+      const toRank = 8 - parseInt(move.to[1]);
+      const toFile = move.to.charCodeAt(0) - 'a'.charCodeAt(0);
+      const targetPiece = position.board[toRank][toFile];
+      const isCapture = targetPiece && targetPiece !== '';
+      
+      if (isCapture) {
+        return `${pieceChar}x${move.to}`;
+      } else {
+        return `${pieceChar}${move.to}`;
+      }
+    }
+  }
+}
+
+export function getPieceSymbol(type: PieceType, color: Color, format: 'unicode' | 'english' = 'unicode'): string {
+  if (format === 'english') {
+    return type;
+  }
+  
+  // Unicode symbols
+  const symbols = {
+    w: {
+      'K': '♔',
+      'Q': '♕', 
+      'R': '♖',
+      'B': '♗',
+      'N': '♘',
+      'P': '♙'
+    },
+    b: {
+      'K': '♚',
+      'Q': '♛',
+      'R': '♜', 
+      'B': '♝',
+      'N': '♞',
+      'P': '♟'
+    }
+  };
+  
+  return symbols[color][type] || type;
+}
+
+export function pvToNotation(pv: ChessMove[], format: 'short' | 'long' = 'short', pieceFormat: 'unicode' | 'english' = 'unicode', fen?: string): string {
+  if (pv.length === 0) return '';
+  
+  // Process moves in the context of the actual position
+  const moves = pv.map((move, index) => {
+    // For now, use the original position for all moves
+    // In a more sophisticated implementation, we'd update the position after each move
+    return moveToNotation(move, format, pieceFormat, fen);
+  });
+  
+  if (format === 'long') {
+    // Long format: just show the moves with piece symbols
+    return moves.join(' ');
+  } else {
+    // Short format: standard game notation with move numbers
+    let result = '';
+    for (let i = 0; i < moves.length; i++) {
+      if (i % 2 === 0) {
+        // White move
+        const moveNumber = Math.floor(i / 2) + 1;
+        result += `${moveNumber}.${moves[i]}`;
+      } else {
+        // Black move
+        result += ` ${moves[i]}`;
+      }
+      
+      // Add line breaks every 6 moves (3 full moves)
+      if ((i + 1) % 6 === 0 && i < moves.length - 1) {
+        result += '\n';
+      } else if (i < moves.length - 1) {
+        result += ' ';
+      }
+    }
+    return result;
+  }
+} 

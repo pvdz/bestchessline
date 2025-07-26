@@ -8,6 +8,8 @@ export class StockfishClient {
   private currentAnalysis: AnalysisResult | null = null;
   private analysisCallbacks: ((result: AnalysisResult) => void)[] = [];
   private engineStatus = { engineLoaded: false, engineReady: false };
+  private waitingForReady = false;
+  private pendingAnalysis: (() => void) | null = null;
 
   constructor() {
     this.initializeStockfish();
@@ -49,8 +51,6 @@ export class StockfishClient {
   }
 
   private handleMessage(message: string): void {
-    console.log('Stockfish message:', message);
-    
     if (message === 'uciok') {
       console.log('UCI protocol ready, engine loaded');
       this.engineStatus.engineLoaded = true;
@@ -59,16 +59,16 @@ export class StockfishClient {
       console.log('Stockfish is ready!');
       this.engineStatus.engineReady = true;
       this.isReady = true;
+      if (this.pendingAnalysis) {
+        this.pendingAnalysis();
+        this.pendingAnalysis = null;
+      }
     } else if (message.startsWith('bestmove')) {
-      console.log('Received bestmove:', message);
       this.handleBestMove(message);
     } else if (message.startsWith('info')) {
-      console.log('Received info:', message);
       this.parseInfoMessage(message);
     } else if (message.startsWith('Stockfish')) {
       console.log('Received Stockfish version info');
-    } else {
-      console.log('Unhandled message:', message);
     }
   }
 
@@ -81,12 +81,16 @@ export class StockfishClient {
     let pv: string[] = [];
     let nodes = 0;
     let time = 0;
+    let multipv = 1; // Default to first principal variation
 
     for (let i = 1; i < parts.length; i++) {
       const part = parts[i];
       switch (part) {
         case 'depth':
           depth = parseInt(parts[++i]);
+          break;
+        case 'multipv':
+          multipv = parseInt(parts[++i]);
           break;
         case 'score':
           const scoreType = parts[++i];
@@ -120,12 +124,12 @@ export class StockfishClient {
           move,
           score,
           depth,
-          pv: pv.map(m => this.parseMove(m)).filter(Boolean) as ChessMove[],
+          pv: pv.map(m => this.parseRawMove(m)).filter(Boolean) as ChessMove[],
           nodes,
           time
         };
 
-        // Update or add move to analysis
+        // Update or add move to analysis based on MultiPV number
         const existingIndex = this.currentAnalysis.moves.findIndex(m => 
           m.move.from === move.from && m.move.to === move.to
         );
@@ -180,6 +184,27 @@ export class StockfishClient {
     this.analysisCallbacks.forEach(callback => callback(this.currentAnalysis!));
   }
 
+  private parseRawMove(moveStr: string): ChessMove | null {
+    if (moveStr.length < 4) return null;
+
+    const from = moveStr.substring(0, 2);
+    const to = moveStr.substring(2, 4);
+    const promotion = moveStr.length > 4 ? moveStr[4] : undefined;
+
+    // Get piece from current position
+    const position = parseFEN(this.currentAnalysis?.position || '');
+    const fromRank = 8 - parseInt(from[1]);
+    const fromFile = from.charCodeAt(0) - 'a'.charCodeAt(0);
+    const piece = position.board[fromRank][fromFile] || '';
+
+    return {
+      from,
+      to,
+      piece,
+      promotion: promotion ? promotion.toUpperCase() : undefined
+    };
+  }
+
   private parseMove(moveStr: string): ChessMove | null {
     if (moveStr.length < 4) return null;
 
@@ -187,10 +212,16 @@ export class StockfishClient {
     const to = moveStr.substring(2, 4);
     const promotion = moveStr.length > 4 ? moveStr[4] : undefined;
 
+    // Get piece from current position
+    const position = parseFEN(this.currentAnalysis?.position || '');
+    const fromRank = 8 - parseInt(from[1]);
+    const fromFile = from.charCodeAt(0) - 'a'.charCodeAt(0);
+    const piece = position.board[fromRank][fromFile] || '';
+
     return {
       from,
       to,
-      piece: '', // Will be filled by board state
+      piece,
       promotion: promotion ? promotion.toUpperCase() : undefined
     };
   }
@@ -255,11 +286,6 @@ export class StockfishClient {
       this.uciCmd(`position fen ${fen}`);
 
       // Set options
-      console.log('Setting options...');
-      if (options.depth) {
-        console.log('Setting depth:', options.depth);
-        this.uciCmd(`setoption name MultiPV value 1`);
-      }
       if (options.threads) {
         console.log('Setting threads:', options.threads);
         this.uciCmd(`setoption name Threads value ${options.threads}`);
@@ -268,31 +294,39 @@ export class StockfishClient {
         console.log('Setting hash:', options.hash);
         this.uciCmd(`setoption name Hash value ${options.hash}`);
       }
-
-      // Start analysis
-      this.isAnalyzing = true;
-      console.log('Starting analysis with options:', options);
-      if (options.depth) {
-        console.log('Sending go depth command:', options.depth);
-        this.uciCmd(`go depth ${options.depth}`);
-      } else if (options.movetime) {
-        console.log('Sending go movetime command:', options.movetime);
-        this.uciCmd(`go movetime ${options.movetime}`);
-      } else if (options.nodes) {
-        console.log('Sending go nodes command:', options.nodes);
-        this.uciCmd(`go nodes ${options.nodes}`);
-      } else {
-        console.log('Sending go infinite command');
-        this.uciCmd('go infinite');
+      if (options.multiPV) {
+        console.log('Setting MultiPV:', options.multiPV);
+        this.uciCmd(`setoption name MultiPV value ${options.multiPV}`);
       }
       
-      // Add timeout for analysis
-      setTimeout(() => {
-        if (this.isAnalyzing) {
-          console.log('Analysis timeout reached, stopping...');
-          this.uciCmd('stop');
+      // Ensure options are applied
+      this.waitingForReady = true;
+      this.uciCmd('isready');
+
+      // Wait for readyok before starting analysis
+      this.pendingAnalysis = () => {
+        this.waitingForReady = false;
+        
+        // Start analysis
+        this.isAnalyzing = true;
+        if (options.depth) {
+          this.uciCmd(`go depth ${options.depth}`);
+        } else if (options.movetime) {
+          this.uciCmd(`go movetime ${options.movetime}`);
+        } else if (options.nodes) {
+          this.uciCmd(`go nodes ${options.nodes}`);
+        } else {
+          this.uciCmd('go infinite');
         }
-      }, 10000); // 10 second timeout
+        
+        // Add timeout for analysis - increased to allow for deeper analysis
+        const timeoutMs = options.depth ? Math.max(10000, options.depth * 1000) : 10000;
+        setTimeout(() => {
+          if (this.isAnalyzing) {
+            this.uciCmd('stop');
+          }
+        }, timeoutMs);
+      };
     });
   }
 
@@ -321,4 +355,4 @@ export class StockfishClient {
       this.worker = null;
     }
   }
-} 
+}

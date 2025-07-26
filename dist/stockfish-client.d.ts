@@ -6,12 +6,15 @@ export declare class StockfishClient {
     private currentAnalysis;
     private analysisCallbacks;
     private engineStatus;
+    private waitingForReady;
+    private pendingAnalysis;
     constructor();
     private initializeStockfish;
     private uciCmd;
     private handleMessage;
     private parseInfoMessage;
     private handleBestMove;
+    private parseRawMove;
     private parseMove;
     analyzePosition(fen: string, options?: StockfishOptions, onUpdate?: (result: AnalysisResult) => void): Promise<AnalysisResult>;
     stopAnalysis(): void;

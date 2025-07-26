@@ -6,6 +6,7 @@ export declare class ChessBoard {
     private dragElement;
     private dragOffset;
     private isDragging;
+    private currentDropTarget;
     constructor(element: HTMLElement, initialFEN?: string);
     private render;
     private createPieceElement;
@@ -19,6 +20,7 @@ export declare class ChessBoard {
     private handleMouseUp;
     private handleTouchEnd;
     private endDrag;
+    private updateDropTarget;
     private findSquareAtPosition;
     private makeMove;
     private isValidMove;
@@ -26,5 +28,8 @@ export declare class ChessBoard {
     getPosition(): ChessPosition;
     getFEN(): string;
     setOnPositionChange(callback: (position: ChessPosition) => void): void;
+    showMoveArrow(from: string, to: string, piece: string): void;
+    hideMoveArrow(): void;
+    private positionArrow;
     destroy(): void;
 }
