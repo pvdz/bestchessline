@@ -26,6 +26,7 @@ export interface AnalysisMove {
   pv: ChessMove[];
   nodes: number;
   time: number;
+  multipv?: number; // Track which principal variation this move belongs to
 }
 
 export interface AnalysisResult {

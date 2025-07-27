@@ -143,6 +143,8 @@ const parseInfoMessage = (message) => {
                 break;
         }
     }
+    // Log the parsed info for debugging
+    log(`Info: depth=${depth}, multipv=${multipv}, score=${score}, nodes=${nodes}, time=${time}, pv=${pv.join(' ')}`);
     // Convert PV moves to ChessMove objects
     const pvMoves = [];
     for (const moveStr of pv) {
@@ -152,24 +154,38 @@ const parseInfoMessage = (message) => {
         }
     }
     // Update analysis result
-    if (stockfishState.currentAnalysis) {
-        const existingMoveIndex = stockfishState.currentAnalysis.moves.findIndex(move => move.move.from === pvMoves[0]?.from && move.move.to === pvMoves[0]?.to);
+    if (stockfishState.currentAnalysis && pvMoves.length > 0) {
+        const firstMove = pvMoves[0];
+        // Find existing move by multipv index (1-based) and move coordinates
+        const existingMoveIndex = stockfishState.currentAnalysis.moves.findIndex(move => move.move.from === firstMove.from &&
+            move.move.to === firstMove.to &&
+            move.multipv === multipv);
         const analysisMove = {
-            move: pvMoves[0] || { from: '', to: '', piece: '' },
+            move: firstMove,
             score,
             depth,
             pv: pvMoves,
             nodes,
-            time
+            time,
+            multipv // Add multipv to track which variation this is
         };
         if (existingMoveIndex >= 0) {
+            // Update existing move with new depth and score
+            log(`Updating existing move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}`);
             stockfishState.currentAnalysis.moves[existingMoveIndex] = analysisMove;
         }
         else {
+            // Add new variation
+            log(`Adding new move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}`);
             stockfishState.currentAnalysis.moves.push(analysisMove);
         }
-        // Sort moves by score (best first)
-        stockfishState.currentAnalysis.moves.sort((a, b) => b.score - a.score);
+        // Sort moves by score (best first), then by multipv for same scores
+        stockfishState.currentAnalysis.moves.sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+            return (a.multipv || 1) - (b.multipv || 1);
+        });
         // Notify callbacks
         stockfishState.analysisCallbacks.forEach(callback => {
             callback(stockfishState.currentAnalysis);

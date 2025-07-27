@@ -377,11 +377,14 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
     const notation = moveToNotation(move.move, notationType, pieceType, Board.getFEN());
     const score = move.score > 0 ? `+${move.score / 100}` : `${move.score / 100}`;
     const pv = pvToNotation(move.pv);
+    
+    // Add multipv indicator if this is not the first variation
+    const multipvIndicator = move.multipv && move.multipv > 1 ? ` (${move.multipv})` : '';
 
     moveItem.innerHTML = `
       <div class="move-header">
         <span class="move-rank" title="Move rank">${rank}</span>
-        <span class="move-notation" title="Move notation">${notation}</span>
+        <span class="move-notation" title="Move notation">${notation}${multipvIndicator}</span>
         <div class="move-info" title="Analysis information">
           <span class="depth-info" title="Analysis depth">d${move.depth}</span>
           <span class="nodes-info" title="Nodes searched">${move.nodes.toLocaleString()}</span>
@@ -1200,4 +1203,4 @@ export {
   // Move highlighting
   highlightLastMove,
   clearLastMoveHighlight
-}; 
+};

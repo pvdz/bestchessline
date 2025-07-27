@@ -24,6 +24,7 @@ export interface AnalysisMove {
     pv: ChessMove[];
     nodes: number;
     time: number;
+    multipv?: number;
 }
 export interface AnalysisResult {
     moves: AnalysisMove[];
