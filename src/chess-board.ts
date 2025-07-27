@@ -370,6 +370,11 @@ export class ChessBoard {
   public setPosition(fen: string): void {
     this.state.position = parseFEN(fen);
     this.render();
+    
+    // Notify listeners of position change
+    if (this.onPositionChange) {
+      this.onPositionChange(this.state.position);
+    }
   }
 
   public getPosition(): ChessPosition {

@@ -17,6 +17,20 @@
             <div class="board-section">
                 <h2>Chess Board</h2>
                 <div id="chess-board"></div>
+                <div class="current-player-control">
+                    <label>Current Player:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="current-player" value="w" checked>
+                            <span>White</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="current-player" value="b">
+                            <span>Black</span>
+                        </label>
+                    </div>
+                </div>
+                
                 <div class="board-controls">
                     <button id="reset-board">Reset</button>
                     <button id="clear-board">Clear</button>
@@ -25,11 +39,52 @@
                         <button id="load-fen">Load</button>
                     </div>
                 </div>
+                
+                <div class="position-controls">
+                    <div class="control-row">
+                        <div class="control-group castling">
+                            <label>White Castling:</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="white-kingside" checked>
+                                    <span>Kingside (K)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="white-queenside" checked>
+                                    <span>Queenside (Q)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <div class="control-group castling">
+                            <label>Black Castling:</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="black-kingside" checked>
+                                    <span>Kingside (k)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="black-queenside" checked>
+                                    <span>Queenside (q)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <div class="control-group en-passant">
+                            <label for="en-passant">En Passant:</label>
+                            <input type="text" id="en-passant" placeholder="e.g., e3, f6, or -" maxlength="2">
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Analysis Controls -->
             <div class="controls-section">
-                <h2>Analysis Controls</h2>
+                <h2>Controls</h2>
                 <div class="control-group">
                     <label for="max-depth">Max Depth:</label>
                     <input type="number" id="max-depth" min="1" max="50" value="20">

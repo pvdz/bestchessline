@@ -299,6 +299,10 @@ export class ChessBoard {
     setPosition(fen) {
         this.state.position = parseFEN(fen);
         this.render();
+        // Notify listeners of position change
+        if (this.onPositionChange) {
+            this.onPositionChange(this.state.position);
+        }
     }
     getPosition() {
         return { ...this.state.position };

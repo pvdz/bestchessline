@@ -17,6 +17,15 @@ class ChessAnalysisApp {
     this.stockfish = new StockfishClient();
     this.initializeEventListeners();
     this.initializeMoveHoverEvents();
+    
+    // Set up board position change callback
+    this.board.setOnPositionChange((position) => {
+      this.updateFENInput();
+      this.updateControlsFromPosition();
+    });
+    
+    // Initialize controls from current board state
+    this.updateControlsFromPosition();
   }
 
   private initializeEventListeners(): void {
@@ -36,6 +45,9 @@ class ChessAnalysisApp {
         }
       });
     }
+
+    // Position controls
+    this.initializePositionControls();
 
     // Analysis controls
     const startBtn = document.getElementById('start-analysis');
@@ -252,6 +264,109 @@ class ChessAnalysisApp {
         this.board.hideMoveArrow();
       });
     });
+  }
+
+  private updateFENInput(): void {
+    const fenInput = document.getElementById('fen-input') as HTMLInputElement;
+    if (fenInput) {
+      fenInput.value = this.board.getFEN();
+    }
+  }
+
+  private initializePositionControls(): void {
+    // Current player radio buttons
+    const playerRadios = document.querySelectorAll('input[name="current-player"]') as NodeListOf<HTMLInputElement>;
+    playerRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        this.updatePositionFromControls();
+      });
+    });
+
+    // Castling rights checkboxes
+    const castlingCheckboxes = [
+      'white-kingside', 'white-queenside', 'black-kingside', 'black-queenside'
+    ];
+    castlingCheckboxes.forEach(id => {
+      const checkbox = document.getElementById(id) as HTMLInputElement;
+      if (checkbox) {
+        checkbox.addEventListener('change', () => {
+          this.updatePositionFromControls();
+        });
+      }
+    });
+
+    // En passant input
+    const enPassantInput = document.getElementById('en-passant') as HTMLInputElement;
+    if (enPassantInput) {
+      enPassantInput.addEventListener('input', () => {
+        this.updatePositionFromControls();
+      });
+    }
+  }
+
+  private updatePositionFromControls(): void {
+    const currentPlayer = (document.querySelector('input[name="current-player"]:checked') as HTMLInputElement)?.value || 'w';
+    const whiteKingside = (document.getElementById('white-kingside') as HTMLInputElement)?.checked || false;
+    const whiteQueenside = (document.getElementById('white-queenside') as HTMLInputElement)?.checked || false;
+    const blackKingside = (document.getElementById('black-kingside') as HTMLInputElement)?.checked || false;
+    const blackQueenside = (document.getElementById('black-queenside') as HTMLInputElement)?.checked || false;
+    const enPassant = (document.getElementById('en-passant') as HTMLInputElement)?.value || '-';
+
+    // Build castling rights string
+    let castling = '';
+    if (whiteKingside) castling += 'K';
+    if (whiteQueenside) castling += 'Q';
+    if (blackKingside) castling += 'k';
+    if (blackQueenside) castling += 'q';
+    if (castling === '') castling = '-';
+
+    // Get current board position
+    const currentFEN = this.board.getFEN();
+    const fenParts = currentFEN.split(' ');
+    
+    // Update FEN parts
+    fenParts[1] = currentPlayer; // Turn
+    fenParts[2] = castling; // Castling rights
+    fenParts[3] = enPassant; // En passant square
+    
+    // Reconstruct FEN
+    const newFEN = fenParts.join(' ');
+    
+    // Update board
+    this.board.setPosition(newFEN);
+  }
+
+  private updateControlsFromPosition(): void {
+    const fen = this.board.getFEN();
+    const fenParts = fen.split(' ');
+    
+    if (fenParts.length >= 4) {
+      // Update current player
+      const currentPlayer = fenParts[1];
+      const playerRadio = document.querySelector(`input[name="current-player"][value="${currentPlayer}"]`) as HTMLInputElement;
+      if (playerRadio) {
+        playerRadio.checked = true;
+      }
+
+      // Update castling rights
+      const castling = fenParts[2];
+      const whiteKingside = document.getElementById('white-kingside') as HTMLInputElement;
+      const whiteQueenside = document.getElementById('white-queenside') as HTMLInputElement;
+      const blackKingside = document.getElementById('black-kingside') as HTMLInputElement;
+      const blackQueenside = document.getElementById('black-queenside') as HTMLInputElement;
+      
+      if (whiteKingside) whiteKingside.checked = castling.includes('K');
+      if (whiteQueenside) whiteQueenside.checked = castling.includes('Q');
+      if (blackKingside) blackKingside.checked = castling.includes('k');
+      if (blackQueenside) blackQueenside.checked = castling.includes('q');
+
+      // Update en passant
+      const enPassant = fenParts[3];
+      const enPassantInput = document.getElementById('en-passant') as HTMLInputElement;
+      if (enPassantInput) {
+        enPassantInput.value = enPassant;
+      }
+    }
   }
 }
 
