@@ -1,6 +1,6 @@
 import { ChessBoard } from './chess-board.js';
 import { StockfishClient } from './stockfish-client.js';
-import { moveToNotation, pvToNotation } from './utils.js';
+import { moveToNotation, pvToNotation, getInputElement, getTextAreaElement, getCheckedRadioByName, getAllRadios } from './utils.js';
 class ChessAnalysisApp {
     constructor() {
         this.isAnalyzing = false;
@@ -32,9 +32,9 @@ class ChessAnalysisApp {
         // Board controls
         const resetBtn = document.getElementById('reset-board');
         const clearBtn = document.getElementById('clear-board');
-        const fenInput = document.getElementById('fen-input');
+        const fenInput = getInputElement('fen-input');
         const loadFenBtn = document.getElementById('load-fen');
-        const gameNotation = document.getElementById('game-notation');
+        const gameNotation = getTextAreaElement('game-notation');
         const importGameBtn = document.getElementById('import-game');
         if (resetBtn)
             resetBtn.addEventListener('click', () => {
@@ -95,22 +95,26 @@ class ChessAnalysisApp {
         if (stopBtn)
             stopBtn.addEventListener('click', () => this.stopAnalysis());
         // Notation and piece format toggles
-        const notationRadios = document.querySelectorAll('input[name="notation-format"]');
-        const pieceRadios = document.querySelectorAll('input[name="piece-format"]');
-        notationRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (this.currentResults) {
-                    this.updateResults(this.currentResults);
-                }
+        const notationRadios = getAllRadios('notation-format');
+        const pieceRadios = getAllRadios('piece-format');
+        if (notationRadios) {
+            notationRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (this.currentResults) {
+                        this.updateResults(this.currentResults);
+                    }
+                });
             });
-        });
-        pieceRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (this.currentResults) {
-                    this.updateResults(this.currentResults);
-                }
+        }
+        if (pieceRadios) {
+            pieceRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (this.currentResults) {
+                        this.updateResults(this.currentResults);
+                    }
+                });
             });
-        });
+        }
     }
     async startAnalysis() {
         if (this.isAnalyzing) {
@@ -155,10 +159,10 @@ class ChessAnalysisApp {
         this.updateStatus('Analysis stopped');
     }
     getAnalysisOptions() {
-        const whiteMoves = parseInt(document.getElementById('white-moves').value);
+        const whiteMoves = parseInt(getInputElement('white-moves')?.value || '5');
         return {
-            depth: parseInt(document.getElementById('max-depth').value),
-            threads: parseInt(document.getElementById('threads').value),
+            depth: parseInt(getInputElement('max-depth')?.value || '20'),
+            threads: parseInt(getInputElement('threads')?.value || '1'),
             multiPV: whiteMoves // Set MultiPV to the number of moves we want
         };
     }
@@ -183,8 +187,8 @@ class ChessAnalysisApp {
         if (!result || !result.moves) {
             return;
         }
-        const notationFormat = document.querySelector('input[name="notation-format"]:checked')?.value || 'short';
-        const pieceFormat = document.querySelector('input[name="piece-format"]:checked')?.value || 'unicode';
+        const notationFormat = getCheckedRadioByName('notation-format')?.value || 'short';
+        const pieceFormat = getCheckedRadioByName('piece-format')?.value || 'unicode';
         // Convert all moves to the proper format
         const moves = result.moves.map((move) => {
             console.log('Processing move:', move);

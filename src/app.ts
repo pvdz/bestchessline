@@ -1,6 +1,15 @@
 import { ChessBoard } from './chess-board.js';
 import { StockfishClient } from './stockfish-client.js';
-import { moveToNotation, pvToNotation } from './utils.js';
+import { 
+  moveToNotation, 
+  pvToNotation,
+  getInputElement,
+  getTextAreaElement,
+  getButtonElement,
+  getCheckedRadioByName,
+  getAllRadios,
+  isHTMLElement
+} from './utils.js';
 import { ChessMove, AnalysisResult, AnalysisOptions, AnalysisMove, ProcessedMoveItem } from './types.js';
 
 class ChessAnalysisApp {
@@ -41,9 +50,9 @@ class ChessAnalysisApp {
     // Board controls
     const resetBtn = document.getElementById('reset-board');
     const clearBtn = document.getElementById('clear-board');
-    const fenInput = document.getElementById('fen-input') as HTMLInputElement;
+    const fenInput = getInputElement('fen-input');
     const loadFenBtn = document.getElementById('load-fen');
-    const gameNotation = document.getElementById('game-notation') as HTMLTextAreaElement;
+    const gameNotation = getTextAreaElement('game-notation');
     const importGameBtn = document.getElementById('import-game');
 
     if (resetBtn) resetBtn.addEventListener('click', () => {
@@ -104,24 +113,28 @@ class ChessAnalysisApp {
     if (stopBtn) stopBtn.addEventListener('click', () => this.stopAnalysis());
 
     // Notation and piece format toggles
-    const notationRadios = document.querySelectorAll('input[name="notation-format"]') as NodeListOf<HTMLInputElement>;
-    const pieceRadios = document.querySelectorAll('input[name="piece-format"]') as NodeListOf<HTMLInputElement>;
+    const notationRadios = getAllRadios('notation-format');
+    const pieceRadios = getAllRadios('piece-format');
 
-    notationRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        if (this.currentResults) {
-          this.updateResults(this.currentResults);
-        }
+    if (notationRadios) {
+      notationRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+          if (this.currentResults) {
+            this.updateResults(this.currentResults);
+          }
+        });
       });
-    });
+    }
 
-    pieceRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        if (this.currentResults) {
-          this.updateResults(this.currentResults);
-        }
+    if (pieceRadios) {
+      pieceRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+          if (this.currentResults) {
+            this.updateResults(this.currentResults);
+          }
+        });
       });
-    });
+    }
   }
 
   private async startAnalysis(): Promise<void> {
@@ -172,10 +185,10 @@ class ChessAnalysisApp {
   }
 
   private getAnalysisOptions(): AnalysisOptions {
-    const whiteMoves = parseInt((document.getElementById('white-moves') as HTMLInputElement).value);
+    const whiteMoves = parseInt(getInputElement('white-moves')?.value || '5');
     return {
-      depth: parseInt((document.getElementById('max-depth') as HTMLInputElement).value),
-      threads: parseInt((document.getElementById('threads') as HTMLInputElement).value),
+      depth: parseInt(getInputElement('max-depth')?.value || '20'),
+      threads: parseInt(getInputElement('threads')?.value || '1'),
       multiPV: whiteMoves // Set MultiPV to the number of moves we want
     };
   }
@@ -202,8 +215,8 @@ class ChessAnalysisApp {
       return;
     }
 
-    const notationFormat = (document.querySelector('input[name="notation-format"]:checked') as HTMLInputElement)?.value || 'short';
-    const pieceFormat = (document.querySelector('input[name="piece-format"]:checked') as HTMLInputElement)?.value || 'unicode';
+    const notationFormat = getCheckedRadioByName('notation-format')?.value || 'short';
+    const pieceFormat = getCheckedRadioByName('piece-format')?.value || 'unicode';
 
     // Convert all moves to the proper format
     const moves = result.moves.map((move: AnalysisMove) => {

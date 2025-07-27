@@ -1,5 +1,5 @@
 import { ChessPosition, BoardState, ChessMove, Color, PieceType } from './types.js';
-import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType } from './utils.js';
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType, isHTMLElement } from './utils.js';
 
 export class ChessBoard {
   private element: HTMLElement;
@@ -132,18 +132,22 @@ export class ChessBoard {
   }
 
   private handleMouseDown(event: MouseEvent): void {
-    this.startDrag(event.target as HTMLElement, event.clientX, event.clientY);
+    if (isHTMLElement(event.target)) {
+      this.startDrag(event.target, event.clientX, event.clientY);
+    }
   }
 
   private handleTouchStart(event: TouchEvent): void {
     event.preventDefault();
     const touch = event.touches[0];
-    this.startDrag(event.target as HTMLElement, touch.clientX, touch.clientY);
+    if (isHTMLElement(event.target)) {
+      this.startDrag(event.target, touch.clientX, touch.clientY);
+    }
   }
 
   private startDrag(target: HTMLElement, clientX: number, clientY: number): void {
-    const pieceElement = target.closest('.piece') as HTMLElement;
-    if (!pieceElement) return;
+    const pieceElement = target.closest('.piece');
+    if (!pieceElement || !isHTMLElement(pieceElement)) return;
 
     const square = pieceElement.dataset.square;
     if (!square) return;
@@ -238,16 +242,16 @@ export class ChessBoard {
     
     // Remove highlighting from previous drop target
     if (this.currentDropTarget && this.currentDropTarget !== newDropTarget) {
-      const prevSquare = this.element.querySelector(`[data-square="${this.currentDropTarget}"]`) as HTMLElement;
-      if (prevSquare) {
+      const prevSquare = this.element.querySelector(`[data-square="${this.currentDropTarget}"]`);
+      if (prevSquare && isHTMLElement(prevSquare)) {
         prevSquare.classList.remove('dragover');
       }
     }
     
     // Add highlighting to new drop target
     if (newDropTarget && newDropTarget !== this.currentDropTarget) {
-      const newSquare = this.element.querySelector(`[data-square="${newDropTarget}"]`) as HTMLElement;
-      if (newSquare) {
+      const newSquare = this.element.querySelector(`[data-square="${newDropTarget}"]`);
+      if (newSquare && isHTMLElement(newSquare)) {
         newSquare.classList.add('dragover');
       }
     }
@@ -435,10 +439,10 @@ export class ChessBoard {
   }
 
   private positionArrow(arrow: HTMLElement, from: string, to: string): void {
-    const fromSquare = this.element.querySelector(`[data-square="${from}"]`) as HTMLElement;
-    const toSquare = this.element.querySelector(`[data-square="${to}"]`) as HTMLElement;
+    const fromSquare = this.element.querySelector(`[data-square="${from}"]`);
+    const toSquare = this.element.querySelector(`[data-square="${to}"]`);
     
-    if (!fromSquare || !toSquare) return;
+    if (!fromSquare || !toSquare || !isHTMLElement(fromSquare) || !isHTMLElement(toSquare)) return;
     
     const boardRect = this.element.querySelector('.board')?.getBoundingClientRect();
     if (!boardRect) return;

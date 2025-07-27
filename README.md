@@ -1,15 +1,32 @@
-# Chess Analysis Web App
+# Chess Moves Coach
 
-A modern, responsive web application for chess position analysis using the Stockfish engine. Built with vanilla TypeScript, HTML, and CSS.
+A comprehensive web-based chess analysis application with interactive board, Stockfish integration, and game management features. Built with functional TypeScript architecture for maintainability and clean code.
 
 ## Features
 
-- **Interactive Chess Board**: Drag and drop pieces with mobile touch support
-- **Stockfish Integration**: Real-time analysis using Stockfish WebAssembly
-- **Configurable Analysis**: Set depth, move count, and engine options
-- **Real-time Results**: Live updates during analysis with scores and best lines
-- **Mobile Responsive**: Optimized for desktop and mobile devices
-- **Modern UI**: Clean, intuitive interface with smooth animations
+### 🎯 Core Analysis
+- **Interactive Chess Board**: Drag and drop pieces with visual feedback and move arrows
+- **Stockfish Integration**: Multi-threaded analysis using Stockfish 16.0.0 WebAssembly
+- **Real-time Results**: Live analysis with scores, depths, and principal variations
+- **Configurable Analysis**: Set depth, move count, threads, and engine options
+
+### 🎮 Game Management
+- **Game Import**: Import games using PGN-like notation with comments and annotations
+- **Move Navigation**: Previous/Next buttons with move highlighting and state management
+- **Game History**: Complete move list with proper formatting and current move indication
+- **Position Controls**: FEN input, current player, castling rights, and en passant
+
+### 🎨 User Experience
+- **Format Controls**: Dynamic notation (Algebraic/Descriptive) and piece format (Symbols/Letters)
+- **Visual Feedback**: Hover effects, move arrows, square highlighting, and last move indication
+- **Responsive Design**: Optimized for desktop and mobile devices
+- **Modern UI**: Clean interface with smooth animations and intuitive controls
+
+### 🔧 Technical Features
+- **Functional Architecture**: Clean, maintainable code using functional programming principles
+- **State Management**: Robust state synchronization between board, controls, and analysis
+- **Move Validation**: Comprehensive chess logic with disambiguation and special moves
+- **Event Handling**: Robust drag-and-drop with proper event delegation
 
 ## Getting Started
 
@@ -23,7 +40,7 @@ A modern, responsive web application for chess position analysis using the Stock
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd chess-analysis
+cd chessmovescoach
 ```
 
 2. Install dependencies:
@@ -31,12 +48,12 @@ cd chess-analysis
 npm install
 ```
 
-3. Build the TypeScript files:
+3. Build the application:
 ```bash
 npm run build
 ```
 
-4. Serve the application:
+4. Start the development server:
 ```bash
 npm run serve
 ```
@@ -55,15 +72,23 @@ npm run dev
 ### Setting Up Positions
 
 1. **Drag and Drop**: Click and drag pieces to move them on the board
-2. **FEN Input**: Enter a FEN string in the input field and click "Load"
-3. **Reset/Clear**: Use the buttons to reset to starting position or clear the board
+2. **FEN Input**: Enter a FEN string and click "Load FEN"
+3. **Position Controls**: Use the current player toggle, castling checkboxes, and en passant input
+4. **Reset/Clear**: Use buttons to reset to starting position or clear the board
+
+### Game Import
+
+1. **Import Games**: Paste PGN-like notation in the textarea
+2. **Navigate Moves**: Use Previous/Next buttons to step through the game
+3. **Move Highlighting**: Current move is highlighted in the move list
+4. **Board Synchronization**: Board state updates with move navigation
 
 ### Analysis Configuration
 
 - **Max Depth**: Maximum search depth for Stockfish (1-50)
 - **White/Black Moves**: Number of top moves to analyze for each side (1-20)
 - **Threads**: Number of CPU threads for Stockfish (1-8)
-- **Hash Size**: Memory allocation for Stockfish in MB (1-1024)
+- **Format Options**: Choose notation format (Algebraic/Descriptive) and piece format (Symbols/Letters)
 
 ### Running Analysis
 
@@ -72,11 +97,12 @@ npm run dev
 3. Click "Start Analysis" to begin
 4. Monitor real-time progress and results
 5. Use "Pause" or "Stop" to control the analysis
+6. Hover over results to see move arrows on the board
 
 ### Understanding Results
 
 Each move result shows:
-- **Move Notation**: The move in algebraic notation (e.g., "e2e4")
+- **Move Notation**: The move in selected notation format
 - **Score**: Evaluation in centipawns or mate notation
 - **Depth**: Search depth reached
 - **Nodes**: Number of positions evaluated
@@ -87,35 +113,61 @@ Each move result shows:
 
 ### Architecture
 
-- **Frontend**: Vanilla TypeScript with modular components
-- **Chess Engine**: Stockfish WebAssembly via CDN
+- **Frontend**: Functional TypeScript with modular components
+- **Chess Engine**: Stockfish 16.0.0 WebAssembly multi-threaded worker
 - **Styling**: Modern CSS with Grid and Flexbox
+- **State Management**: Global state objects with pure functions
 - **Mobile Support**: Touch events and responsive design
 
 ### Key Components
 
-- `ChessBoard`: Interactive board with drag & drop
-- `StockfishClient`: Engine integration and analysis
-- `ChessAnalysisApp`: Main application logic
-- `utils.ts`: Chess utilities and formatting functions
+- **`main-functional.ts`**: Main application logic and state management
+- **`chess-board-functional.ts`**: Interactive board with drag & drop
+- **`stockfish-client-functional.ts`**: Engine integration and analysis
+- **`types.ts`**: TypeScript interfaces and type definitions
+- **`utils.ts`**: Chess utilities and notation functions
 
 ### File Structure
 
 ```
-chess-analysis/
-├── index.html          # Main HTML structure
-├── styles.css          # Modern responsive CSS
+chessmovescoach/
+├── index.html                    # Main HTML structure (4-column grid)
+├── styles.css                    # Modern responsive CSS (835 lines)
+├── favicon.svg                   # Custom chess piece icon
 ├── src/
-│   ├── app.ts          # Main application
-│   ├── chess-board.ts  # Board component
-│   ├── stockfish-client.ts # Engine integration
-│   ├── types.ts        # TypeScript definitions
-│   └── utils.ts        # Utility functions
-├── dist/               # Compiled JavaScript
-├── tsconfig.json       # TypeScript configuration
-├── package.json        # Dependencies and scripts
-└── README.md          # This file
+│   ├── main-functional.ts        # Main application logic (1112 lines)
+│   ├── chess-board-functional.ts # Board component with drag & drop
+│   ├── stockfish-client-functional.ts # Engine integration
+│   ├── types.ts                  # TypeScript definitions (112 lines)
+│   └── utils.ts                  # Utility functions (245 lines)
+├── dist/
+│   ├── stockfish.js              # Stockfish WebAssembly worker
+│   └── stockfish-nnue-16.wasm   # Stockfish binary
+├── tsconfig.json                 # TypeScript configuration
+├── package.json                  # Dependencies and scripts
+├── server.js                     # Node.js development server
+└── README.md                     # This file
 ```
+
+## Key Features
+
+### Functional Programming
+- **Global State Objects**: Clean state management with `appState`, `boardState`, `stockfishState`
+- **Pure Functions**: Modular, testable code with clear separation of concerns
+- **Event Handling**: Robust event delegation and listener management
+- **Type Safety**: Comprehensive TypeScript interfaces and type checking
+
+### Chess Logic
+- **Move Validation**: Comprehensive piece movement rules with path blocking
+- **Disambiguation**: Smart piece selection for ambiguous moves
+- **Special Moves**: Castling and en passant handling
+- **Game Import**: PGN-like notation parsing with comments and annotations
+
+### UI/UX
+- **Drag-and-Drop**: Reliable piece movement with visual feedback
+- **Format Controls**: Dynamic notation and piece format selection
+- **Move Navigation**: Game replay with proper state management
+- **Visual Feedback**: Hover effects, move arrows, and highlighting
 
 ## Browser Support
 
@@ -131,12 +183,12 @@ Requires WebAssembly support for Stockfish engine.
 1. **Lower Depth**: Use depth 10-15 for faster analysis
 2. **Fewer Moves**: Analyze 3-5 moves per side for quicker results
 3. **Single Thread**: Use 1 thread for mobile devices
-4. **Smaller Hash**: Use 16-32MB hash size for mobile
+4. **Game Import**: Large games may take a moment to parse
 
 ## Troubleshooting
 
 ### Stockfish Not Loading
-- Check internet connection (Stockfish loads from CDN)
+- Check that `dist/stockfish.js` and `dist/stockfish-nnue-16.wasm` exist
 - Ensure browser supports WebAssembly
 - Try refreshing the page
 
@@ -145,10 +197,27 @@ Requires WebAssembly support for Stockfish engine.
 - Check browser console for errors
 - Ensure all configuration values are valid
 
-### Mobile Issues
-- Use touch gestures for piece movement
-- Ensure screen is large enough for controls
-- Try landscape orientation for better layout
+### Drag-and-Drop Issues
+- Ensure you're clicking directly on pieces
+- Try refreshing the page if issues persist
+- Check browser console for errors
+
+### Game Import Problems
+- Verify PGN notation is valid
+- Check for proper move syntax
+- Ensure game starts from a valid position
+
+## Development Commands
+
+```bash
+# Development
+npm run dev          # TypeScript watch mode
+npm run build        # Build and copy Stockfish files
+npm run serve        # Start development server
+
+# Stockfish files
+npm run copy-stockfish  # Copy stockfish-nnue-16.js and stockfish-nnue-16.wasm
+```
 
 ## Contributing
 

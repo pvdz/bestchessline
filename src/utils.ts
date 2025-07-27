@@ -282,4 +282,116 @@ export function logError(...args: unknown[]): void {
   if (loggingEnabled) {
     console.error(...args);
   }
+}
+
+// ============================================================================
+// DOM ELEMENT HELPERS (to replace type casts)
+// ============================================================================
+
+/**
+ * Safely get an HTML input element by ID
+ */
+export function getInputElement(id: string): HTMLInputElement | null {
+  const element = document.getElementById(id);
+  return element instanceof HTMLInputElement ? element : null;
+}
+
+/**
+ * Safely get an HTML textarea element by ID
+ */
+export function getTextAreaElement(id: string): HTMLTextAreaElement | null {
+  const element = document.getElementById(id);
+  return element instanceof HTMLTextAreaElement ? element : null;
+}
+
+/**
+ * Safely get an HTML button element by ID
+ */
+export function getButtonElement(id: string): HTMLButtonElement | null {
+  const element = document.getElementById(id);
+  return element instanceof HTMLButtonElement ? element : null;
+}
+
+/**
+ * Safely get an HTML select element by ID
+ */
+export function getSelectElement(id: string): HTMLSelectElement | null {
+  const element = document.getElementById(id);
+  return element instanceof HTMLSelectElement ? element : null;
+}
+
+/**
+ * Safely get a checked radio button by name and value
+ */
+export function getCheckedRadio(name: string, value: string): HTMLInputElement | null {
+  const element = document.querySelector(`input[name="${name}"][value="${value}"]`);
+  return element instanceof HTMLInputElement ? element : null;
+}
+
+/**
+ * Safely get all radio buttons by name
+ */
+export function getAllRadios(name: string): NodeListOf<HTMLInputElement> | null {
+  const elements = document.querySelectorAll(`input[name="${name}"]`);
+  return elements.length > 0 ? elements as NodeListOf<HTMLInputElement> : null;
+}
+
+/**
+ * Safely get a checked radio button by name
+ */
+export function getCheckedRadioByName(name: string): HTMLInputElement | null {
+  const element = document.querySelector(`input[name="${name}"]:checked`);
+  return element instanceof HTMLInputElement ? element : null;
+}
+
+/**
+ * Safely get an element that matches a selector
+ */
+export function querySelector<T extends Element>(selector: string): T | null {
+  const element = document.querySelector(selector);
+  return element as T | null;
+}
+
+/**
+ * Safely get all elements that match a selector
+ */
+export function querySelectorAll<T extends Element>(selector: string): NodeListOf<T> | null {
+  const elements = document.querySelectorAll(selector);
+  return elements.length > 0 ? elements as NodeListOf<T> : null;
+}
+
+/**
+ * Safely get an element by ID with type checking
+ */
+export function getElementById<T extends Element>(id: string): T | null {
+  const element = document.getElementById(id);
+  return element as T | null;
+}
+
+/**
+ * Check if an element is an HTMLElement
+ */
+export function isHTMLElement(element: EventTarget | null): element is HTMLElement {
+  return element instanceof HTMLElement;
+}
+
+/**
+ * Check if an element is an HTMLInputElement
+ */
+export function isHTMLInputElement(element: Element | null): element is HTMLInputElement {
+  return element instanceof HTMLInputElement;
+}
+
+/**
+ * Check if an element is an HTMLButtonElement
+ */
+export function isHTMLButtonElement(element: Element | null): element is HTMLButtonElement {
+  return element instanceof HTMLButtonElement;
+}
+
+/**
+ * Check if an element is an HTMLTextAreaElement
+ */
+export function isHTMLTextAreaElement(element: Element | null): element is HTMLTextAreaElement {
+  return element instanceof HTMLTextAreaElement;
 } 

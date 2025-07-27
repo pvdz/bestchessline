@@ -1,4 +1,4 @@
-import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError } from './utils.js';
+import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName } from './utils.js';
 import * as Board from './chess-board-functional.js';
 import * as Stockfish from './stockfish-client-functional.js';
 /**
@@ -62,9 +62,9 @@ const initializeEventListeners = () => {
     // Board controls
     const resetBtn = document.getElementById('reset-board');
     const clearBtn = document.getElementById('clear-board');
-    const fenInput = document.getElementById('fen-input');
+    const fenInput = getInputElement('fen-input');
     const loadFenBtn = document.getElementById('load-fen');
-    const gameNotation = document.getElementById('game-notation');
+    const gameNotation = getTextAreaElement('game-notation');
     const importGameBtn = document.getElementById('import-game');
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
@@ -170,7 +170,7 @@ const initializePositionControls = () => {
         checkbox.addEventListener('change', updatePositionFromControls);
     });
     // En passant control
-    const enPassantInput = document.getElementById('en-passant');
+    const enPassantInput = getInputElement('en-passant');
     if (enPassantInput) {
         enPassantInput.addEventListener('input', updatePositionFromControls);
     }
@@ -229,10 +229,10 @@ const stopAnalysis = () => {
  * Get analysis options from UI
  */
 const getAnalysisOptions = () => {
-    const maxDepth = document.getElementById('max-depth')?.value || '20';
-    const whiteMoves = document.getElementById('white-moves')?.value || '5';
-    const blackMoves = document.getElementById('black-moves')?.value || '5';
-    const threads = document.getElementById('threads')?.value || '1';
+    const maxDepth = getInputElement('max-depth')?.value || '20';
+    const whiteMoves = getInputElement('white-moves')?.value || '5';
+    const blackMoves = getInputElement('black-moves')?.value || '5';
+    const threads = getInputElement('threads')?.value || '1';
     return {
         depth: parseInt(maxDepth),
         threads: parseInt(threads),
@@ -243,9 +243,9 @@ const getAnalysisOptions = () => {
  * Update button states
  */
 const updateButtonStates = () => {
-    const startBtn = document.getElementById('start-analysis');
-    const pauseBtn = document.getElementById('pause-analysis');
-    const stopBtn = document.getElementById('stop-analysis');
+    const startBtn = getButtonElement('start-analysis');
+    const pauseBtn = getButtonElement('pause-analysis');
+    const stopBtn = getButtonElement('stop-analysis');
     if (startBtn)
         startBtn.disabled = appState.isAnalyzing;
     if (pauseBtn)
@@ -273,8 +273,8 @@ const updateResultsPanel = (moves) => {
     if (!resultsPanel)
         return;
     // Get current format settings
-    const notationFormat = document.querySelector('input[name="notation-format"]:checked')?.value || 'algebraic';
-    const pieceFormat = document.querySelector('input[name="piece-format"]:checked')?.value || 'symbols';
+    const notationFormat = getCheckedRadioByName('notation-format')?.value || 'algebraic';
+    const pieceFormat = getCheckedRadioByName('piece-format')?.value || 'symbols';
     // Convert format values to match moveToNotation parameters
     const notationType = notationFormat === 'algebraic' ? 'short' : 'long';
     const pieceType = pieceFormat === 'symbols' ? 'unicode' : 'english';
@@ -377,7 +377,7 @@ const addMoveHoverListeners = () => {
  * Update FEN input field
  */
 const updateFENInput = () => {
-    const fenInput = document.getElementById('fen-input');
+    const fenInput = getInputElement('fen-input');
     if (fenInput) {
         fenInput.value = Board.getFEN();
     }

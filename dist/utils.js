@@ -258,4 +258,101 @@ export function logError(...args) {
         console.error(...args);
     }
 }
+// ============================================================================
+// DOM ELEMENT HELPERS (to replace type casts)
+// ============================================================================
+/**
+ * Safely get an HTML input element by ID
+ */
+export function getInputElement(id) {
+    const element = document.getElementById(id);
+    return element instanceof HTMLInputElement ? element : null;
+}
+/**
+ * Safely get an HTML textarea element by ID
+ */
+export function getTextAreaElement(id) {
+    const element = document.getElementById(id);
+    return element instanceof HTMLTextAreaElement ? element : null;
+}
+/**
+ * Safely get an HTML button element by ID
+ */
+export function getButtonElement(id) {
+    const element = document.getElementById(id);
+    return element instanceof HTMLButtonElement ? element : null;
+}
+/**
+ * Safely get an HTML select element by ID
+ */
+export function getSelectElement(id) {
+    const element = document.getElementById(id);
+    return element instanceof HTMLSelectElement ? element : null;
+}
+/**
+ * Safely get a checked radio button by name and value
+ */
+export function getCheckedRadio(name, value) {
+    const element = document.querySelector(`input[name="${name}"][value="${value}"]`);
+    return element instanceof HTMLInputElement ? element : null;
+}
+/**
+ * Safely get all radio buttons by name
+ */
+export function getAllRadios(name) {
+    const elements = document.querySelectorAll(`input[name="${name}"]`);
+    return elements.length > 0 ? elements : null;
+}
+/**
+ * Safely get a checked radio button by name
+ */
+export function getCheckedRadioByName(name) {
+    const element = document.querySelector(`input[name="${name}"]:checked`);
+    return element instanceof HTMLInputElement ? element : null;
+}
+/**
+ * Safely get an element that matches a selector
+ */
+export function querySelector(selector) {
+    const element = document.querySelector(selector);
+    return element;
+}
+/**
+ * Safely get all elements that match a selector
+ */
+export function querySelectorAll(selector) {
+    const elements = document.querySelectorAll(selector);
+    return elements.length > 0 ? elements : null;
+}
+/**
+ * Safely get an element by ID with type checking
+ */
+export function getElementById(id) {
+    const element = document.getElementById(id);
+    return element;
+}
+/**
+ * Check if an element is an HTMLElement
+ */
+export function isHTMLElement(element) {
+    return element instanceof HTMLElement;
+}
+/**
+ * Check if an element is an HTMLInputElement
+ */
+export function isHTMLInputElement(element) {
+    return element instanceof HTMLInputElement;
+}
+/**
+ * Check if an element is an HTMLButtonElement
+ */
+export function isHTMLButtonElement(element) {
+    return element instanceof HTMLButtonElement;
+}
+/**
+ * Check if an element is an HTMLTextAreaElement
+ */
+export function isHTMLTextAreaElement(element) {
+    return element instanceof HTMLTextAreaElement;
+}
 //# sourceMappingURL=utils.js.map

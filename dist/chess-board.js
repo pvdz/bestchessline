@@ -1,4 +1,4 @@
-import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType } from './utils.js';
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType, isHTMLElement } from './utils.js';
 export class ChessBoard {
     constructor(element, initialFEN) {
         this.dragElement = null;
@@ -105,16 +105,20 @@ export class ChessBoard {
         document.addEventListener('touchend', this.handleTouchEnd.bind(this));
     }
     handleMouseDown(event) {
-        this.startDrag(event.target, event.clientX, event.clientY);
+        if (isHTMLElement(event.target)) {
+            this.startDrag(event.target, event.clientX, event.clientY);
+        }
     }
     handleTouchStart(event) {
         event.preventDefault();
         const touch = event.touches[0];
-        this.startDrag(event.target, touch.clientX, touch.clientY);
+        if (isHTMLElement(event.target)) {
+            this.startDrag(event.target, touch.clientX, touch.clientY);
+        }
     }
     startDrag(target, clientX, clientY) {
         const pieceElement = target.closest('.piece');
-        if (!pieceElement)
+        if (!pieceElement || !isHTMLElement(pieceElement))
             return;
         const square = pieceElement.dataset.square;
         if (!square)
@@ -192,14 +196,14 @@ export class ChessBoard {
         // Remove highlighting from previous drop target
         if (this.currentDropTarget && this.currentDropTarget !== newDropTarget) {
             const prevSquare = this.element.querySelector(`[data-square="${this.currentDropTarget}"]`);
-            if (prevSquare) {
+            if (prevSquare && isHTMLElement(prevSquare)) {
                 prevSquare.classList.remove('dragover');
             }
         }
         // Add highlighting to new drop target
         if (newDropTarget && newDropTarget !== this.currentDropTarget) {
             const newSquare = this.element.querySelector(`[data-square="${newDropTarget}"]`);
-            if (newSquare) {
+            if (newSquare && isHTMLElement(newSquare)) {
                 newSquare.classList.add('dragover');
             }
         }
@@ -352,7 +356,7 @@ export class ChessBoard {
     positionArrow(arrow, from, to) {
         const fromSquare = this.element.querySelector(`[data-square="${from}"]`);
         const toSquare = this.element.querySelector(`[data-square="${to}"]`);
-        if (!fromSquare || !toSquare)
+        if (!fromSquare || !toSquare || !isHTMLElement(fromSquare) || !isHTMLElement(toSquare))
             return;
         const boardRect = this.element.querySelector('.board')?.getBoundingClientRect();
         if (!boardRect)

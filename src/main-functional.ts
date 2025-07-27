@@ -1,5 +1,22 @@
 import { ChessMove, AnalysisResult, ChessPosition, AnalysisOptions, AnalysisMove } from './types.js';
-import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, setLoggingEnabled } from './utils.js';
+import { 
+  moveToNotation, 
+  pvToNotation, 
+  parseFEN, 
+  toFEN, 
+  squareToCoords, 
+  coordsToSquare, 
+  log, 
+  logError, 
+  setLoggingEnabled,
+  getInputElement,
+  getTextAreaElement,
+  getButtonElement,
+  getCheckedRadio,
+  getCheckedRadioByName,
+  querySelector,
+  isHTMLElement
+} from './utils.js';
 import * as Board from './chess-board-functional.js';
 import * as Stockfish from './stockfish-client-functional.js';
 
@@ -103,9 +120,9 @@ const initializeEventListeners = (): void => {
   // Board controls
   const resetBtn = document.getElementById('reset-board');
   const clearBtn = document.getElementById('clear-board');
-  const fenInput = document.getElementById('fen-input') as HTMLInputElement;
+  const fenInput = getInputElement('fen-input');
   const loadFenBtn = document.getElementById('load-fen');
-  const gameNotation = document.getElementById('game-notation') as HTMLTextAreaElement;
+  const gameNotation = getTextAreaElement('game-notation');
   const importGameBtn = document.getElementById('import-game');
 
   if (resetBtn) {
@@ -226,7 +243,7 @@ const initializePositionControls = (): void => {
   });
 
   // En passant control
-  const enPassantInput = document.getElementById('en-passant') as HTMLInputElement;
+  const enPassantInput = getInputElement('en-passant');
   if (enPassantInput) {
     enPassantInput.addEventListener('input', updatePositionFromControls);
   }
@@ -293,10 +310,10 @@ const stopAnalysis = (): void => {
  * Get analysis options from UI
  */
 const getAnalysisOptions = (): AnalysisOptions => {
-  const maxDepth = (document.getElementById('max-depth') as HTMLInputElement)?.value || '20';
-  const whiteMoves = (document.getElementById('white-moves') as HTMLInputElement)?.value || '5';
-  const blackMoves = (document.getElementById('black-moves') as HTMLInputElement)?.value || '5';
-  const threads = (document.getElementById('threads') as HTMLInputElement)?.value || '1';
+  const maxDepth = getInputElement('max-depth')?.value || '20';
+  const whiteMoves = getInputElement('white-moves')?.value || '5';
+  const blackMoves = getInputElement('black-moves')?.value || '5';
+  const threads = getInputElement('threads')?.value || '1';
 
   return {
     depth: parseInt(maxDepth),
@@ -309,9 +326,9 @@ const getAnalysisOptions = (): AnalysisOptions => {
  * Update button states
  */
 const updateButtonStates = (): void => {
-  const startBtn = document.getElementById('start-analysis') as HTMLButtonElement;
-  const pauseBtn = document.getElementById('pause-analysis') as HTMLButtonElement;
-  const stopBtn = document.getElementById('stop-analysis') as HTMLButtonElement;
+  const startBtn = getButtonElement('start-analysis');
+  const pauseBtn = getButtonElement('pause-analysis');
+  const stopBtn = getButtonElement('stop-analysis');
 
   if (startBtn) startBtn.disabled = appState.isAnalyzing;
   if (pauseBtn) pauseBtn.disabled = !appState.isAnalyzing;
@@ -340,8 +357,8 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
   if (!resultsPanel) return;
 
   // Get current format settings
-  const notationFormat = (document.querySelector('input[name="notation-format"]:checked') as HTMLInputElement)?.value || 'algebraic';
-  const pieceFormat = (document.querySelector('input[name="piece-format"]:checked') as HTMLInputElement)?.value || 'symbols';
+  const notationFormat = getCheckedRadioByName('notation-format')?.value || 'algebraic';
+  const pieceFormat = getCheckedRadioByName('piece-format')?.value || 'symbols';
   
   // Convert format values to match moveToNotation parameters
   const notationType = notationFormat === 'algebraic' ? 'short' : 'long';
@@ -468,7 +485,7 @@ const addMoveHoverListeners = (): void => {
  * Update FEN input field
  */
 const updateFENInput = (): void => {
-  const fenInput = document.getElementById('fen-input') as HTMLInputElement;
+  const fenInput = getInputElement('fen-input');
   if (fenInput) {
     fenInput.value = Board.getFEN();
   }
