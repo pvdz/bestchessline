@@ -1,0 +1,76 @@
+import { ChessMove, AnalysisResult } from './types.js';
+/**
+ * Application state interface
+ */
+interface AppState {
+    moves: ChessMove[];
+    initialFEN: string;
+    currentMoveIndex: number;
+    isAnalyzing: boolean;
+    currentResults: AnalysisResult | null;
+}
+/**
+ * Update application state
+ */
+declare const updateAppState: (updates: Partial<AppState>) => void;
+/**
+ * Get current application state
+ */
+declare const getAppState: () => AppState;
+/**
+ * Initialize the application
+ */
+declare const initializeApp: () => void;
+/**
+ * Start analysis
+ */
+declare const startAnalysis: () => Promise<void>;
+/**
+ * Pause analysis
+ */
+declare const pauseAnalysis: () => void;
+/**
+ * Stop analysis
+ */
+declare const stopAnalysis: () => void;
+/**
+ * Update results display
+ */
+declare const updateResults: (result: AnalysisResult) => void;
+/**
+ * Update status message
+ */
+declare const updateStatus: (message: string) => void;
+/**
+ * Add move to game history
+ */
+declare const addMove: (move: ChessMove) => void;
+/**
+ * Import game from notation
+ */
+declare const importGame: (notation: string) => void;
+/**
+ * Navigate to previous move
+ */
+declare const previousMove: () => void;
+/**
+ * Navigate to next move
+ */
+declare const nextMove: () => void;
+/**
+ * Highlight the last move on the board
+ */
+declare const highlightLastMove: (move: ChessMove) => void;
+/**
+ * Clear last move highlight
+ */
+declare const clearLastMoveHighlight: () => void;
+/**
+ * Update move list display
+ */
+declare const updateMoveList: () => void;
+/**
+ * Update navigation buttons
+ */
+declare const updateNavigationButtons: () => void;
+export { initializeApp, getAppState, updateAppState, startAnalysis, pauseAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight };

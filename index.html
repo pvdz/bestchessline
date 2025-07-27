@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Analysis</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <title>Best Chess Line Discovery - by Peter van der Zee, July 2025</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
     <div class="container">
@@ -117,15 +117,11 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
                     <label for="threads">Threads:</label>
                     <input type="number" id="threads" min="1" max="8" value="1">
                 </div>
-                <div class="control-group">
-                    <label for="hash-size">Hash Size (MB):</label>
-                    <input type="number" id="hash-size" min="1" max="1024" value="32">
-                </div>
                 
                 <div class="analysis-controls">
-                    <button id="start-analysis">Start Analysis</button>
-                    <button id="pause-analysis">Pause</button>
-                    <button id="stop-analysis">Stop</button>
+                    <button id="start-analysis">Start</button>
+                    <button id="pause-analysis" disabled>Pause</button>
+                    <button id="stop-analysis" disabled>Stop</button>
                 </div>
                 
                 <div class="status">
@@ -136,14 +132,12 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
             <!-- Game Moves -->
             <div class="game-moves-section">
                 <h2>Game Moves</h2>
-                <div class="game-moves-controls">
-                    <button id="prev-move" disabled>← Previous</button>
-                    <button id="next-move" disabled>Next →</button>
-                </div>
                 <div class="game-moves-content">
-                    <div id="game-moves" class="moves-panel">
-                        <p>No moves yet.</p>
+                    <div class="game-moves-controls">
+                        <button id="prev-move" disabled>← Previous</button>
+                        <button id="next-move" disabled>Next →</button>
                     </div>
+                    <div id="game-moves" class="moves-panel"></div>
                 </div>
             </div>
 
@@ -151,64 +145,58 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
             <div class="results-section">
                 <h2>Analysis Results</h2>
                 <div class="results-controls">
-                    <div class="radio-header">
-                        <label>Notation:</label>
-                        <label>Pieces:</label>
-                    </div>
-                    <div class="radio-options">
-                        <div class="radio-column">
-                            <label class="radio-label">
-                                <input type="radio" name="notation-format" value="short" checked>
-                                <span>Short (e4, Nf3)</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="notation-format" value="long">
-                                <span>Long (e2-e4, Ng1-f3)</span>
-                            </label>
-                        </div>
-                        <div class="radio-column">
-                            <label class="radio-label">
-                                <input type="radio" name="piece-format" value="unicode" checked>
-                                <span>Unicode (♔♕♖♗♘♙)</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="piece-format" value="english">
-                                <span>English (KQRBNP)</span>
-                            </label>
+                    <div class="control-group">
+                        <label>Results Format:</label>
+                        <div class="radio-row">
+                            <div class="radio-column">
+                                <label class="radio-label">
+                                    <input type="radio" name="notation-format" value="algebraic" checked>
+                                    <span>Algebraic</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="notation-format" value="descriptive">
+                                    <span>Descriptive</span>
+                                </label>
+                            </div>
+                            <div class="radio-column">
+                                <label class="radio-label">
+                                    <input type="radio" name="piece-format" value="symbols" checked>
+                                    <span>Symbols</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="piece-format" value="letters">
+                                    <span>Letters</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="results-content">
-                    <div id="analysis-results" class="results-panel">
-                        <p>No analysis results yet.</p>
-                    </div>
-                </div>
+                <div id="analysis-results" class="results-panel"></div>
             </div>
         </div>
     </div>
 
+    <!-- Stockfish loading script -->
     <script>
-        // Set up exports for UMD module
+        // Load Stockfish WebAssembly module
         window.exports = {};
-        
-        // Load Stockfish script
-        var stockfishScript = document.createElement('script');
-        stockfishScript.src = 'dist/stockfish.js';
-        stockfishScript.onload = function() {
-            console.log('Stockfish script loaded');
-            // The UMD module should have set window.exports.Stockfish
-            if (typeof window.exports.Stockfish !== 'undefined') {
-                window.Stockfish = window.exports.Stockfish;
-                console.log('Stockfish exposed to window.Stockfish');
-            } else {
-                console.error('window.exports.Stockfish is undefined');
-            }
-        };
-        stockfishScript.onerror = function() {
-            console.error('Failed to load stockfish.js');
-        };
-        document.head.appendChild(stockfishScript);
+        window.Stockfish = window.exports.Stockfish;
     </script>
-    <script type="module" src="dist/app.js"></script>
+    <script src="dist/stockfish.js"></script>
+    
+    <!-- Application script -->
+    <script type="module">
+        import { initializeApp } from './dist/main-functional.js';
+        
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initializeApp();
+                console.log('Functional Chess Analysis App initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize application:', error);
+            }
+        });
+    </script>
 </body>
 </html> 
