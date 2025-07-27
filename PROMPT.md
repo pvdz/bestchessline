@@ -15,11 +15,19 @@ The application uses global state objects to manage different aspects:
 ```typescript
 // Main application state
 interface AppState {
+  // Game state
   moves: ChessMove[];
   initialFEN: string;
   currentMoveIndex: number;
+
+  // Analysis state
   isAnalyzing: boolean;
   currentResults: AnalysisResult | null;
+
+  // Branching state
+  branchMoves: ChessMove[];
+  branchStartIndex: number;
+  isInBranch: boolean;
 }
 
 // Board-specific state
@@ -43,21 +51,22 @@ interface DragState {
 
 ### Key Components
 
-#### 1. Main Application (`src/main-functional.ts`)
+#### 1. Main Application (`src/main.ts`)
 
 - **Orchestration**: Coordinates board, Stockfish, and UI updates
 - **Event Management**: Handles all user interactions and state changes
 - **Game Logic**: Manages move validation, game import, and navigation
 - **Analysis Control**: Manages Stockfish analysis and result display
+- **Branching System**: Temporary move branches for exploring variations
 
-#### 2. Chess Board (`src/chess-board-functional.ts`)
+#### 2. Chess Board (`src/chess-board.ts`)
 
 - **Interactive Board**: 8x8 grid with drag-and-drop piece movement
 - **Visual Features**: Hover effects, move arrows, square highlighting
 - **Event Handling**: Mouse/touch events with proper delegation
 - **State Synchronization**: Keeps board state in sync with FEN
 
-#### 3. Stockfish Client (`src/stockfish-client-functional.ts`)
+#### 3. Stockfish Client (`src/stockfish-client.ts`)
 
 - **Engine Integration**: WebAssembly worker communication
 - **UCI Protocol**: Handles Stockfish commands and responses
@@ -222,6 +231,24 @@ interface DragState {
 // - Move effects determined for each analysis move
 ```
 
+#### Enhanced PV Display
+
+```typescript
+// PV moves with effects and clickability:
+// - Each PV move is validated against the correct position
+// - Move effects (capture, check, mate) are determined sequentially
+// - PV moves are clickable for temporary board visualization
+// - Move numbering continues from current game position
+```
+
+**PV Features:**
+
+- **Sequential Validation**: Each move validated against position after previous moves
+- **Effect Detection**: Captures (#), checks (+), and mates (#) shown in notation
+- **Clickable Moves**: Individual PV moves update board temporarily
+- **Dynamic Numbering**: PV moves numbered relative to current game position
+- **Visual Feedback**: Hover effects and move arrows for PV moves
+
 ### 5. Format Controls & UI
 
 #### Dynamic Formatting
@@ -255,6 +282,24 @@ interface DragState {
 - **Current Move Highlighting**: Blue background for current position
 - **Clickable Cursor**: Pointer cursor for interactive moves
 - **Tooltips**: "Click to go to this position" on hover
+
+#### Branching System
+
+```typescript
+// Temporary move branches for exploring variations:
+// - Clicking PV moves creates branches at correct positions
+// - Branches show alternative moves with visual distinction
+// - Clicking different moves clears previous branches
+// - Branches appear at original analysis position, not current position
+```
+
+**Branch Features:**
+
+- **Contextual Positioning**: Branches appear at the move where analysis was performed
+- **Visual Distinction**: Indented with blue border and italic styling
+- **Dynamic Updates**: Clicking different PV moves updates existing branches
+- **Proper Notation**: Shows "..." for original moves and alternative moves
+- **State Management**: Branches are cleared when navigating to different game moves
 
 #### Responsive Design
 
@@ -419,9 +464,9 @@ npm run serve        # Start development server
 
 ### Key Files
 
-- **`src/main-functional.ts`** (1431 lines): Main application logic with enhanced navigation
-- **`src/chess-board-functional.ts`**: Interactive board component
-- **`src/stockfish-client-functional.ts`**: Engine integration
+- **`src/main.ts`** (1748 lines): Main application logic with enhanced navigation and branching system
+- **`src/chess-board.ts`**: Interactive board component
+- **`src/stockfish-client.ts`**: Engine integration
 - **`src/move-validator.ts`** (435 lines): Move validation and effect detection
 - **`src/types.ts`** (246 lines): TypeScript interfaces with effect support
 - **`src/utils.ts`** (435 lines): Utility functions with enhanced notation

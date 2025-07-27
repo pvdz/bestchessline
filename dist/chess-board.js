@@ -482,4 +482,4 @@ getBoardState, updateBoardState,
 renderBoard, 
 // Public API
 setPosition, getPosition, getFEN, setOnPositionChange, setOnMoveMade, showMoveArrow, hideMoveArrow, clearLastMoveHighlight, destroy, };
-//# sourceMappingURL=chess-board-functional.js.map
+//# sourceMappingURL=chess-board.js.map

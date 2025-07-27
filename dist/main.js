@@ -1,6 +1,6 @@
 import { moveToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName, } from "./utils.js";
-import * as Board from "./chess-board-functional.js";
-import * as Stockfish from "./stockfish-client-functional.js";
+import * as Board from "./chess-board.js";
+import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
 /**
  * Application state instance
@@ -1332,4 +1332,4 @@ addMove, importGame, previousMove, nextMove,
 updateResults, updateStatus, updateMoveList, updateNavigationButtons, 
 // Move highlighting
 highlightLastMove, clearLastMoveHighlight, };
-//# sourceMappingURL=main-functional.js.map
+//# sourceMappingURL=main.js.map

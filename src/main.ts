@@ -23,8 +23,8 @@ import {
   querySelector,
   isHTMLElement,
 } from "./utils.js";
-import * as Board from "./chess-board-functional.js";
-import * as Stockfish from "./stockfish-client-functional.js";
+import * as Board from "./chess-board.js";
+import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
 
 // ============================================================================

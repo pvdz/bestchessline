@@ -354,4 +354,4 @@ getStockfishState, updateStockfishState,
 analyzePosition, stopAnalysis, isAnalyzingPosition, getCurrentAnalysis, 
 // Utility
 destroy, };
-//# sourceMappingURL=stockfish-client-functional.js.map
+//# sourceMappingURL=stockfish-client.js.map

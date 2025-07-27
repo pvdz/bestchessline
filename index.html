@@ -234,13 +234,13 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
 
     <!-- Application script -->
     <script type="module">
-      import { initializeApp } from "./dist/main-functional.js";
+      import { initializeApp } from "./dist/main.js";
 
       // Initialize the application when DOM is loaded
       document.addEventListener("DOMContentLoaded", () => {
         try {
           initializeApp();
-          console.log("Functional Chess Analysis App initialized successfully");
+          console.log("Chess Analysis App initialized successfully");
         } catch (error) {
           console.error("Failed to initialize application:", error);
         }

@@ -131,9 +131,9 @@ Each move result shows:
 
 ### Key Components
 
-- **`main-functional.ts`**: Main application logic and state management
-- **`chess-board-functional.ts`**: Interactive board with drag & drop
-- **`stockfish-client-functional.ts`**: Engine integration and analysis
+- **`main.ts`**: Main application logic and state management with branching system
+- **`chess-board.ts`**: Interactive board with drag & drop
+- **`stockfish-client.ts`**: Engine integration and analysis
 - **`types.ts`**: TypeScript interfaces and type definitions
 - **`utils.ts`**: Chess utilities and notation functions
 
@@ -145,9 +145,9 @@ chessmovescoach/
 ├── styles.css                    # Modern responsive CSS (835 lines)
 ├── favicon.svg                   # Custom chess piece icon
 ├── src/
-│   ├── main-functional.ts        # Main application logic (1112 lines)
-│   ├── chess-board-functional.ts # Board component with drag & drop
-│   ├── stockfish-client-functional.ts # Engine integration
+│   ├── main.ts                   # Main application logic (1748 lines)
+│   ├── chess-board.ts            # Board component with drag & drop
+│   ├── stockfish-client.ts       # Engine integration
 │   ├── types.ts                  # TypeScript definitions (112 lines)
 │   └── utils.ts                  # Utility functions (245 lines)
 ├── dist/
