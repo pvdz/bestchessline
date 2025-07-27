@@ -1,5 +1,5 @@
 import { AnalysisMove, AnalysisResult, StockfishOptions, ChessMove } from './types.js';
-import { parseFEN, toFEN, squareToCoords, coordsToSquare } from './utils.js';
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError } from './utils.js';
 
 // ============================================================================
 // STOCKFISH STATE MANAGEMENT
@@ -60,7 +60,7 @@ const getStockfishState = (): StockfishState => ({ ...stockfishState });
  */
 const initializeStockfish = (): void => {
   try {
-    console.log('Initializing Stockfish with Web Worker...');
+    log('Initializing Stockfish with Web Worker...');
     
     // Create Web Worker for Stockfish
     const worker = new Worker('dist/stockfish.js');
@@ -68,23 +68,23 @@ const initializeStockfish = (): void => {
     // Set up message handler
     worker.onmessage = (event) => {
       const message = event.data;
-      console.log('Received message from Stockfish:', message);
+      log('Received message from Stockfish:', message);
       handleMessage(message);
     };
     
     // Set up error handler
     worker.onerror = (error) => {
-      console.error('Stockfish worker error:', error);
+      logError('Stockfish worker error:', error);
     };
     
     updateStockfishState({ worker });
     
     // Initialize with UCI protocol
-    console.log('Starting UCI protocol...');
+    log('Starting UCI protocol...');
     uciCmd('uci');
     
   } catch (error) {
-    console.error('Failed to initialize Stockfish:', error);
+    logError('Failed to initialize Stockfish:', error);
   }
 };
 
@@ -92,7 +92,7 @@ const initializeStockfish = (): void => {
  * Send UCI command to Stockfish
  */
 const uciCmd = (cmd: string): void => {
-  console.log('UCI Command:', cmd);
+  log('UCI Command:', cmd);
   if (stockfishState.worker) {
     stockfishState.worker.postMessage(cmd);
   }
@@ -107,13 +107,13 @@ const uciCmd = (cmd: string): void => {
  */
 const handleMessage = (message: string): void => {
   if (message === 'uciok') {
-    console.log('UCI protocol ready, engine loaded');
+    log('UCI protocol ready, engine loaded');
     updateStockfishState({
       engineStatus: { ...stockfishState.engineStatus, engineLoaded: true }
     });
     uciCmd('isready');
   } else if (message === 'readyok') {
-    console.log('Stockfish is ready!');
+    log('Stockfish is ready!');
     updateStockfishState({
       engineStatus: { ...stockfishState.engineStatus, engineReady: true },
       isReady: true
@@ -127,7 +127,7 @@ const handleMessage = (message: string): void => {
   } else if (message.startsWith('info')) {
     parseInfoMessage(message);
   } else if (message.startsWith('Stockfish')) {
-    console.log('Received Stockfish version info');
+    log('Received Stockfish version info');
   }
 };
 
@@ -223,7 +223,7 @@ const handleBestMove = (message: string): void => {
   const parts = message.split(' ');
   if (parts.length >= 2) {
     const bestMove = parts[1];
-    console.log('Best move:', bestMove);
+    log('Best move:', bestMove);
     
     // Stop analysis
     updateStockfishState({ isAnalyzing: false });
@@ -284,7 +284,7 @@ const analyzePosition = async (
 ): Promise<AnalysisResult> => {
   return new Promise((resolve, reject) => {
     if (!stockfishState.isReady) {
-      console.log('Stockfish not ready, queuing analysis...');
+      log('Stockfish not ready, queuing analysis...');
       updateStockfishState({
         pendingAnalysis: () => analyzePosition(fen, options, onUpdate).then(resolve).catch(reject)
       });

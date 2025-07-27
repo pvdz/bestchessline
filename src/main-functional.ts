@@ -1,7 +1,14 @@
 import { ChessMove, AnalysisResult, ChessPosition } from './types.js';
-import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare } from './utils.js';
+import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, setLoggingEnabled } from './utils.js';
 import * as Board from './chess-board-functional.js';
 import * as Stockfish from './stockfish-client-functional.js';
+
+// ============================================================================
+// LOGGING CONFIGURATION
+// ============================================================================
+
+// Enable logging for debugging (set to false in production)
+// setLoggingEnabled(true);
 
 // ============================================================================
 // APPLICATION STATE
@@ -52,7 +59,7 @@ const getAppState = (): AppState => ({ ...appState });
  * Initialize the application
  */
 const initializeApp = (): void => {
-  console.log('Initializing Chess Analysis App...');
+  log('Initializing Chess Analysis App...');
   
   // Initialize board
   const boardElement = document.getElementById('chess-board');
@@ -82,7 +89,7 @@ const initializeApp = (): void => {
   // Initialize controls from current board state
   updateControlsFromPosition();
   
-  console.log('Application initialized successfully');
+  log('Application initialized successfully');
 };
 
 // ============================================================================
@@ -254,7 +261,7 @@ const startAnalysis = async (): Promise<void> => {
     updateButtonStates();
     
   } catch (error) {
-    console.error('Analysis failed:', error);
+    logError('Analysis failed:', error);
     updateAppState({ isAnalyzing: false });
     updateButtonStates();
   }
@@ -370,10 +377,43 @@ const updateResultsPanel = (moves: any[]): void => {
       </div>
     `;
 
+    // Add click handler to make the move
+    moveItem.addEventListener('click', () => {
+      makeAnalysisMove(move.move);
+    });
+
     resultsPanel.appendChild(moveItem);
   });
 
   addMoveHoverListeners();
+};
+
+/**
+ * Make a move from analysis results
+ */
+const makeAnalysisMove = (move: ChessMove): void => {
+  // Add the move to the game history
+  addMove(move);
+  
+  // Update the board position
+  const newFEN = applyMoveToFEN(Board.getFEN(), move);
+  Board.setPosition(newFEN);
+  
+  // Update UI controls
+  updateFENInput();
+  updateControlsFromPosition();
+  
+  // Update move list and navigation
+  updateMoveList();
+  updateNavigationButtons();
+  
+  // Clear any existing move highlights
+  clearLastMoveHighlight();
+  
+  // Highlight the new move
+  highlightLastMove(move);
+  
+  updateStatus(`Made move: ${move.from}${move.to}`);
 };
 
 /**

@@ -243,3 +243,43 @@ export function pvToNotation(pv: ChessMove[], format: 'short' | 'long' = 'short'
     return result;
   }
 } 
+
+// ============================================================================
+// LOGGING CONFIGURATION
+// ============================================================================
+
+let loggingEnabled = false;
+
+/**
+ * Enable or disable logging
+ */
+export function setLoggingEnabled(enabled: boolean): void {
+  loggingEnabled = enabled;
+}
+
+/**
+ * Get current logging state
+ */
+export function isLoggingEnabled(): boolean {
+  return loggingEnabled;
+}
+
+/**
+ * Logging utility function
+ * @param args - Arguments to pass to console.log
+ */
+export function log(...args: any[]): void {
+  if (loggingEnabled) {
+    console.log(...args);
+  }
+}
+
+/**
+ * Error logging utility function
+ * @param args - Arguments to pass to console.error
+ */
+export function logError(...args: any[]): void {
+  if (loggingEnabled) {
+    console.error(...args);
+  }
+} 

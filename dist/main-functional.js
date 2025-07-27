@@ -1,4 +1,4 @@
-import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare } from './utils.js';
+import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError } from './utils.js';
 import * as Board from './chess-board-functional.js';
 import * as Stockfish from './stockfish-client-functional.js';
 /**
@@ -28,7 +28,7 @@ const getAppState = () => ({ ...appState });
  * Initialize the application
  */
 const initializeApp = () => {
-    console.log('Initializing Chess Analysis App...');
+    log('Initializing Chess Analysis App...');
     // Initialize board
     const boardElement = document.getElementById('chess-board');
     if (!boardElement) {
@@ -50,7 +50,7 @@ const initializeApp = () => {
     initializeMoveHoverEvents();
     // Initialize controls from current board state
     updateControlsFromPosition();
-    console.log('Application initialized successfully');
+    log('Application initialized successfully');
 };
 // ============================================================================
 // EVENT LISTENERS
@@ -200,7 +200,7 @@ const startAnalysis = async () => {
         updateButtonStates();
     }
     catch (error) {
-        console.error('Analysis failed:', error);
+        logError('Analysis failed:', error);
         updateAppState({ isAnalyzing: false });
         updateButtonStates();
     }
@@ -304,9 +304,34 @@ const updateResultsPanel = (moves) => {
         <div class="move-pv" title="Principal variation">${pv}</div>
       </div>
     `;
+        // Add click handler to make the move
+        moveItem.addEventListener('click', () => {
+            makeAnalysisMove(move.move);
+        });
         resultsPanel.appendChild(moveItem);
     });
     addMoveHoverListeners();
+};
+/**
+ * Make a move from analysis results
+ */
+const makeAnalysisMove = (move) => {
+    // Add the move to the game history
+    addMove(move);
+    // Update the board position
+    const newFEN = applyMoveToFEN(Board.getFEN(), move);
+    Board.setPosition(newFEN);
+    // Update UI controls
+    updateFENInput();
+    updateControlsFromPosition();
+    // Update move list and navigation
+    updateMoveList();
+    updateNavigationButtons();
+    // Clear any existing move highlights
+    clearLastMoveHighlight();
+    // Highlight the new move
+    highlightLastMove(move);
+    updateStatus(`Made move: ${move.from}${move.to}`);
 };
 /**
  * Update status message

@@ -12,3 +12,21 @@ export declare function debounce<T extends (...args: any[]) => any>(func: T, wai
 export declare function moveToNotation(move: ChessMove, format?: 'short' | 'long', pieceFormat?: 'unicode' | 'english', fen?: string): string;
 export declare function getPieceSymbol(type: PieceType, color: Color, format?: 'unicode' | 'english'): string;
 export declare function pvToNotation(pv: ChessMove[], format?: 'short' | 'long', pieceFormat?: 'unicode' | 'english', fen?: string): string;
+/**
+ * Enable or disable logging
+ */
+export declare function setLoggingEnabled(enabled: boolean): void;
+/**
+ * Get current logging state
+ */
+export declare function isLoggingEnabled(): boolean;
+/**
+ * Logging utility function
+ * @param args - Arguments to pass to console.log
+ */
+export declare function log(...args: any[]): void;
+/**
+ * Error logging utility function
+ * @param args - Arguments to pass to console.error
+ */
+export declare function logError(...args: any[]): void;
