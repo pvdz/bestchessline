@@ -1,4 +1,4 @@
-import { ChessPosition, ChessMove } from './types.js';
+import { ChessPosition, ChessMove } from "./types.js";
 /**
  * Board state interface
  */
@@ -62,4 +62,4 @@ declare const clearLastMoveHighlight: () => void;
  * Destroy board
  */
 declare const destroy: () => void;
-export { initializeBoard, getBoardState, updateBoardState, renderBoard, setPosition, getPosition, getFEN, setOnPositionChange, setOnMoveMade, showMoveArrow, hideMoveArrow, clearLastMoveHighlight, destroy };
+export { initializeBoard, getBoardState, updateBoardState, renderBoard, setPosition, getPosition, getFEN, setOnPositionChange, setOnMoveMade, showMoveArrow, hideMoveArrow, clearLastMoveHighlight, destroy, };

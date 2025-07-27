@@ -1,4 +1,4 @@
-import { parseFEN, squareToCoords, log, logError } from './utils.js';
+import { parseFEN, squareToCoords, log, logError, } from "./utils.js";
 /**
  * Stockfish state instance
  */
@@ -10,10 +10,10 @@ let stockfishState = {
     analysisCallbacks: [],
     engineStatus: {
         engineLoaded: false,
-        engineReady: false
+        engineReady: false,
     },
     waitingForReady: false,
-    pendingAnalysis: null
+    pendingAnalysis: null,
 };
 /**
  * Update Stockfish state
@@ -33,33 +33,33 @@ const getStockfishState = () => ({ ...stockfishState });
  */
 const initializeStockfish = () => {
     try {
-        log('Initializing Stockfish with Web Worker...');
+        log("Initializing Stockfish with Web Worker...");
         // Create Web Worker for Stockfish
-        const worker = new Worker('dist/stockfish.js');
+        const worker = new Worker("dist/stockfish.js");
         // Set up message handler
         worker.onmessage = (event) => {
             const message = event.data;
-            log('Received message from Stockfish:', message);
+            log("Received message from Stockfish:", message);
             handleMessage(message);
         };
         // Set up error handler
         worker.onerror = (error) => {
-            logError('Stockfish worker error:', error);
+            logError("Stockfish worker error:", error);
         };
         updateStockfishState({ worker });
         // Initialize with UCI protocol
-        log('Starting UCI protocol...');
-        uciCmd('uci');
+        log("Starting UCI protocol...");
+        uciCmd("uci");
     }
     catch (error) {
-        logError('Failed to initialize Stockfish:', error);
+        logError("Failed to initialize Stockfish:", error);
     }
 };
 /**
  * Send UCI command to Stockfish
  */
 const uciCmd = (cmd) => {
-    log('UCI Command:', cmd);
+    log("UCI Command:", cmd);
     if (stockfishState.worker) {
         stockfishState.worker.postMessage(cmd);
     }
@@ -71,32 +71,32 @@ const uciCmd = (cmd) => {
  * Handle messages from Stockfish
  */
 const handleMessage = (message) => {
-    if (message === 'uciok') {
-        log('UCI protocol ready, engine loaded');
+    if (message === "uciok") {
+        log("UCI protocol ready, engine loaded");
         updateStockfishState({
-            engineStatus: { ...stockfishState.engineStatus, engineLoaded: true }
+            engineStatus: { ...stockfishState.engineStatus, engineLoaded: true },
         });
-        uciCmd('isready');
+        uciCmd("isready");
     }
-    else if (message === 'readyok') {
-        log('Stockfish is ready!');
+    else if (message === "readyok") {
+        log("Stockfish is ready!");
         updateStockfishState({
             engineStatus: { ...stockfishState.engineStatus, engineReady: true },
-            isReady: true
+            isReady: true,
         });
         if (stockfishState.pendingAnalysis) {
             stockfishState.pendingAnalysis();
             updateStockfishState({ pendingAnalysis: null });
         }
     }
-    else if (message.startsWith('bestmove')) {
+    else if (message.startsWith("bestmove")) {
         handleBestMove(message);
     }
-    else if (message.startsWith('info')) {
+    else if (message.startsWith("info")) {
         parseInfoMessage(message);
     }
-    else if (message.startsWith('Stockfish')) {
-        log('Received Stockfish version info');
+    else if (message.startsWith("Stockfish")) {
+        log("Received Stockfish version info");
     }
 };
 /**
@@ -105,7 +105,7 @@ const handleMessage = (message) => {
 const parseInfoMessage = (message) => {
     if (!stockfishState.currentAnalysis || !stockfishState.isAnalyzing)
         return;
-    const parts = message.split(' ');
+    const parts = message.split(" ");
     let depth = 0;
     let score = 0;
     let pv = [];
@@ -115,36 +115,36 @@ const parseInfoMessage = (message) => {
     for (let i = 1; i < parts.length; i++) {
         const part = parts[i];
         switch (part) {
-            case 'depth':
+            case "depth":
                 depth = parseInt(parts[++i]);
                 break;
-            case 'multipv':
+            case "multipv":
                 multipv = parseInt(parts[++i]);
                 break;
-            case 'score':
+            case "score":
                 const scoreType = parts[++i];
-                if (scoreType === 'cp') {
+                if (scoreType === "cp") {
                     score = parseInt(parts[++i]);
                 }
-                else if (scoreType === 'mate') {
+                else if (scoreType === "mate") {
                     const mateScore = parseInt(parts[++i]);
                     score = mateScore > 0 ? 10000 : -10000;
                 }
                 break;
-            case 'nodes':
+            case "nodes":
                 nodes = parseInt(parts[++i]);
                 break;
-            case 'time':
+            case "time":
                 time = parseInt(parts[++i]);
                 break;
-            case 'pv':
+            case "pv":
                 // Collect all remaining parts as PV moves
                 pv = parts.slice(++i);
                 break;
         }
     }
     // Log the parsed info for debugging
-    log(`Info: depth=${depth}, multipv=${multipv}, score=${score}, nodes=${nodes}, time=${time}, pv=${pv.join(' ')}`);
+    log(`Info: depth=${depth}, multipv=${multipv}, score=${score}, nodes=${nodes}, time=${time}, pv=${pv.join(" ")}`);
     // Convert PV moves to ChessMove objects
     const pvMoves = [];
     for (const moveStr of pv) {
@@ -157,7 +157,7 @@ const parseInfoMessage = (message) => {
     if (stockfishState.currentAnalysis && pvMoves.length > 0) {
         const firstMove = pvMoves[0];
         // Find existing move by multipv index (1-based) and move coordinates
-        const existingMoveIndex = stockfishState.currentAnalysis.moves.findIndex(move => move.move.from === firstMove.from &&
+        const existingMoveIndex = stockfishState.currentAnalysis.moves.findIndex((move) => move.move.from === firstMove.from &&
             move.move.to === firstMove.to &&
             move.multipv === multipv);
         const analysisMove = {
@@ -167,7 +167,7 @@ const parseInfoMessage = (message) => {
             pv: pvMoves,
             nodes,
             time,
-            multipv // Add multipv to track which variation this is
+            multipv, // Add multipv to track which variation this is
         };
         if (existingMoveIndex >= 0) {
             // Update existing move with new depth and score
@@ -187,7 +187,7 @@ const parseInfoMessage = (message) => {
             return (a.multipv || 1) - (b.multipv || 1);
         });
         // Notify callbacks
-        stockfishState.analysisCallbacks.forEach(callback => {
+        stockfishState.analysisCallbacks.forEach((callback) => {
             callback(stockfishState.currentAnalysis);
         });
     }
@@ -196,16 +196,16 @@ const parseInfoMessage = (message) => {
  * Handle best move message
  */
 const handleBestMove = (message) => {
-    const parts = message.split(' ');
+    const parts = message.split(" ");
     if (parts.length >= 2) {
         const bestMove = parts[1];
-        log('Best move:', bestMove);
+        log("Best move:", bestMove);
         // Stop analysis
         updateStockfishState({ isAnalyzing: false });
         if (stockfishState.currentAnalysis) {
             stockfishState.currentAnalysis.completed = true;
             // Notify callbacks of final result
-            stockfishState.analysisCallbacks.forEach(callback => {
+            stockfishState.analysisCallbacks.forEach((callback) => {
                 callback(stockfishState.currentAnalysis);
             });
         }
@@ -220,7 +220,7 @@ const parseRawMove = (moveStr) => {
     const from = moveStr.substring(0, 2);
     const to = moveStr.substring(2, 4);
     // Determine piece type from current board position
-    const currentFEN = stockfishState.currentAnalysis?.position || '';
+    const currentFEN = stockfishState.currentAnalysis?.position || "";
     if (!currentFEN)
         return null;
     const board = parseFEN(currentFEN).board;
@@ -247,9 +247,9 @@ const parseMove = (moveStr) => {
 const analyzePosition = async (fen, options = {}, onUpdate) => {
     return new Promise((resolve, reject) => {
         if (!stockfishState.isReady) {
-            log('Stockfish not ready, queuing analysis...');
+            log("Stockfish not ready, queuing analysis...");
             updateStockfishState({
-                pendingAnalysis: () => analyzePosition(fen, options, onUpdate).then(resolve).catch(reject)
+                pendingAnalysis: () => analyzePosition(fen, options, onUpdate).then(resolve).catch(reject),
             });
             return;
         }
@@ -258,15 +258,15 @@ const analyzePosition = async (fen, options = {}, onUpdate) => {
             moves: [],
             position: fen,
             depth: options.depth || 20,
-            completed: false
+            completed: false,
         };
         updateStockfishState({
             currentAnalysis: analysisResult,
-            isAnalyzing: true
+            isAnalyzing: true,
         });
         if (onUpdate) {
             updateStockfishState({
-                analysisCallbacks: [...stockfishState.analysisCallbacks, onUpdate]
+                analysisCallbacks: [...stockfishState.analysisCallbacks, onUpdate],
             });
         }
         // Set up completion callback
@@ -275,15 +275,15 @@ const analyzePosition = async (fen, options = {}, onUpdate) => {
                 resolve(result);
                 // Remove this callback
                 updateStockfishState({
-                    analysisCallbacks: stockfishState.analysisCallbacks.filter(cb => cb !== finalCallback)
+                    analysisCallbacks: stockfishState.analysisCallbacks.filter((cb) => cb !== finalCallback),
                 });
             }
         };
         updateStockfishState({
-            analysisCallbacks: [...stockfishState.analysisCallbacks, finalCallback]
+            analysisCallbacks: [...stockfishState.analysisCallbacks, finalCallback],
         });
         // Configure Stockfish
-        uciCmd('position fen ' + fen);
+        uciCmd("position fen " + fen);
         // Set options
         if (options.threads) {
             uciCmd(`setoption name Threads value ${options.threads}`);
@@ -296,11 +296,13 @@ const analyzePosition = async (fen, options = {}, onUpdate) => {
         }
         // Start analysis
         const goCommand = [
-            'go',
-            options.depth ? `depth ${options.depth}` : '',
-            options.movetime ? `movetime ${options.movetime}` : '',
-            options.nodes ? `nodes ${options.nodes}` : ''
-        ].filter(Boolean).join(' ');
+            "go",
+            options.depth ? `depth ${options.depth}` : "",
+            options.movetime ? `movetime ${options.movetime}` : "",
+            options.nodes ? `nodes ${options.nodes}` : "",
+        ]
+            .filter(Boolean)
+            .join(" ");
         uciCmd(goCommand);
     });
 };
@@ -309,7 +311,7 @@ const analyzePosition = async (fen, options = {}, onUpdate) => {
  */
 const stopAnalysis = () => {
     if (stockfishState.isAnalyzing) {
-        uciCmd('stop');
+        uciCmd("stop");
         updateStockfishState({ isAnalyzing: false });
     }
 };
@@ -337,7 +339,7 @@ const destroy = () => {
         analysisCallbacks: [],
         engineStatus: { engineLoaded: false, engineReady: false },
         waitingForReady: false,
-        pendingAnalysis: null
+        pendingAnalysis: null,
     });
 };
 // ============================================================================
@@ -351,5 +353,5 @@ getStockfishState, updateStockfishState,
 // Analysis
 analyzePosition, stopAnalysis, isAnalyzingPosition, getCurrentAnalysis, 
 // Utility
-destroy };
+destroy, };
 //# sourceMappingURL=stockfish-client-functional.js.map

@@ -1,4 +1,4 @@
-import { ChessMove, AnalysisResult } from './types.js';
+import { ChessMove, AnalysisResult } from "./types.js";
 /**
  * Application state interface
  */
@@ -73,4 +73,4 @@ declare const updateMoveList: () => void;
  * Update navigation buttons
  */
 declare const updateNavigationButtons: () => void;
-export { initializeApp, getAppState, updateAppState, startAnalysis, pauseAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight };
+export { initializeApp, getAppState, updateAppState, startAnalysis, pauseAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight, };

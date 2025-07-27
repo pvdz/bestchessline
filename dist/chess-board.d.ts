@@ -1,4 +1,4 @@
-import { ChessPosition, ChessMove } from './types.js';
+import { ChessPosition, ChessMove } from "./types.js";
 export declare class ChessBoard {
     private element;
     private state;

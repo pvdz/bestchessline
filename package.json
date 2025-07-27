@@ -3,18 +3,25 @@
   "version": "1.0.0",
   "author": "Peter van der Zee",
   "description": "Chess analysis web application using Stockfish",
-  "keywords": ["chess", "stockfish", "analysis", "web"],
+  "keywords": [
+    "chess",
+    "stockfish",
+    "analysis",
+    "web"
+  ],
   "main": "index.html",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc && npm run copy-stockfish",
+    "build": "npm run format && tsc && npm run copy-stockfish",
     "copy-stockfish": "cp node_modules/stockfish/src/stockfish-nnue-16.js dist/stockfish.js && cp node_modules/stockfish/src/stockfish-nnue-16.wasm dist/stockfish-nnue-16.wasm && echo 'Stockfish files copied'",
+    "format": "prettier --write .",
     "serve": "node server.js"
   },
   "dependencies": {
     "stockfish": "16.0.0"
   },
   "devDependencies": {
+    "prettier": "^3.6.2",
     "typescript": "^5.0.0"
   }
 }

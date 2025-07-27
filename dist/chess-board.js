@@ -1,4 +1,4 @@
-import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType, isHTMLElement } from './utils.js';
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, isValidSquare, getPieceColor, getPieceType, isHTMLElement, } from "./utils.js";
 export class ChessBoard {
     constructor(element, initialFEN) {
         this.dragElement = null;
@@ -6,44 +6,44 @@ export class ChessBoard {
         this.isDragging = false;
         this.currentDropTarget = null;
         this.element = element;
-        const fen = initialFEN || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+        const fen = initialFEN || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         this.state = {
             position: parseFEN(fen),
             selectedSquare: null,
             draggedPiece: null,
-            legalMoves: []
+            legalMoves: [],
         };
         this.render();
         this.setupEventListeners();
     }
     render() {
-        this.element.innerHTML = '';
-        this.element.className = 'chess-board';
+        this.element.innerHTML = "";
+        this.element.className = "chess-board";
         // Create board container
-        const boardContainer = document.createElement('div');
-        boardContainer.className = 'board-container';
+        const boardContainer = document.createElement("div");
+        boardContainer.className = "board-container";
         // Create board grid
-        const board = document.createElement('div');
-        board.className = 'board';
+        const board = document.createElement("div");
+        board.className = "board";
         // Create squares
         for (let rank = 0; rank < 8; rank++) {
             for (let file = 0; file < 8; file++) {
-                const square = document.createElement('div');
+                const square = document.createElement("div");
                 const squareName = coordsToSquare(rank, file);
                 const isLight = (rank + file) % 2 === 0;
-                square.className = `square ${isLight ? 'light' : 'dark'}`;
+                square.className = `square ${isLight ? "light" : "dark"}`;
                 square.dataset.square = squareName;
                 // Add rank/file labels
                 if (file === 0) {
-                    const rankLabel = document.createElement('div');
-                    rankLabel.className = 'rank-label';
+                    const rankLabel = document.createElement("div");
+                    rankLabel.className = "rank-label";
                     rankLabel.textContent = (8 - rank).toString();
                     square.appendChild(rankLabel);
                 }
                 if (rank === 7) {
-                    const fileLabel = document.createElement('div');
-                    fileLabel.className = 'file-label';
-                    fileLabel.textContent = String.fromCharCode('a'.charCodeAt(0) + file);
+                    const fileLabel = document.createElement("div");
+                    fileLabel.className = "file-label";
+                    fileLabel.textContent = String.fromCharCode("a".charCodeAt(0) + file);
                     square.appendChild(fileLabel);
                 }
                 // Add piece if present
@@ -54,11 +54,11 @@ export class ChessBoard {
                 }
                 // Highlight selected square
                 if (this.state.selectedSquare === squareName) {
-                    square.classList.add('selected');
+                    square.classList.add("selected");
                 }
                 // Highlight legal moves
                 if (this.state.legalMoves.includes(squareName)) {
-                    square.classList.add('legal-move');
+                    square.classList.add("legal-move");
                 }
                 board.appendChild(square);
             }
@@ -67,8 +67,8 @@ export class ChessBoard {
         this.element.appendChild(boardContainer);
     }
     createPieceElement(piece, square) {
-        const pieceElement = document.createElement('div');
-        pieceElement.className = 'piece';
+        const pieceElement = document.createElement("div");
+        pieceElement.className = "piece";
         pieceElement.dataset.piece = piece;
         pieceElement.dataset.square = square;
         const color = getPieceColor(piece);
@@ -81,28 +81,37 @@ export class ChessBoard {
     }
     getPieceSymbol(type, color) {
         const symbols = {
-            'K': '♔',
-            'Q': '♕',
-            'R': '♖',
-            'B': '♗',
-            'N': '♘',
-            'P': '♙'
+            K: "♔",
+            Q: "♕",
+            R: "♖",
+            B: "♗",
+            N: "♘",
+            P: "♙",
         };
         const symbol = symbols[type];
-        return color === 'w' ? symbol : symbol.replace(/♔|♕|♖|♗|♘|♙/g, (match) => {
-            const blackSymbols = {
-                '♔': '♚', '♕': '♛', '♖': '♜', '♗': '♝', '♘': '♞', '♙': '♟'
-            };
-            return blackSymbols[match];
-        });
+        return color === "w"
+            ? symbol
+            : symbol.replace(/♔|♕|♖|♗|♘|♙/g, (match) => {
+                const blackSymbols = {
+                    "♔": "♚",
+                    "♕": "♛",
+                    "♖": "♜",
+                    "♗": "♝",
+                    "♘": "♞",
+                    "♙": "♟",
+                };
+                return blackSymbols[match];
+            });
     }
     setupEventListeners() {
-        this.element.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.element.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        document.addEventListener('touchend', this.handleTouchEnd.bind(this));
+        this.element.addEventListener("mousedown", this.handleMouseDown.bind(this));
+        this.element.addEventListener("touchstart", this.handleTouchStart.bind(this), { passive: false });
+        document.addEventListener("mousemove", this.handleMouseMove.bind(this));
+        document.addEventListener("touchmove", this.handleTouchMove.bind(this), {
+            passive: false,
+        });
+        document.addEventListener("mouseup", this.handleMouseUp.bind(this));
+        document.addEventListener("touchend", this.handleTouchEnd.bind(this));
     }
     handleMouseDown(event) {
         if (isHTMLElement(event.target)) {
@@ -117,7 +126,7 @@ export class ChessBoard {
         }
     }
     startDrag(target, clientX, clientY) {
-        const pieceElement = target.closest('.piece');
+        const pieceElement = target.closest(".piece");
         if (!pieceElement || !isHTMLElement(pieceElement))
             return;
         const square = pieceElement.dataset.square;
@@ -125,14 +134,14 @@ export class ChessBoard {
             return;
         this.isDragging = true;
         // Create a simple drag element with just the piece symbol
-        this.dragElement = document.createElement('div');
-        this.dragElement.className = 'drag-ghost';
+        this.dragElement = document.createElement("div");
+        this.dragElement.className = "drag-ghost";
         this.dragElement.innerHTML = pieceElement.innerHTML;
-        this.dragElement.style.position = 'fixed';
-        this.dragElement.style.pointerEvents = 'none';
-        this.dragElement.style.zIndex = '1000';
-        this.dragElement.style.transform = 'scale(1.1)';
-        this.dragElement.style.opacity = '0.9';
+        this.dragElement.style.position = "fixed";
+        this.dragElement.style.pointerEvents = "none";
+        this.dragElement.style.zIndex = "1000";
+        this.dragElement.style.transform = "scale(1.1)";
+        this.dragElement.style.opacity = "0.9";
         const rect = pieceElement.getBoundingClientRect();
         this.dragOffset.x = clientX - rect.left;
         this.dragOffset.y = clientY - rect.top;
@@ -140,7 +149,7 @@ export class ChessBoard {
         this.dragElement.style.top = `${clientY - this.dragOffset.y}px`;
         document.body.appendChild(this.dragElement);
         // Hide original piece
-        pieceElement.style.opacity = '0.3';
+        pieceElement.style.opacity = "0.3";
         this.state.selectedSquare = square;
         this.state.draggedPiece = pieceElement.dataset.piece || null;
         this.render();
@@ -197,20 +206,22 @@ export class ChessBoard {
         if (this.currentDropTarget && this.currentDropTarget !== newDropTarget) {
             const prevSquare = this.element.querySelector(`[data-square="${this.currentDropTarget}"]`);
             if (prevSquare && isHTMLElement(prevSquare)) {
-                prevSquare.classList.remove('dragover');
+                prevSquare.classList.remove("dragover");
             }
         }
         // Add highlighting to new drop target
         if (newDropTarget && newDropTarget !== this.currentDropTarget) {
             const newSquare = this.element.querySelector(`[data-square="${newDropTarget}"]`);
             if (newSquare && isHTMLElement(newSquare)) {
-                newSquare.classList.add('dragover');
+                newSquare.classList.add("dragover");
             }
         }
         this.currentDropTarget = newDropTarget;
     }
     findSquareAtPosition(clientX, clientY) {
-        const boardRect = this.element.querySelector('.board')?.getBoundingClientRect();
+        const boardRect = this.element
+            .querySelector(".board")
+            ?.getBoundingClientRect();
         if (!boardRect)
             return null;
         const x = clientX - boardRect.left;
@@ -235,17 +246,18 @@ export class ChessBoard {
         if (this.isValidMove(from, to, piece)) {
             // Make the move
             this.state.position.board[toRank][toFile] = piece;
-            this.state.position.board[fromRank][fromFile] = '';
+            this.state.position.board[fromRank][fromFile] = "";
             // Switch turn
-            this.state.position.turn = this.state.position.turn === 'w' ? 'b' : 'w';
+            this.state.position.turn = this.state.position.turn === "w" ? "b" : "w";
             // Update move counters
-            if (piece.toLowerCase() === 'p' || this.state.position.board[toRank][toFile] !== '') {
+            if (piece.toLowerCase() === "p" ||
+                this.state.position.board[toRank][toFile] !== "") {
                 this.state.position.halfMoveClock = 0;
             }
             else {
                 this.state.position.halfMoveClock++;
             }
-            if (this.state.position.turn === 'w') {
+            if (this.state.position.turn === "w") {
                 this.state.position.fullMoveNumber++;
             }
             // Notify move made
@@ -275,31 +287,35 @@ export class ChessBoard {
         const rankDiff = Math.abs(toRank - fromRank);
         const fileDiff = Math.abs(toFile - fromFile);
         switch (pieceType) {
-            case 'P': // Pawn
-                const direction = pieceColor === 'w' ? -1 : 1;
-                const startRank = pieceColor === 'w' ? 6 : 1;
+            case "P": // Pawn
+                const direction = pieceColor === "w" ? -1 : 1;
+                const startRank = pieceColor === "w" ? 6 : 1;
                 // Forward move
                 if (fileDiff === 0 && toRank === fromRank + direction) {
-                    return targetPiece === '';
+                    return targetPiece === "";
                 }
                 // Initial two-square move
-                if (fileDiff === 0 && fromRank === startRank && toRank === fromRank + 2 * direction) {
-                    return targetPiece === '' && this.state.position.board[fromRank + direction][fromFile] === '';
+                if (fileDiff === 0 &&
+                    fromRank === startRank &&
+                    toRank === fromRank + 2 * direction) {
+                    return (targetPiece === "" &&
+                        this.state.position.board[fromRank + direction][fromFile] === "");
                 }
                 // Capture
                 if (fileDiff === 1 && rankDiff === 1) {
-                    return targetPiece !== '';
+                    return targetPiece !== "";
                 }
                 break;
-            case 'R': // Rook
+            case "R": // Rook
                 return rankDiff === 0 || fileDiff === 0;
-            case 'N': // Knight
-                return (rankDiff === 2 && fileDiff === 1) || (rankDiff === 1 && fileDiff === 2);
-            case 'B': // Bishop
+            case "N": // Knight
+                return ((rankDiff === 2 && fileDiff === 1) ||
+                    (rankDiff === 1 && fileDiff === 2));
+            case "B": // Bishop
                 return rankDiff === fileDiff;
-            case 'Q': // Queen
+            case "Q": // Queen
                 return rankDiff === 0 || fileDiff === 0 || rankDiff === fileDiff;
-            case 'K': // King
+            case "K": // King
                 return rankDiff <= 1 && fileDiff <= 1;
         }
         return false;
@@ -328,37 +344,42 @@ export class ChessBoard {
         // Remove any existing arrows
         this.hideMoveArrow();
         // Create arrow element
-        const arrow = document.createElement('div');
-        arrow.className = 'move-arrow';
+        const arrow = document.createElement("div");
+        arrow.className = "move-arrow";
         arrow.dataset.from = from;
         arrow.dataset.to = to;
         // Position the arrow
         this.positionArrow(arrow, from, to);
         // Add to board
-        const board = this.element.querySelector('.board');
+        const board = this.element.querySelector(".board");
         if (board) {
             board.appendChild(arrow);
         }
     }
     hideMoveArrow() {
-        const existingArrow = this.element.querySelector('.move-arrow');
+        const existingArrow = this.element.querySelector(".move-arrow");
         if (existingArrow) {
             existingArrow.remove();
         }
     }
     clearLastMoveHighlight() {
         // Remove highlight classes from all squares
-        const highlightedSquares = this.element.querySelectorAll('.last-move-from, .last-move-to');
-        highlightedSquares.forEach(square => {
-            square.classList.remove('last-move-from', 'last-move-to');
+        const highlightedSquares = this.element.querySelectorAll(".last-move-from, .last-move-to");
+        highlightedSquares.forEach((square) => {
+            square.classList.remove("last-move-from", "last-move-to");
         });
     }
     positionArrow(arrow, from, to) {
         const fromSquare = this.element.querySelector(`[data-square="${from}"]`);
         const toSquare = this.element.querySelector(`[data-square="${to}"]`);
-        if (!fromSquare || !toSquare || !isHTMLElement(fromSquare) || !isHTMLElement(toSquare))
+        if (!fromSquare ||
+            !toSquare ||
+            !isHTMLElement(fromSquare) ||
+            !isHTMLElement(toSquare))
             return;
-        const boardRect = this.element.querySelector('.board')?.getBoundingClientRect();
+        const boardRect = this.element
+            .querySelector(".board")
+            ?.getBoundingClientRect();
         if (!boardRect)
             return;
         const fromRect = fromSquare.getBoundingClientRect();
@@ -366,27 +387,28 @@ export class ChessBoard {
         // Calculate arrow position and rotation
         const fromCenter = {
             x: fromRect.left + fromRect.width / 2 - boardRect.left,
-            y: fromRect.top + fromRect.height / 2 - boardRect.top
+            y: fromRect.top + fromRect.height / 2 - boardRect.top,
         };
         const toCenter = {
             x: toRect.left + toRect.width / 2 - boardRect.left,
-            y: toRect.top + toRect.height / 2 - boardRect.top
+            y: toRect.top + toRect.height / 2 - boardRect.top,
         };
         // Position arrow at the center of the board
-        arrow.style.position = 'absolute';
+        arrow.style.position = "absolute";
         arrow.style.left = `${boardRect.width / 2}px`;
         arrow.style.top = `${boardRect.height / 2}px`;
-        arrow.style.transform = 'translate(-50%, -50%)';
+        arrow.style.transform = "translate(-50%, -50%)";
         // Calculate angle
-        const angle = Math.atan2(toCenter.y - fromCenter.y, toCenter.x - fromCenter.x) * 180 / Math.PI;
+        const angle = (Math.atan2(toCenter.y - fromCenter.y, toCenter.x - fromCenter.x) * 180) /
+            Math.PI;
         arrow.style.transform += ` rotate(${angle}deg)`;
     }
     destroy() {
         // Clean up event listeners
-        document.removeEventListener('mousemove', this.handleMouseMove.bind(this));
-        document.removeEventListener('touchmove', this.handleTouchMove.bind(this));
-        document.removeEventListener('mouseup', this.handleMouseUp.bind(this));
-        document.removeEventListener('touchend', this.handleTouchEnd.bind(this));
+        document.removeEventListener("mousemove", this.handleMouseMove.bind(this));
+        document.removeEventListener("touchmove", this.handleTouchMove.bind(this));
+        document.removeEventListener("mouseup", this.handleMouseUp.bind(this));
+        document.removeEventListener("touchend", this.handleTouchEnd.bind(this));
     }
 }
 //# sourceMappingURL=chess-board.js.map

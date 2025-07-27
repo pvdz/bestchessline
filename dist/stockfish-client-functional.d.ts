@@ -1,4 +1,4 @@
-import { AnalysisResult, StockfishOptions } from './types.js';
+import { AnalysisResult, StockfishOptions } from "./types.js";
 /**
  * Stockfish state interface
  */
@@ -47,4 +47,4 @@ declare const getCurrentAnalysis: () => AnalysisResult | null;
  * Destroy Stockfish client
  */
 declare const destroy: () => void;
-export { initializeStockfish, getStockfishState, updateStockfishState, analyzePosition, stopAnalysis, isAnalyzingPosition, getCurrentAnalysis, destroy };
+export { initializeStockfish, getStockfishState, updateStockfishState, analyzePosition, stopAnalysis, isAnalyzingPosition, getCurrentAnalysis, destroy, };

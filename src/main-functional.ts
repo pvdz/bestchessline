@@ -1,13 +1,19 @@
-import { ChessMove, AnalysisResult, ChessPosition, AnalysisOptions, AnalysisMove } from './types.js';
-import { 
-  moveToNotation, 
-  pvToNotation, 
-  parseFEN, 
-  toFEN, 
-  squareToCoords, 
-  coordsToSquare, 
-  log, 
-  logError, 
+import {
+  ChessMove,
+  AnalysisResult,
+  ChessPosition,
+  AnalysisOptions,
+  AnalysisMove,
+} from "./types.js";
+import {
+  moveToNotation,
+  pvToNotation,
+  parseFEN,
+  toFEN,
+  squareToCoords,
+  coordsToSquare,
+  log,
+  logError,
   setLoggingEnabled,
   getInputElement,
   getTextAreaElement,
@@ -15,10 +21,10 @@ import {
   getCheckedRadio,
   getCheckedRadioByName,
   querySelector,
-  isHTMLElement
-} from './utils.js';
-import * as Board from './chess-board-functional.js';
-import * as Stockfish from './stockfish-client-functional.js';
+  isHTMLElement,
+} from "./utils.js";
+import * as Board from "./chess-board-functional.js";
+import * as Stockfish from "./stockfish-client-functional.js";
 
 // ============================================================================
 // LOGGING CONFIGURATION
@@ -39,7 +45,7 @@ interface AppState {
   moves: ChessMove[];
   initialFEN: string;
   currentMoveIndex: number;
-  
+
   // Analysis state
   isAnalyzing: boolean;
   currentResults: AnalysisResult | null;
@@ -50,10 +56,10 @@ interface AppState {
  */
 let appState: AppState = {
   moves: [],
-  initialFEN: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  initialFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
   currentMoveIndex: -1,
   isAnalyzing: false,
-  currentResults: null
+  currentResults: null,
 };
 
 /**
@@ -76,37 +82,37 @@ const getAppState = (): AppState => ({ ...appState });
  * Initialize the application
  */
 const initializeApp = (): void => {
-  log('Initializing Chess Analysis App...');
-  
+  log("Initializing Chess Analysis App...");
+
   // Initialize board
-  const boardElement = document.getElementById('chess-board');
+  const boardElement = document.getElementById("chess-board");
   if (!boardElement) {
-    throw new Error('Chess board element not found');
+    throw new Error("Chess board element not found");
   }
-  
+
   Board.initializeBoard(boardElement, appState.initialFEN);
-  
+
   // Initialize Stockfish
   Stockfish.initializeStockfish();
-  
+
   // Set up board callbacks
   Board.setOnPositionChange((position) => {
     updateFENInput();
     updateControlsFromPosition();
   });
-  
+
   Board.setOnMoveMade((move) => {
     addMove(move);
   });
-  
+
   // Initialize event listeners
   initializeEventListeners();
   initializeMoveHoverEvents();
-  
+
   // Initialize controls from current board state
   updateControlsFromPosition();
-  
-  log('Application initialized successfully');
+
+  log("Application initialized successfully");
 };
 
 // ============================================================================
@@ -118,20 +124,21 @@ const initializeApp = (): void => {
  */
 const initializeEventListeners = (): void => {
   // Board controls
-  const resetBtn = document.getElementById('reset-board');
-  const clearBtn = document.getElementById('clear-board');
-  const fenInput = getInputElement('fen-input');
-  const loadFenBtn = document.getElementById('load-fen');
-  const gameNotation = getTextAreaElement('game-notation');
-  const importGameBtn = document.getElementById('import-game');
+  const resetBtn = document.getElementById("reset-board");
+  const clearBtn = document.getElementById("clear-board");
+  const fenInput = getInputElement("fen-input");
+  const loadFenBtn = document.getElementById("load-fen");
+  const gameNotation = getTextAreaElement("game-notation");
+  const importGameBtn = document.getElementById("import-game");
 
   if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      const initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    resetBtn.addEventListener("click", () => {
+      const initialFEN =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
       updateAppState({
         initialFEN,
         moves: [],
-        currentMoveIndex: -1
+        currentMoveIndex: -1,
       });
       Board.setPosition(initialFEN);
       updateMoveList();
@@ -140,12 +147,12 @@ const initializeEventListeners = (): void => {
   }
 
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      const emptyFEN = '8/8/8/8/8/8/8/8 w - - 0 1';
+    clearBtn.addEventListener("click", () => {
+      const emptyFEN = "8/8/8/8/8/8/8/8 w - - 0 1";
       updateAppState({
         initialFEN: emptyFEN,
         moves: [],
-        currentMoveIndex: -1
+        currentMoveIndex: -1,
       });
       Board.setPosition(emptyFEN);
       updateMoveList();
@@ -154,13 +161,13 @@ const initializeEventListeners = (): void => {
   }
 
   if (loadFenBtn && fenInput) {
-    loadFenBtn.addEventListener('click', () => {
+    loadFenBtn.addEventListener("click", () => {
       const fen = fenInput.value.trim();
       if (fen) {
         updateAppState({
           initialFEN: fen,
           moves: [],
-          currentMoveIndex: -1
+          currentMoveIndex: -1,
         });
         Board.setPosition(fen);
         updateMoveList();
@@ -170,7 +177,7 @@ const initializeEventListeners = (): void => {
   }
 
   if (importGameBtn && gameNotation) {
-    importGameBtn.addEventListener('click', () => {
+    importGameBtn.addEventListener("click", () => {
       const notation = gameNotation.value.trim();
       if (notation) {
         importGame(notation);
@@ -179,47 +186,49 @@ const initializeEventListeners = (): void => {
   }
 
   // Game moves navigation
-  const prevMoveBtn = document.getElementById('prev-move');
-  const nextMoveBtn = document.getElementById('next-move');
+  const prevMoveBtn = document.getElementById("prev-move");
+  const nextMoveBtn = document.getElementById("next-move");
 
   if (prevMoveBtn) {
-    prevMoveBtn.addEventListener('click', () => previousMove());
+    prevMoveBtn.addEventListener("click", () => previousMove());
   }
   if (nextMoveBtn) {
-    nextMoveBtn.addEventListener('click', () => nextMove());
+    nextMoveBtn.addEventListener("click", () => nextMove());
   }
 
   // Analysis controls
-  const startBtn = document.getElementById('start-analysis');
-  const pauseBtn = document.getElementById('pause-analysis');
-  const stopBtn = document.getElementById('stop-analysis');
+  const startBtn = document.getElementById("start-analysis");
+  const pauseBtn = document.getElementById("pause-analysis");
+  const stopBtn = document.getElementById("stop-analysis");
 
   if (startBtn) {
-    startBtn.addEventListener('click', () => startAnalysis());
+    startBtn.addEventListener("click", () => startAnalysis());
   }
   if (pauseBtn) {
-    pauseBtn.addEventListener('click', () => pauseAnalysis());
+    pauseBtn.addEventListener("click", () => pauseAnalysis());
   }
   if (stopBtn) {
-    stopBtn.addEventListener('click', () => stopAnalysis());
+    stopBtn.addEventListener("click", () => stopAnalysis());
   }
 
   // Position controls
   initializePositionControls();
-  
+
   // Analysis format controls
-  const notationRadios = document.querySelectorAll('input[name="notation-format"]');
+  const notationRadios = document.querySelectorAll(
+    'input[name="notation-format"]',
+  );
   const pieceRadios = document.querySelectorAll('input[name="piece-format"]');
-  
-  notationRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
+
+  notationRadios.forEach((radio) => {
+    radio.addEventListener("change", () => {
       updateMoveList();
       updateResultsPanel(appState.currentResults?.moves || []);
     });
   });
-  
-  pieceRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
+
+  pieceRadios.forEach((radio) => {
+    radio.addEventListener("change", () => {
       updateMoveList();
       updateResultsPanel(appState.currentResults?.moves || []);
     });
@@ -231,21 +240,25 @@ const initializeEventListeners = (): void => {
  */
 const initializePositionControls = (): void => {
   // Current player controls
-  const playerRadios = document.querySelectorAll('input[name="current-player"]');
-  playerRadios.forEach(radio => {
-    radio.addEventListener('change', updatePositionFromControls);
+  const playerRadios = document.querySelectorAll(
+    'input[name="current-player"]',
+  );
+  playerRadios.forEach((radio) => {
+    radio.addEventListener("change", updatePositionFromControls);
   });
 
   // Castling controls
-  const castlingCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-  castlingCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', updatePositionFromControls);
+  const castlingCheckboxes = document.querySelectorAll(
+    'input[type="checkbox"]',
+  );
+  castlingCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener("change", updatePositionFromControls);
   });
 
   // En passant control
-  const enPassantInput = getInputElement('en-passant');
+  const enPassantInput = getInputElement("en-passant");
   if (enPassantInput) {
-    enPassantInput.addEventListener('input', updatePositionFromControls);
+    enPassantInput.addEventListener("input", updatePositionFromControls);
   }
 };
 
@@ -265,20 +278,23 @@ const startAnalysis = async (): Promise<void> => {
   try {
     const options = getAnalysisOptions();
     const fen = Board.getFEN();
-    
-    const result = await Stockfish.analyzePosition(fen, options, (analysisResult) => {
-      updateAppState({ currentResults: analysisResult });
-      updateResults(analysisResult);
-    });
-    
-    updateAppState({ 
+
+    const result = await Stockfish.analyzePosition(
+      fen,
+      options,
+      (analysisResult) => {
+        updateAppState({ currentResults: analysisResult });
+        updateResults(analysisResult);
+      },
+    );
+
+    updateAppState({
       currentResults: result,
-      isAnalyzing: false 
+      isAnalyzing: false,
     });
     updateButtonStates();
-    
   } catch (error) {
-    logError('Analysis failed:', error);
+    logError("Analysis failed:", error);
     updateAppState({ isAnalyzing: false });
     updateButtonStates();
   }
@@ -298,9 +314,9 @@ const pauseAnalysis = (): void => {
  */
 const stopAnalysis = (): void => {
   Stockfish.stopAnalysis();
-  updateAppState({ 
+  updateAppState({
     isAnalyzing: false,
-    currentResults: null 
+    currentResults: null,
   });
   updateButtonStates();
   updateResultsPanel([]);
@@ -310,15 +326,15 @@ const stopAnalysis = (): void => {
  * Get analysis options from UI
  */
 const getAnalysisOptions = (): AnalysisOptions => {
-  const maxDepth = getInputElement('max-depth')?.value || '20';
-  const whiteMoves = getInputElement('white-moves')?.value || '5';
-  const blackMoves = getInputElement('black-moves')?.value || '5';
-  const threads = getInputElement('threads')?.value || '1';
+  const maxDepth = getInputElement("max-depth")?.value || "20";
+  const whiteMoves = getInputElement("white-moves")?.value || "5";
+  const blackMoves = getInputElement("black-moves")?.value || "5";
+  const threads = getInputElement("threads")?.value || "1";
 
   return {
     depth: parseInt(maxDepth),
     threads: parseInt(threads),
-    multiPV: Math.max(parseInt(whiteMoves), parseInt(blackMoves))
+    multiPV: Math.max(parseInt(whiteMoves), parseInt(blackMoves)),
   };
 };
 
@@ -326,9 +342,9 @@ const getAnalysisOptions = (): AnalysisOptions => {
  * Update button states
  */
 const updateButtonStates = (): void => {
-  const startBtn = getButtonElement('start-analysis');
-  const pauseBtn = getButtonElement('pause-analysis');
-  const stopBtn = getButtonElement('stop-analysis');
+  const startBtn = getButtonElement("start-analysis");
+  const pauseBtn = getButtonElement("pause-analysis");
+  const stopBtn = getButtonElement("stop-analysis");
 
   if (startBtn) startBtn.disabled = appState.isAnalyzing;
   if (pauseBtn) pauseBtn.disabled = !appState.isAnalyzing;
@@ -344,7 +360,7 @@ const updateButtonStates = (): void => {
  */
 const updateResults = (result: AnalysisResult): void => {
   if (!result || !result.moves) return;
-  
+
   updateResultsPanel(result.moves);
   updateStatus(`Analysis complete: ${result.moves.length} moves found`);
 };
@@ -353,33 +369,41 @@ const updateResults = (result: AnalysisResult): void => {
  * Update results panel
  */
 const updateResultsPanel = (moves: AnalysisMove[]): void => {
-  const resultsPanel = document.getElementById('analysis-results');
+  const resultsPanel = document.getElementById("analysis-results");
   if (!resultsPanel) return;
 
   // Get current format settings
-  const notationFormat = getCheckedRadioByName('notation-format')?.value || 'algebraic';
-  const pieceFormat = getCheckedRadioByName('piece-format')?.value || 'symbols';
-  
-  // Convert format values to match moveToNotation parameters
-  const notationType = notationFormat === 'algebraic' ? 'short' : 'long';
-  const pieceType = pieceFormat === 'symbols' ? 'unicode' : 'english';
+  const notationFormat =
+    getCheckedRadioByName("notation-format")?.value || "algebraic";
+  const pieceFormat = getCheckedRadioByName("piece-format")?.value || "symbols";
 
-  resultsPanel.innerHTML = '';
-  
+  // Convert format values to match moveToNotation parameters
+  const notationType = notationFormat === "algebraic" ? "short" : "long";
+  const pieceType = pieceFormat === "symbols" ? "unicode" : "english";
+
+  resultsPanel.innerHTML = "";
+
   moves.forEach((move, index) => {
-    const moveItem = document.createElement('div');
-    moveItem.className = 'move-item';
+    const moveItem = document.createElement("div");
+    moveItem.className = "move-item";
     moveItem.dataset.moveFrom = move.move.from;
     moveItem.dataset.moveTo = move.move.to;
     moveItem.dataset.movePiece = move.move.piece;
 
     const rank = index + 1;
-    const notation = moveToNotation(move.move, notationType, pieceType, Board.getFEN());
-    const score = move.score > 0 ? `+${move.score / 100}` : `${move.score / 100}`;
+    const notation = moveToNotation(
+      move.move,
+      notationType,
+      pieceType,
+      Board.getFEN(),
+    );
+    const score =
+      move.score > 0 ? `+${move.score / 100}` : `${move.score / 100}`;
     const pv = pvToNotation(move.pv);
-    
+
     // Add multipv indicator if this is not the first variation
-    const multipvIndicator = move.multipv && move.multipv > 1 ? ` (${move.multipv})` : '';
+    const multipvIndicator =
+      move.multipv && move.multipv > 1 ? ` (${move.multipv})` : "";
 
     moveItem.innerHTML = `
       <div class="move-header">
@@ -398,7 +422,7 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
     `;
 
     // Add click handler to make the move
-    moveItem.addEventListener('click', () => {
+    moveItem.addEventListener("click", () => {
       makeAnalysisMove(move.move);
     });
 
@@ -414,25 +438,25 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
 const makeAnalysisMove = (move: ChessMove): void => {
   // Add the move to the game history
   addMove(move);
-  
+
   // Update the board position
   const newFEN = applyMoveToFEN(Board.getFEN(), move);
   Board.setPosition(newFEN);
-  
+
   // Update UI controls
   updateFENInput();
   updateControlsFromPosition();
-  
+
   // Update move list and navigation
   updateMoveList();
   updateNavigationButtons();
-  
+
   // Clear any existing move highlights
   clearLastMoveHighlight();
-  
+
   // Highlight the new move
   highlightLastMove(move);
-  
+
   updateStatus(`Made move: ${move.from}${move.to}`);
 };
 
@@ -440,7 +464,7 @@ const makeAnalysisMove = (move: ChessMove): void => {
  * Update status message
  */
 const updateStatus = (message: string): void => {
-  const statusElement = document.getElementById('status');
+  const statusElement = document.getElementById("status");
   if (statusElement) {
     statusElement.textContent = message;
   }
@@ -461,20 +485,20 @@ const initializeMoveHoverEvents = (): void => {
  * Add move hover listeners
  */
 const addMoveHoverListeners = (): void => {
-  const moveItems = document.querySelectorAll('.move-item');
-  
-  moveItems.forEach(item => {
-    item.addEventListener('mouseenter', () => {
-      const from = item.getAttribute('data-move-from');
-      const to = item.getAttribute('data-move-to');
-      const piece = item.getAttribute('data-move-piece');
-      
+  const moveItems = document.querySelectorAll(".move-item");
+
+  moveItems.forEach((item) => {
+    item.addEventListener("mouseenter", () => {
+      const from = item.getAttribute("data-move-from");
+      const to = item.getAttribute("data-move-to");
+      const piece = item.getAttribute("data-move-piece");
+
       if (from && to && piece) {
         Board.showMoveArrow(from, to, piece);
       }
     });
-    
-    item.addEventListener('mouseleave', () => {
+
+    item.addEventListener("mouseleave", () => {
       Board.hideMoveArrow();
     });
   });
@@ -488,7 +512,7 @@ const addMoveHoverListeners = (): void => {
  * Update FEN input field
  */
 const updateFENInput = (): void => {
-  const fenInput = getInputElement('fen-input');
+  const fenInput = getInputElement("fen-input");
   if (fenInput) {
     fenInput.value = Board.getFEN();
   }
@@ -499,7 +523,7 @@ const updateFENInput = (): void => {
  */
 const updateControlsFromPosition = (): void => {
   const fen = Board.getFEN();
-  const fenParts = fen.split(' ');
+  const fenParts = fen.split(" ");
   if (fenParts.length < 4) return;
 
   const turn = fenParts[1];
@@ -507,11 +531,15 @@ const updateControlsFromPosition = (): void => {
   const enPassant = fenParts[3];
 
   // Update current player
-  const whiteRadio = document.querySelector('input[name="current-player"][value="w"]') as HTMLInputElement;
-  const blackRadio = document.querySelector('input[name="current-player"][value="b"]') as HTMLInputElement;
-  
+  const whiteRadio = document.querySelector(
+    'input[name="current-player"][value="w"]',
+  ) as HTMLInputElement;
+  const blackRadio = document.querySelector(
+    'input[name="current-player"][value="b"]',
+  ) as HTMLInputElement;
+
   if (whiteRadio && blackRadio) {
-    if (turn === 'w') {
+    if (turn === "w") {
       whiteRadio.checked = true;
     } else {
       blackRadio.checked = true;
@@ -519,20 +547,30 @@ const updateControlsFromPosition = (): void => {
   }
 
   // Update castling rights
-  const whiteKingside = document.getElementById('white-kingside') as HTMLInputElement;
-  const whiteQueenside = document.getElementById('white-queenside') as HTMLInputElement;
-  const blackKingside = document.getElementById('black-kingside') as HTMLInputElement;
-  const blackQueenside = document.getElementById('black-queenside') as HTMLInputElement;
+  const whiteKingside = document.getElementById(
+    "white-kingside",
+  ) as HTMLInputElement;
+  const whiteQueenside = document.getElementById(
+    "white-queenside",
+  ) as HTMLInputElement;
+  const blackKingside = document.getElementById(
+    "black-kingside",
+  ) as HTMLInputElement;
+  const blackQueenside = document.getElementById(
+    "black-queenside",
+  ) as HTMLInputElement;
 
-  if (whiteKingside) whiteKingside.checked = castling.includes('K');
-  if (whiteQueenside) whiteQueenside.checked = castling.includes('Q');
-  if (blackKingside) blackKingside.checked = castling.includes('k');
-  if (blackQueenside) blackQueenside.checked = castling.includes('q');
+  if (whiteKingside) whiteKingside.checked = castling.includes("K");
+  if (whiteQueenside) whiteQueenside.checked = castling.includes("Q");
+  if (blackKingside) blackKingside.checked = castling.includes("k");
+  if (blackQueenside) blackQueenside.checked = castling.includes("q");
 
   // Update en passant
-  const enPassantInput = document.getElementById('en-passant') as HTMLInputElement;
+  const enPassantInput = document.getElementById(
+    "en-passant",
+  ) as HTMLInputElement;
   if (enPassantInput) {
-    enPassantInput.value = enPassant === '-' ? '' : enPassant;
+    enPassantInput.value = enPassant === "-" ? "" : enPassant;
   }
 };
 
@@ -541,36 +579,48 @@ const updateControlsFromPosition = (): void => {
  */
 const updatePositionFromControls = (): void => {
   // Get current player
-  const whiteRadio = document.querySelector('input[name="current-player"][value="w"]') as HTMLInputElement;
-  const turn = whiteRadio?.checked ? 'w' : 'b';
+  const whiteRadio = document.querySelector(
+    'input[name="current-player"][value="w"]',
+  ) as HTMLInputElement;
+  const turn = whiteRadio?.checked ? "w" : "b";
 
   // Get castling rights
-  const whiteKingside = document.getElementById('white-kingside') as HTMLInputElement;
-  const whiteQueenside = document.getElementById('white-queenside') as HTMLInputElement;
-  const blackKingside = document.getElementById('black-kingside') as HTMLInputElement;
-  const blackQueenside = document.getElementById('black-queenside') as HTMLInputElement;
+  const whiteKingside = document.getElementById(
+    "white-kingside",
+  ) as HTMLInputElement;
+  const whiteQueenside = document.getElementById(
+    "white-queenside",
+  ) as HTMLInputElement;
+  const blackKingside = document.getElementById(
+    "black-kingside",
+  ) as HTMLInputElement;
+  const blackQueenside = document.getElementById(
+    "black-queenside",
+  ) as HTMLInputElement;
 
-  let castling = '';
-  if (whiteKingside?.checked) castling += 'K';
-  if (whiteQueenside?.checked) castling += 'Q';
-  if (blackKingside?.checked) castling += 'k';
-  if (blackQueenside?.checked) castling += 'q';
-  if (!castling) castling = '-';
+  let castling = "";
+  if (whiteKingside?.checked) castling += "K";
+  if (whiteQueenside?.checked) castling += "Q";
+  if (blackKingside?.checked) castling += "k";
+  if (blackQueenside?.checked) castling += "q";
+  if (!castling) castling = "-";
 
   // Get en passant
-  const enPassantInput = document.getElementById('en-passant') as HTMLInputElement;
-  const enPassant = enPassantInput?.value || '-';
+  const enPassantInput = document.getElementById(
+    "en-passant",
+  ) as HTMLInputElement;
+  const enPassant = enPassantInput?.value || "-";
 
   // Construct new FEN
   const currentFEN = Board.getFEN();
-  const fenParts = currentFEN.split(' ');
+  const fenParts = currentFEN.split(" ");
   const newFEN = `${fenParts[0]} ${turn} ${castling} ${enPassant} ${fenParts[4]} ${fenParts[5]}`;
 
   // Update state and board
   updateAppState({
     initialFEN: newFEN,
     moves: [],
-    currentMoveIndex: -1
+    currentMoveIndex: -1,
   });
   Board.setPosition(newFEN);
   updateMoveList();
@@ -587,7 +637,7 @@ const updatePositionFromControls = (): void => {
 const addMove = (move: ChessMove): void => {
   updateAppState({
     moves: [...appState.moves, move],
-    currentMoveIndex: appState.moves.length
+    currentMoveIndex: appState.moves.length,
   });
   updateMoveList();
   updateNavigationButtons();
@@ -598,24 +648,24 @@ const addMove = (move: ChessMove): void => {
  * Import game from notation
  */
 const importGame = (notation: string): void => {
-  console.log('Importing game:', notation);
-  
+  console.log("Importing game:", notation);
+
   // Reset game state
   updateAppState({
     moves: [],
-    currentMoveIndex: -1
+    currentMoveIndex: -1,
   });
-  
+
   // Parse moves
   const moves = parseGameNotation(notation);
   updateAppState({ moves });
   updateMoveList();
   updateNavigationButtons();
-  
+
   // Set board to initial position
   Board.setPosition(appState.initialFEN);
-  
-  console.log('Game import complete, parsed moves:', moves);
+
+  console.log("Game import complete, parsed moves:", moves);
 };
 
 /**
@@ -624,27 +674,33 @@ const importGame = (notation: string): void => {
 const parseGameNotation = (notation: string): ChessMove[] => {
   // Clean the notation
   let cleanNotation = notation
-    .replace(/\{[^}]*\}/g, '') // Remove comments
-    .replace(/\([^)]*\)/g, '') // Remove annotations
-    .replace(/\$\d+/g, '') // Remove evaluation symbols
-    .replace(/[!?]+/g, '') // Remove move annotations
-    .replace(/\d+\./g, '') // Remove move numbers
-    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replace(/\{[^}]*\}/g, "") // Remove comments
+    .replace(/\([^)]*\)/g, "") // Remove annotations
+    .replace(/\$\d+/g, "") // Remove evaluation symbols
+    .replace(/[!?]+/g, "") // Remove move annotations
+    .replace(/\d+\./g, "") // Remove move numbers
+    .replace(/\s+/g, " ") // Normalize whitespace
     .trim();
-  
-  console.log('Cleaned notation:', cleanNotation);
-  
+
+  console.log("Cleaned notation:", cleanNotation);
+
   const moves: ChessMove[] = [];
   const tokens = cleanNotation.split(/\s+/);
-  
+
   // Apply moves sequentially to maintain board context
   let currentFEN = appState.initialFEN;
-  
+
   for (const token of tokens) {
-    if (!token || token === '1-0' || token === '0-1' || token === '1/2-1/2' || token === '*') {
+    if (
+      !token ||
+      token === "1-0" ||
+      token === "0-1" ||
+      token === "1/2-1/2" ||
+      token === "*"
+    ) {
       continue;
     }
-    
+
     const move = parseMove(token, currentFEN);
     if (move) {
       moves.push(move);
@@ -652,7 +708,7 @@ const parseGameNotation = (notation: string): ChessMove[] => {
       currentFEN = applyMoveToFEN(currentFEN, move);
     }
   }
-  
+
   return moves;
 };
 
@@ -660,83 +716,122 @@ const parseGameNotation = (notation: string): ChessMove[] => {
  * Parse individual move
  */
 const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
-  console.log('Parsing move:', moveText, 'from FEN:', currentFEN);
-  
+  console.log("Parsing move:", moveText, "from FEN:", currentFEN);
+
   const position = parseFEN(currentFEN);
-  const isWhiteTurn = position.turn === 'w';
-  
+  const isWhiteTurn = position.turn === "w";
+
   // Handle castling
-  if (moveText === 'O-O' || moveText === '0-0') {
+  if (moveText === "O-O" || moveText === "0-0") {
     if (isWhiteTurn) {
-      return { from: 'e1', to: 'g1', piece: 'K', special: 'castling', rookFrom: 'h1', rookTo: 'f1' };
+      return {
+        from: "e1",
+        to: "g1",
+        piece: "K",
+        special: "castling",
+        rookFrom: "h1",
+        rookTo: "f1",
+      };
     } else {
-      return { from: 'e8', to: 'g8', piece: 'k', special: 'castling', rookFrom: 'h8', rookTo: 'f8' };
+      return {
+        from: "e8",
+        to: "g8",
+        piece: "k",
+        special: "castling",
+        rookFrom: "h8",
+        rookTo: "f8",
+      };
     }
   }
-  if (moveText === 'O-O-O' || moveText === '0-0-0') {
+  if (moveText === "O-O-O" || moveText === "0-0-0") {
     if (isWhiteTurn) {
-      return { from: 'e1', to: 'c1', piece: 'K', special: 'castling', rookFrom: 'a1', rookTo: 'd1' };
+      return {
+        from: "e1",
+        to: "c1",
+        piece: "K",
+        special: "castling",
+        rookFrom: "a1",
+        rookTo: "d1",
+      };
     } else {
-      return { from: 'e8', to: 'c8', piece: 'k', special: 'castling', rookFrom: 'a8', rookTo: 'd8' };
+      return {
+        from: "e8",
+        to: "c8",
+        piece: "k",
+        special: "castling",
+        rookFrom: "a8",
+        rookTo: "d8",
+      };
     }
   }
-  
+
   // Handle pawn moves (both white and black)
   if (moveText.match(/^[a-h][2-7]$/)) {
     // Simple pawn move
     const toSquare = moveText;
-    const fromSquare = findFromSquare('P', toSquare, currentFEN);
+    const fromSquare = findFromSquare("P", toSquare, currentFEN);
     if (fromSquare) {
-      const piece = isWhiteTurn ? 'P' : 'p';
+      const piece = isWhiteTurn ? "P" : "p";
       return { from: fromSquare, to: toSquare, piece };
     }
   }
-  
+
   // Handle pawn captures (both white and black)
   if (moveText.match(/^[a-h]x[a-h][2-7]$/)) {
     const fromFile = moveText[0];
     const toSquare = moveText.substring(2);
-    const fromSquare = findFromSquare('P', toSquare, currentFEN);
+    const fromSquare = findFromSquare("P", toSquare, currentFEN);
     if (fromSquare) {
-      const piece = isWhiteTurn ? 'P' : 'p';
+      const piece = isWhiteTurn ? "P" : "p";
       return { from: fromSquare, to: toSquare, piece };
     }
   }
-  
+
   // Handle piece moves
-  const pieceMatch = moveText.match(/^([KQRBN])([a-h]?[1-8]?)?x?([a-h][1-8])([+#])?$/);
+  const pieceMatch = moveText.match(
+    /^([KQRBN])([a-h]?[1-8]?)?x?([a-h][1-8])([+#])?$/,
+  );
   if (pieceMatch) {
     const pieceType = pieceMatch[1];
-    const disambiguation = pieceMatch[2] || '';
+    const disambiguation = pieceMatch[2] || "";
     const toSquare = pieceMatch[3];
-    const fromSquare = findFromSquareWithDisambiguation(pieceType, toSquare, disambiguation, currentFEN);
+    const fromSquare = findFromSquareWithDisambiguation(
+      pieceType,
+      toSquare,
+      disambiguation,
+      currentFEN,
+    );
     if (fromSquare) {
       const piece = isWhiteTurn ? pieceType : pieceType.toLowerCase();
       return { from: fromSquare, to: toSquare, piece };
     }
   }
-  
-  console.log('Failed to parse move:', moveText);
+
+  console.log("Failed to parse move:", moveText);
   return null;
 };
 
 /**
  * Find from square for a piece
  */
-const findFromSquare = (piece: string, toSquare: string, currentFEN: string): string | null => {
+const findFromSquare = (
+  piece: string,
+  toSquare: string,
+  currentFEN: string,
+): string | null => {
   const position = parseFEN(currentFEN);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   // Find all pieces of the given type
   const candidates: string[] = [];
-  
+
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const squarePiece = position.board[rank][file];
       if (squarePiece && squarePiece.toUpperCase() === piece) {
         // Check if piece color matches current turn
         const isWhitePiece = squarePiece === squarePiece.toUpperCase();
-        const isWhiteTurn = position.turn === 'w';
+        const isWhiteTurn = position.turn === "w";
         if (isWhitePiece === isWhiteTurn) {
           const fromSquare = coordsToSquare(rank, file);
           if (canPieceMoveTo(fromSquare, toSquare, piece, position.board)) {
@@ -746,33 +841,38 @@ const findFromSquare = (piece: string, toSquare: string, currentFEN: string): st
       }
     }
   }
-  
+
   if (candidates.length === 1) {
     return candidates[0];
   } else if (candidates.length > 1) {
     return selectCorrectMove(candidates, toSquare, piece, position.board);
   }
-  
+
   return null;
 };
 
 /**
  * Find from square with disambiguation
  */
-const findFromSquareWithDisambiguation = (piece: string, toSquare: string, disambiguation: string, currentFEN: string): string | null => {
+const findFromSquareWithDisambiguation = (
+  piece: string,
+  toSquare: string,
+  disambiguation: string,
+  currentFEN: string,
+): string | null => {
   const position = parseFEN(currentFEN);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   // Find all pieces of the given type
   const candidates: string[] = [];
-  
+
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const squarePiece = position.board[rank][file];
       if (squarePiece && squarePiece.toUpperCase() === piece) {
         // Check if piece color matches current turn
         const isWhitePiece = squarePiece === squarePiece.toUpperCase();
-        const isWhiteTurn = position.turn === 'w';
+        const isWhiteTurn = position.turn === "w";
         if (isWhitePiece === isWhiteTurn) {
           const fromSquare = coordsToSquare(rank, file);
           if (canPieceMoveTo(fromSquare, toSquare, piece, position.board)) {
@@ -782,54 +882,65 @@ const findFromSquareWithDisambiguation = (piece: string, toSquare: string, disam
       }
     }
   }
-  
+
   // Apply disambiguation
   if (disambiguation) {
-    const filtered = candidates.filter(square => 
-      square.includes(disambiguation[0]) || square.includes(disambiguation[1])
+    const filtered = candidates.filter(
+      (square) =>
+        square.includes(disambiguation[0]) ||
+        square.includes(disambiguation[1]),
     );
     if (filtered.length > 0) {
       candidates.splice(0, candidates.length, ...filtered);
     }
   }
-  
+
   if (candidates.length === 1) {
     return candidates[0];
   } else if (candidates.length > 1) {
     return selectCorrectMove(candidates, toSquare, piece, position.board);
   }
-  
+
   return null;
 };
 
 /**
  * Check if piece can move to destination
  */
-const canPieceMoveTo = (fromSquare: string, toSquare: string, piece: string, board: string[][]): boolean => {
+const canPieceMoveTo = (
+  fromSquare: string,
+  toSquare: string,
+  piece: string,
+  board: string[][],
+): boolean => {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   // Check if destination is occupied by same color
   const fromPiece = board[fromRank][fromFile];
   const toPiece = board[toRank][toFile];
-  if (toPiece && (fromPiece.toUpperCase() === fromPiece) === (toPiece.toUpperCase() === toPiece)) {
+  if (
+    toPiece &&
+    (fromPiece.toUpperCase() === fromPiece) ===
+      (toPiece.toUpperCase() === toPiece)
+  ) {
     return false;
   }
-  
+
   const pieceType = piece.toUpperCase();
-  
+
   switch (pieceType) {
-    case 'P':
+    case "P":
       return canPawnMoveTo(fromSquare, toSquare, board);
-    case 'R':
+    case "R":
       return canRookMoveTo(fromSquare, toSquare, board);
-    case 'N':
+    case "N":
       return canKnightMoveTo(fromSquare, toSquare, board);
-    case 'B':
+    case "B":
       return canBishopMoveTo(fromSquare, toSquare, board);
-    case 'Q':
+    case "Q":
       return canQueenMoveTo(fromSquare, toSquare, board);
-    case 'K':
+    case "K":
       return canKingMoveTo(fromSquare, toSquare, board);
     default:
       return false;
@@ -839,132 +950,169 @@ const canPieceMoveTo = (fromSquare: string, toSquare: string, piece: string, boa
 /**
  * Check if pawn can move to destination
  */
-const canPawnMoveTo = (fromSquare: string, toSquare: string, board: string[][]): boolean => {
+const canPawnMoveTo = (
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean => {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   const fromPiece = board[fromRank][fromFile];
   const isWhite = fromPiece === fromPiece.toUpperCase();
   const direction = isWhite ? -1 : 1;
-  
+
   // Forward move
   if (fromFile === toFile && toRank === fromRank + direction) {
-    return board[toRank][toFile] === '';
+    return board[toRank][toFile] === "";
   }
-  
+
   // Double move from starting position
   if (fromFile === toFile && toRank === fromRank + 2 * direction) {
     const startRank = isWhite ? 6 : 1;
     if (fromRank === startRank) {
-      return board[fromRank + direction][fromFile] === '' && board[toRank][toFile] === '';
+      return (
+        board[fromRank + direction][fromFile] === "" &&
+        board[toRank][toFile] === ""
+      );
     }
   }
-  
+
   // Capture
   if (Math.abs(fromFile - toFile) === 1 && toRank === fromRank + direction) {
-    return board[toRank][toFile] !== '';
+    return board[toRank][toFile] !== "";
   }
-  
+
   return false;
 };
 
 /**
  * Check if rook can move to destination
  */
-const canRookMoveTo = (fromSquare: string, toSquare: string, board: string[][]): boolean => {
+const canRookMoveTo = (
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean => {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   // Rook moves horizontally or vertically
   if (fromRank !== toRank && fromFile !== toFile) {
     return false;
   }
-  
+
   // Check path
-  const rankStep = fromRank === toRank ? 0 : (toRank > fromRank ? 1 : -1);
-  const fileStep = fromFile === toFile ? 0 : (toFile > fromFile ? 1 : -1);
-  
+  const rankStep = fromRank === toRank ? 0 : toRank > fromRank ? 1 : -1;
+  const fileStep = fromFile === toFile ? 0 : toFile > fromFile ? 1 : -1;
+
   let currentRank = fromRank + rankStep;
   let currentFile = fromFile + fileStep;
-  
+
   while (currentRank !== toRank || currentFile !== toFile) {
-    if (board[currentRank][currentFile] !== '') {
+    if (board[currentRank][currentFile] !== "") {
       return false;
     }
     currentRank += rankStep;
     currentFile += fileStep;
   }
-  
+
   return true;
 };
 
 /**
  * Check if knight can move to destination
  */
-const canKnightMoveTo = (fromSquare: string, toSquare: string, board: string[][]): boolean => {
+const canKnightMoveTo = (
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean => {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   const rankDiff = Math.abs(fromRank - toRank);
   const fileDiff = Math.abs(fromFile - toFile);
-  
-  return (rankDiff === 2 && fileDiff === 1) || (rankDiff === 1 && fileDiff === 2);
+
+  return (
+    (rankDiff === 2 && fileDiff === 1) || (rankDiff === 1 && fileDiff === 2)
+  );
 };
 
 /**
  * Check if bishop can move to destination
  */
-const canBishopMoveTo = (fromSquare: string, toSquare: string, board: string[][]): boolean => {
+const canBishopMoveTo = (
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean => {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   // Bishop moves diagonally
   if (Math.abs(fromRank - toRank) !== Math.abs(fromFile - toFile)) {
     return false;
   }
-  
+
   // Check path
   const rankStep = toRank > fromRank ? 1 : -1;
   const fileStep = toFile > fromFile ? 1 : -1;
-  
+
   let currentRank = fromRank + rankStep;
   let currentFile = fromFile + fileStep;
-  
+
   while (currentRank !== toRank && currentFile !== toFile) {
-    if (board[currentRank][currentFile] !== '') {
+    if (board[currentRank][currentFile] !== "") {
       return false;
     }
     currentRank += rankStep;
     currentFile += fileStep;
   }
-  
+
   return true;
 };
 
 /**
  * Check if queen can move to destination
  */
-const canQueenMoveTo = (fromSquare: string, toSquare: string, board: string[][]): boolean => {
-  return canRookMoveTo(fromSquare, toSquare, board) || canBishopMoveTo(fromSquare, toSquare, board);
+const canQueenMoveTo = (
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean => {
+  return (
+    canRookMoveTo(fromSquare, toSquare, board) ||
+    canBishopMoveTo(fromSquare, toSquare, board)
+  );
 };
 
 /**
  * Check if king can move to destination
  */
-const canKingMoveTo = (fromSquare: string, toSquare: string, board: string[][]): boolean => {
+const canKingMoveTo = (
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean => {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  
+
   const rankDiff = Math.abs(fromRank - toRank);
   const fileDiff = Math.abs(fromFile - toFile);
-  
+
   return rankDiff <= 1 && fileDiff <= 1;
 };
 
 /**
  * Select correct move when multiple options exist
  */
-const selectCorrectMove = (candidates: string[], toSquare: string, piece: string, board: string[][]): string => {
+const selectCorrectMove = (
+  candidates: string[],
+  toSquare: string,
+  piece: string,
+  board: string[][],
+): string => {
   // For now, just return the first candidate
   // In a full implementation, this would use more sophisticated logic
   return candidates[0];
@@ -977,66 +1125,66 @@ const applyMoveToFEN = (fen: string, move: ChessMove): string => {
   const position = parseFEN(fen);
   const [fromRank, fromFile] = squareToCoords(move.from);
   const [toRank, toFile] = squareToCoords(move.to);
-  
+
   // Create new board
-  const newBoard = position.board.map(row => [...row]);
+  const newBoard = position.board.map((row) => [...row]);
   newBoard[toRank][toFile] = newBoard[fromRank][fromFile];
-  newBoard[fromRank][fromFile] = '';
-  
+  newBoard[fromRank][fromFile] = "";
+
   // Handle special moves
-  if (move.special === 'castling') {
+  if (move.special === "castling") {
     if (move.rookFrom && move.rookTo) {
       const [rookFromRank, rookFromFile] = squareToCoords(move.rookFrom);
       const [rookToRank, rookToFile] = squareToCoords(move.rookTo);
       newBoard[rookToRank][rookToFile] = newBoard[rookFromRank][rookFromFile];
-      newBoard[rookFromRank][rookFromFile] = '';
+      newBoard[rookFromRank][rookFromFile] = "";
     }
   }
-  
+
   // Update castling rights
   let newCastling = position.castling;
-  
+
   // Remove castling rights when king moves
-  if (move.piece.toUpperCase() === 'K') {
-    if (move.piece === 'K') {
+  if (move.piece.toUpperCase() === "K") {
+    if (move.piece === "K") {
       // White king moved
-      newCastling = newCastling.replace(/[KQ]/g, '');
+      newCastling = newCastling.replace(/[KQ]/g, "");
     } else {
       // Black king moved
-      newCastling = newCastling.replace(/[kq]/g, '');
+      newCastling = newCastling.replace(/[kq]/g, "");
     }
   }
-  
+
   // Remove castling rights when rooks move
-  if (move.piece.toUpperCase() === 'R') {
-    if (move.from === 'a1') newCastling = newCastling.replace('Q', '');
-    if (move.from === 'h1') newCastling = newCastling.replace('K', '');
-    if (move.from === 'a8') newCastling = newCastling.replace('q', '');
-    if (move.from === 'h8') newCastling = newCastling.replace('k', '');
+  if (move.piece.toUpperCase() === "R") {
+    if (move.from === "a1") newCastling = newCastling.replace("Q", "");
+    if (move.from === "h1") newCastling = newCastling.replace("K", "");
+    if (move.from === "a8") newCastling = newCastling.replace("q", "");
+    if (move.from === "h8") newCastling = newCastling.replace("k", "");
   }
-  
+
   // Update en passant
   let newEnPassant = null;
-  if (move.piece.toUpperCase() === 'P') {
+  if (move.piece.toUpperCase() === "P") {
     const [fromRank, fromFile] = squareToCoords(move.from);
     const [toRank, toFile] = squareToCoords(move.to);
-    
+
     // Check if it's a double pawn move
     if (Math.abs(fromRank - toRank) === 2) {
       const enPassantRank = fromRank + (toRank > fromRank ? 1 : -1);
       newEnPassant = coordsToSquare(enPassantRank, fromFile);
     }
   }
-  
+
   // Update position
   const newPosition: ChessPosition = {
     ...position,
     board: newBoard,
-    turn: position.turn === 'w' ? 'b' : 'w',
-    castling: newCastling || '-',
-    enPassant: newEnPassant
+    turn: position.turn === "w" ? "b" : "w",
+    castling: newCastling || "-",
+    enPassant: newEnPassant,
   };
-  
+
   return toFEN(newPosition);
 };
 
@@ -1074,19 +1222,19 @@ const nextMove = (): void => {
 const applyMovesUpToIndex = (index: number): void => {
   // Reset to initial position
   Board.setPosition(appState.initialFEN);
-  
+
   // Apply moves up to index
   let currentFEN = appState.initialFEN;
   for (let i = 0; i <= index && i < appState.moves.length; i++) {
     const move = appState.moves[i];
     currentFEN = applyMoveToFEN(currentFEN, move);
   }
-  
+
   Board.setPosition(currentFEN);
   updateMoveList();
   updateFENInput();
   updateControlsFromPosition();
-  
+
   // Highlight last move if there is one
   if (index >= 0 && index < appState.moves.length) {
     highlightLastMove(appState.moves[index]);
@@ -1101,16 +1249,16 @@ const applyMovesUpToIndex = (index: number): void => {
 const highlightLastMove = (move: ChessMove): void => {
   // Clear previous highlights
   clearLastMoveHighlight();
-  
+
   // Add highlights for the last move
   const fromSquare = document.querySelector(`[data-square="${move.from}"]`);
   const toSquare = document.querySelector(`[data-square="${move.to}"]`);
-  
+
   if (fromSquare) {
-    fromSquare.classList.add('last-move-from');
+    fromSquare.classList.add("last-move-from");
   }
   if (toSquare) {
-    toSquare.classList.add('last-move-to');
+    toSquare.classList.add("last-move-to");
   }
 };
 
@@ -1125,33 +1273,43 @@ const clearLastMoveHighlight = (): void => {
  * Update move list display
  */
 const updateMoveList = (): void => {
-  const movesPanel = document.getElementById('game-moves');
+  const movesPanel = document.getElementById("game-moves");
   if (!movesPanel) return;
 
   // Get current format settings
-  const notationFormat = (document.querySelector('input[name="notation-format"]:checked') as HTMLInputElement)?.value || 'algebraic';
-  const pieceFormat = (document.querySelector('input[name="piece-format"]:checked') as HTMLInputElement)?.value || 'symbols';
-  
-  // Convert format values to match moveToNotation parameters
-  const notationType = notationFormat === 'algebraic' ? 'short' : 'long';
-  const pieceType = pieceFormat === 'symbols' ? 'unicode' : 'english';
+  const notationFormat =
+    (
+      document.querySelector(
+        'input[name="notation-format"]:checked',
+      ) as HTMLInputElement
+    )?.value || "algebraic";
+  const pieceFormat =
+    (
+      document.querySelector(
+        'input[name="piece-format"]:checked',
+      ) as HTMLInputElement
+    )?.value || "symbols";
 
-  movesPanel.innerHTML = '';
-  
+  // Convert format values to match moveToNotation parameters
+  const notationType = notationFormat === "algebraic" ? "short" : "long";
+  const pieceType = pieceFormat === "symbols" ? "unicode" : "english";
+
+  movesPanel.innerHTML = "";
+
   for (let i = 0; i < appState.moves.length; i += 2) {
-    const moveEntry = document.createElement('div');
-    moveEntry.className = 'move-entry';
-    
+    const moveEntry = document.createElement("div");
+    moveEntry.className = "move-entry";
+
     const moveNumber = Math.floor(i / 2) + 1;
     const whiteMove = appState.moves[i];
     const blackMove = appState.moves[i + 1];
-    
+
     moveEntry.innerHTML = `
       <span class="move-number">${moveNumber}.</span>
-      <span class="move-text ${i === appState.currentMoveIndex ? 'current-move' : ''}">${whiteMove ? moveToNotation(whiteMove, notationType, pieceType, '') : '...'}</span>
-      <span class="move-text ${i + 1 === appState.currentMoveIndex ? 'current-move' : ''}">${blackMove ? moveToNotation(blackMove, notationType, pieceType, '') : ''}</span>
+      <span class="move-text ${i === appState.currentMoveIndex ? "current-move" : ""}">${whiteMove ? moveToNotation(whiteMove, notationType, pieceType, "") : "..."}</span>
+      <span class="move-text ${i + 1 === appState.currentMoveIndex ? "current-move" : ""}">${blackMove ? moveToNotation(blackMove, notationType, pieceType, "") : ""}</span>
     `;
-    
+
     movesPanel.appendChild(moveEntry);
   }
 };
@@ -1160,9 +1318,9 @@ const updateMoveList = (): void => {
  * Update navigation buttons
  */
 const updateNavigationButtons = (): void => {
-  const prevBtn = document.getElementById('prev-move') as HTMLButtonElement;
-  const nextBtn = document.getElementById('next-move') as HTMLButtonElement;
-  
+  const prevBtn = document.getElementById("prev-move") as HTMLButtonElement;
+  const nextBtn = document.getElementById("next-move") as HTMLButtonElement;
+
   if (prevBtn) {
     prevBtn.disabled = appState.currentMoveIndex <= -1;
   }
@@ -1178,29 +1336,29 @@ const updateNavigationButtons = (): void => {
 export {
   // Initialization
   initializeApp,
-  
+
   // State management
   getAppState,
   updateAppState,
-  
+
   // Analysis
   startAnalysis,
   pauseAnalysis,
   stopAnalysis,
-  
+
   // Game management
   addMove,
   importGame,
   previousMove,
   nextMove,
-  
+
   // UI updates
   updateResults,
   updateStatus,
   updateMoveList,
   updateNavigationButtons,
-  
+
   // Move highlighting
   highlightLastMove,
-  clearLastMoveHighlight
+  clearLastMoveHighlight,
 };

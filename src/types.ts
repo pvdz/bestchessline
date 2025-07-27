@@ -1,6 +1,6 @@
 export interface ChessPosition {
   board: string[][];
-  turn: 'w' | 'b';
+  turn: "w" | "b";
   castling: string;
   enPassant: string | null;
   halfMoveClock: number;
@@ -13,7 +13,7 @@ export interface ChessMove {
   piece: string;
   promotion?: string;
   san?: string;
-  special?: 'castling' | 'en-passant';
+  special?: "castling" | "en-passant";
   rookFrom?: string;
   rookTo?: string;
   capturedSquare?: string; // For en passant captures
@@ -46,7 +46,7 @@ export interface StockfishOptions {
 }
 
 // Stockfish API types based on the source code
-// Note: StockfishConfig, StockfishInstance, StockfishConstructor, and global Window interface 
+// Note: StockfishConfig, StockfishInstance, StockfishConstructor, and global Window interface
 // are already defined above, so we don't need to duplicate them here
 
 export interface AnalysisConfig {
@@ -63,8 +63,8 @@ export interface BoardState {
   legalMoves: string[];
 }
 
-export type PieceType = 'P' | 'R' | 'N' | 'B' | 'Q' | 'K';
-export type Color = 'w' | 'b';
+export type PieceType = "P" | "R" | "N" | "B" | "Q" | "K";
+export type Color = "w" | "b";
 
 export interface Piece {
   type: PieceType;
@@ -107,8 +107,8 @@ export interface ProcessedMoveItem {
 }
 
 export interface FormatSettings {
-  notationFormat: 'algebraic' | 'descriptive';
-  pieceFormat: 'symbols' | 'english';
+  notationFormat: "algebraic" | "descriptive";
+  pieceFormat: "symbols" | "english";
 }
 
 export interface MoveItemElement extends HTMLElement {
@@ -212,23 +212,23 @@ export interface StockfishInstance {
   postCustomMessage?(message: string): void;
   addMessageListener(listener: (message: string) => void): void;
   removeMessageListener(listener: (message: string) => void): void;
-  
+
   // Single-threaded specific
   onCustomMessage?: (message: string) => void;
-  
+
   // Utility methods
   terminate(): void;
   print(message: string): void;
   printErr(message: string): void;
-  
+
   // Internal properties
   __IS_SINGLE_THREADED__?: boolean;
   _origOnCustomMessage?: (message: string) => void;
-  
+
   // Queue management
   pauseQueue(): void;
   unpauseQueue(): void;
-  
+
   // Ready state
   ready: Promise<void>;
 }
@@ -242,4 +242,4 @@ declare global {
   interface Window {
     Stockfish: StockfishConstructor;
   }
-} 
+}

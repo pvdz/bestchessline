@@ -1,4 +1,4 @@
-import { AnalysisResult, StockfishOptions } from './types.js';
+import { AnalysisResult, StockfishOptions } from "./types.js";
 export declare class StockfishClient {
     private worker;
     private isReady;

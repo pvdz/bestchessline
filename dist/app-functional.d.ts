@@ -1,4 +1,4 @@
-import { ChessMove, AnalysisResult } from './types.js';
+import { ChessMove, AnalysisResult } from "./types.js";
 /**
  * Application state interface
  */
@@ -49,4 +49,4 @@ declare const updateFENInput: () => void;
  * Update controls from current position
  */
 declare const updateControlsFromPosition: () => void;
-export { getState, updateState, setBoardPosition, getBoardFEN, updateBoardState, renderBoard, updateFENInput, updateControlsFromPosition };
+export { getState, updateState, setBoardPosition, getBoardFEN, updateBoardState, renderBoard, updateFENInput, updateControlsFromPosition, };

@@ -1,6 +1,6 @@
 export interface ChessPosition {
     board: string[][];
-    turn: 'w' | 'b';
+    turn: "w" | "b";
     castling: string;
     enPassant: string | null;
     halfMoveClock: number;
@@ -12,7 +12,7 @@ export interface ChessMove {
     piece: string;
     promotion?: string;
     san?: string;
-    special?: 'castling' | 'en-passant';
+    special?: "castling" | "en-passant";
     rookFrom?: string;
     rookTo?: string;
     capturedSquare?: string;
@@ -52,8 +52,8 @@ export interface BoardState {
     draggedPiece: string | null;
     legalMoves: string[];
 }
-export type PieceType = 'P' | 'R' | 'N' | 'B' | 'Q' | 'K';
-export type Color = 'w' | 'b';
+export type PieceType = "P" | "R" | "N" | "B" | "Q" | "K";
+export type Color = "w" | "b";
 export interface Piece {
     type: PieceType;
     color: Color;
@@ -87,8 +87,8 @@ export interface ProcessedMoveItem {
     time: number;
 }
 export interface FormatSettings {
-    notationFormat: 'algebraic' | 'descriptive';
-    pieceFormat: 'symbols' | 'english';
+    notationFormat: "algebraic" | "descriptive";
+    pieceFormat: "symbols" | "english";
 }
 export interface MoveItemElement extends HTMLElement {
     dataset: {

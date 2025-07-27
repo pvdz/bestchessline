@@ -9,6 +9,7 @@ A comprehensive web-based chess analysis application that provides interactive b
 ## Core Architecture
 
 ### State Management
+
 The application uses global state objects to manage different aspects:
 
 ```typescript
@@ -43,18 +44,21 @@ interface DragState {
 ### Key Components
 
 #### 1. Main Application (`src/main-functional.ts`)
+
 - **Orchestration**: Coordinates board, Stockfish, and UI updates
 - **Event Management**: Handles all user interactions and state changes
 - **Game Logic**: Manages move validation, game import, and navigation
 - **Analysis Control**: Manages Stockfish analysis and result display
 
 #### 2. Chess Board (`src/chess-board-functional.ts`)
+
 - **Interactive Board**: 8x8 grid with drag-and-drop piece movement
 - **Visual Features**: Hover effects, move arrows, square highlighting
 - **Event Handling**: Mouse/touch events with proper delegation
 - **State Synchronization**: Keeps board state in sync with FEN
 
 #### 3. Stockfish Client (`src/stockfish-client-functional.ts`)
+
 - **Engine Integration**: WebAssembly worker communication
 - **UCI Protocol**: Handles Stockfish commands and responses
 - **Analysis Management**: MultiPV, depth control, result parsing
@@ -65,6 +69,7 @@ interface DragState {
 ### 1. Interactive Chess Board
 
 #### Drag-and-Drop System
+
 ```typescript
 // Critical implementation details:
 // - Uses originalPiece and originalSquare for reliable move handling
@@ -74,12 +79,14 @@ interface DragState {
 ```
 
 **Edge Cases Handled:**
+
 - Clicking on piece children (spans, etc.)
 - Board re-rendering losing event listeners
 - Drag ghost positioning and sizing
 - Drop target highlighting during drag
 
 #### Visual Feedback
+
 - **Hover Effects**: Pieces scale and highlight on hover
 - **Move Arrows**: Red arrows show analysis moves on hover
 - **Square Highlighting**: Yellow squares for last move
@@ -88,6 +95,7 @@ interface DragState {
 ### 2. Game Import & Navigation
 
 #### PGN-like Notation Parsing
+
 ```typescript
 // Parsing approach:
 // 1. Clean input (remove comments, annotations, move numbers)
@@ -97,6 +105,7 @@ interface DragState {
 ```
 
 **Complexities Handled:**
+
 - **Comments**: `{This is a comment}` removal
 - **Annotations**: `!`, `?`, `!!`, `??` removal
 - **Move Numbers**: `1.`, `2.`, etc. removal
@@ -104,6 +113,7 @@ interface DragState {
 - **Special Moves**: Castling (`O-O`, `O-O-O`) and en passant
 
 #### Move Disambiguation Algorithm
+
 ```typescript
 // For ambiguous moves like "Bc4" when multiple bishops exist:
 // 1. Find all pieces of the correct type and color
@@ -114,6 +124,7 @@ interface DragState {
 ```
 
 **Path Blocking Logic:**
+
 - **Sliding Pieces**: Rook, Bishop, Queen check path for obstacles
 - **Jumping Pieces**: Knight, King can jump over pieces
 - **Pawns**: Special diagonal capture rules and en passant
@@ -121,6 +132,7 @@ interface DragState {
 ### 3. Stockfish Integration
 
 #### WebAssembly Worker Setup
+
 ```typescript
 // Uses stockfish-nnue-16.wasm for multi-threaded performance
 // Worker communication via postMessage/onmessage
@@ -128,6 +140,7 @@ interface DragState {
 ```
 
 #### Analysis Features
+
 - **MultiPV**: Multiple principal variations
 - **Configurable Depth**: 1-50 ply search depth
 - **Thread Control**: 1-8 CPU threads
@@ -135,6 +148,7 @@ interface DragState {
 - **Real-time Results**: Live updates during analysis
 
 #### Result Processing
+
 ```typescript
 // Parses Stockfish info messages:
 // - depth, nodes, time, score
@@ -146,6 +160,7 @@ interface DragState {
 ### 4. Format Controls & UI
 
 #### Dynamic Formatting
+
 ```typescript
 // Radio button controls affect:
 // - Move list display (game moves)
@@ -154,11 +169,13 @@ interface DragState {
 ```
 
 **Format Options:**
+
 - **Notation**: Algebraic vs Descriptive
 - **Piece Format**: Unicode symbols vs English letters
 - **Conversion**: Maps UI values to internal function parameters
 
 #### Responsive Design
+
 - **4-column Grid**: Board, controls, game moves, analysis results
 - **Mobile Support**: Touch events and responsive breakpoints
 - **Visual Hierarchy**: Clear information architecture
@@ -168,6 +185,7 @@ interface DragState {
 ### 1. State Synchronization
 
 #### FEN ↔ UI Controls ↔ Board State
+
 ```typescript
 // Bidirectional synchronization:
 // - FEN input updates board and controls
@@ -177,6 +195,7 @@ interface DragState {
 ```
 
 **Synchronization Points:**
+
 - Board position changes
 - Control value changes
 - Game navigation
@@ -185,6 +204,7 @@ interface DragState {
 ### 2. Event Handling
 
 #### Event Delegation
+
 ```typescript
 // Uses target.closest('.piece') for reliable piece selection
 // Handles clicks on piece children (spans, etc.)
@@ -192,6 +212,7 @@ interface DragState {
 ```
 
 #### Listener Management
+
 - **Board Re-rendering**: Re-attach listeners after position changes
 - **Dynamic Elements**: Handle newly created analysis results
 - **Memory Management**: Clean up listeners when needed
@@ -199,6 +220,7 @@ interface DragState {
 ### 3. Move Validation System
 
 #### Comprehensive Chess Logic
+
 ```typescript
 // Piece-specific validation:
 // - Pawns: Forward movement, diagonal captures, en passant
@@ -210,6 +232,7 @@ interface DragState {
 ```
 
 #### Special Move Handling
+
 - **Castling**: King and rook movement, rights tracking
 - **En Passant**: Double pawn push detection and capture
 - **Promotion**: Pawn promotion logic (future enhancement)
@@ -217,6 +240,7 @@ interface DragState {
 ### 4. Game State Management
 
 #### Move History
+
 ```typescript
 // Tracks:
 // - moves: ChessMove[] (complete game history)
@@ -225,6 +249,7 @@ interface DragState {
 ```
 
 #### Navigation System
+
 - **Previous/Next**: Step through game moves
 - **Move Highlighting**: Visual indication of current move
 - **State Restoration**: Apply moves up to current index
@@ -235,7 +260,8 @@ interface DragState {
 ### 1. Drag-and-Drop Reliability
 
 **Problem**: Pieces not dragging after board updates
-**Solution**: 
+**Solution**:
+
 - Store `originalPiece` and `originalSquare` in drag state
 - Re-attach event listeners after board re-rendering
 - Use event delegation for reliable piece selection
@@ -244,6 +270,7 @@ interface DragState {
 
 **Problem**: Wrong piece moving (e.g., wrong bishop)
 **Solution**:
+
 - Board-aware move finding using current FEN
 - Path blocking validation for sliding pieces
 - Color matching to ensure correct piece selection
@@ -253,6 +280,7 @@ interface DragState {
 
 **Problem**: UI controls not reflecting board state
 **Solution**:
+
 - Bidirectional update functions
 - Call synchronization after every state change
 - Proper castling rights and en passant tracking
@@ -261,6 +289,7 @@ interface DragState {
 
 **Problem**: Incorrect move parsing from notation
 **Solution**:
+
 - Apply moves sequentially during parsing
 - Use current board state for move validation
 - Comprehensive disambiguation logic
@@ -270,6 +299,7 @@ interface DragState {
 
 **Problem**: Radio buttons not affecting display
 **Solution**:
+
 - Add event listeners for format controls
 - Update both move list and analysis results
 - Real-time format conversion and display
@@ -277,16 +307,19 @@ interface DragState {
 ## Performance Considerations
 
 ### 1. Stockfish Integration
+
 - **Multi-threading**: Uses WebAssembly worker for performance
 - **Memory Management**: Proper worker cleanup
 - **Analysis Limits**: Configurable depth and move counts
 
 ### 2. Board Rendering
+
 - **Efficient Updates**: Only re-render when necessary
 - **Event Optimization**: Proper listener management
 - **Visual Performance**: Smooth animations and transitions
 
 ### 3. Game Import
+
 - **Parsing Efficiency**: Sequential application for accuracy
 - **Memory Usage**: Large games handled properly
 - **UI Responsiveness**: Non-blocking import process
@@ -294,6 +327,7 @@ interface DragState {
 ## Development Workflow
 
 ### Build Process
+
 ```bash
 npm run dev          # TypeScript watch mode
 npm run build        # Build and copy Stockfish files
@@ -301,6 +335,7 @@ npm run serve        # Start development server
 ```
 
 ### Key Files
+
 - **`src/main-functional.ts`** (1112 lines): Main application logic
 - **`src/chess-board-functional.ts`**: Interactive board component
 - **`src/stockfish-client-functional.ts`**: Engine integration
@@ -308,6 +343,7 @@ npm run serve        # Start development server
 - **`src/utils.ts`** (245 lines): Utility functions
 
 ### Testing Approach
+
 - **Manual Testing**: Interactive board and game import
 - **Edge Case Testing**: Ambiguous moves, special moves
 - **Performance Testing**: Large games and deep analysis
@@ -316,21 +352,25 @@ npm run serve        # Start development server
 ## Common Issues & Solutions
 
 ### 1. Stockfish Not Loading
+
 - Check `dist/stockfish.js` and `dist/stockfish-nnue-16.wasm` exist
 - Verify WebAssembly support in browser
 - Check browser console for errors
 
 ### 2. Drag-and-Drop Issues
+
 - Ensure clicking directly on pieces
 - Check event listener attachment
 - Verify drag state management
 
 ### 3. Game Import Problems
+
 - Validate PGN notation syntax
 - Check for proper move format
 - Verify starting position validity
 
 ### 4. Analysis Not Starting
+
 - Ensure valid board position
 - Check analysis parameters
 - Verify Stockfish communication
@@ -338,6 +378,7 @@ npm run serve        # Start development server
 ## Future Enhancements
 
 ### Planned Features
+
 - **PGN Export**: Save games in standard format
 - **Opening Book**: Integrate opening database
 - **Position Evaluation**: Historical evaluation tracking
@@ -345,6 +386,7 @@ npm run serve        # Start development server
 - **Game Annotation**: Add comments and variations
 
 ### Technical Improvements
+
 - **Performance**: Optimize large game handling
 - **Memory**: Better state management for large games
 - **UI**: Enhanced visual feedback and animations
@@ -358,4 +400,4 @@ npm run serve        # Start development server
 4. **UI Synchronization**: Bidirectional updates prevent inconsistencies
 5. **Performance**: WebAssembly provides excellent chess engine performance
 
-The application provides a solid foundation for chess analysis with room for enhancement and expansion. 
+The application provides a solid foundation for chess analysis with room for enhancement and expansion.

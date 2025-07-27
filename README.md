@@ -5,24 +5,28 @@ A comprehensive web-based chess analysis application with interactive board, Sto
 ## Features
 
 ### 🎯 Core Analysis
+
 - **Interactive Chess Board**: Drag and drop pieces with visual feedback and move arrows
 - **Stockfish Integration**: Multi-threaded analysis using Stockfish 16.0.0 WebAssembly
 - **Real-time Results**: Live analysis with scores, depths, and principal variations
 - **Configurable Analysis**: Set depth, move count, threads, and engine options
 
 ### 🎮 Game Management
+
 - **Game Import**: Import games using PGN-like notation with comments and annotations
 - **Move Navigation**: Previous/Next buttons with move highlighting and state management
 - **Game History**: Complete move list with proper formatting and current move indication
 - **Position Controls**: FEN input, current player, castling rights, and en passant
 
 ### 🎨 User Experience
+
 - **Format Controls**: Dynamic notation (Algebraic/Descriptive) and piece format (Symbols/Letters)
 - **Visual Feedback**: Hover effects, move arrows, square highlighting, and last move indication
 - **Responsive Design**: Optimized for desktop and mobile devices
 - **Modern UI**: Clean interface with smooth animations and intuitive controls
 
 ### 🔧 Technical Features
+
 - **Functional Architecture**: Clean, maintainable code using functional programming principles
 - **State Management**: Robust state synchronization between board, controls, and analysis
 - **Move Validation**: Comprehensive chess logic with disambiguation and special moves
@@ -38,22 +42,26 @@ A comprehensive web-based chess analysis application with interactive board, Sto
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd chessmovescoach
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Build the application:
+
 ```bash
 npm run build
 ```
 
 4. Start the development server:
+
 ```bash
 npm run serve
 ```
@@ -63,6 +71,7 @@ npm run serve
 ### Development
 
 For development with auto-recompilation:
+
 ```bash
 npm run dev
 ```
@@ -102,6 +111,7 @@ npm run dev
 ### Understanding Results
 
 Each move result shows:
+
 - **Move Notation**: The move in selected notation format
 - **Score**: Evaluation in centipawns or mate notation
 - **Depth**: Search depth reached
@@ -152,18 +162,21 @@ chessmovescoach/
 ## Key Features
 
 ### Functional Programming
+
 - **Global State Objects**: Clean state management with `appState`, `boardState`, `stockfishState`
 - **Pure Functions**: Modular, testable code with clear separation of concerns
 - **Event Handling**: Robust event delegation and listener management
 - **Type Safety**: Comprehensive TypeScript interfaces and type checking
 
 ### Chess Logic
+
 - **Move Validation**: Comprehensive piece movement rules with path blocking
 - **Disambiguation**: Smart piece selection for ambiguous moves
 - **Special Moves**: Castling and en passant handling
 - **Game Import**: PGN-like notation parsing with comments and annotations
 
 ### UI/UX
+
 - **Drag-and-Drop**: Reliable piece movement with visual feedback
 - **Format Controls**: Dynamic notation and piece format selection
 - **Move Navigation**: Game replay with proper state management
@@ -188,21 +201,25 @@ Requires WebAssembly support for Stockfish engine.
 ## Troubleshooting
 
 ### Stockfish Not Loading
+
 - Check that `dist/stockfish.js` and `dist/stockfish-nnue-16.wasm` exist
 - Ensure browser supports WebAssembly
 - Try refreshing the page
 
 ### Analysis Not Starting
+
 - Verify position is valid
 - Check browser console for errors
 - Ensure all configuration values are valid
 
 ### Drag-and-Drop Issues
+
 - Ensure you're clicking directly on pieces
 - Try refreshing the page if issues persist
 - Check browser console for errors
 
 ### Game Import Problems
+
 - Verify PGN notation is valid
 - Check for proper move syntax
 - Ensure game starts from a valid position
@@ -234,4 +251,4 @@ MIT License - see LICENSE file for details.
 ## Acknowledgments
 
 - [Stockfish](https://stockfishchess.org/) - Chess engine
-- [Chess Unicode Symbols](https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode) - Piece representation 
+- [Chess Unicode Symbols](https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode) - Piece representation

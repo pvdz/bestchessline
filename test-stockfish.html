@@ -1,16 +1,29 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stockfish Test</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        #log { background: #f0f0f0; padding: 10px; height: 400px; overflow-y: scroll; font-family: monospace; white-space: pre-wrap; }
-        button { margin: 5px; padding: 10px; }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #log {
+        background: #f0f0f0;
+        padding: 10px;
+        height: 400px;
+        overflow-y: scroll;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+      button {
+        margin: 5px;
+        padding: 10px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Stockfish Loading Test</h1>
     <button onclick="testStockfish()">Test Stockfish</button>
     <button onclick="testMinimalClient()">Test Minimal Client</button>
@@ -18,84 +31,95 @@
     <div id="log"></div>
 
     <script>
-        function log(message) {
-            const logDiv = document.getElementById('log');
-            const timestamp = new Date().toLocaleTimeString();
-            logDiv.textContent += `[${timestamp}] ${message}\n`;
-            logDiv.scrollTop = logDiv.scrollHeight;
+      function log(message) {
+        const logDiv = document.getElementById("log");
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.textContent += `[${timestamp}] ${message}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      function clearLog() {
+        document.getElementById("log").textContent = "";
+      }
+
+      // Set up exports for UMD module
+      window.exports = {};
+
+      function testStockfish() {
+        log("=== Starting Direct Stockfish Test ===");
+
+        if (typeof window.Stockfish === "undefined") {
+          log("ERROR: window.Stockfish is undefined");
+          return;
         }
 
-        function clearLog() {
-            document.getElementById('log').textContent = '';
+        log("✓ window.Stockfish is available");
+
+        // Test creating a Stockfish instance
+        try {
+          window
+            .Stockfish()
+            .then(function (stockfish) {
+              log("✓ Stockfish instance created successfully");
+              log("✓ Stockfish ready for use");
+            })
+            .catch(function (error) {
+              log("ERROR: Failed to create Stockfish instance: " + error);
+            });
+        } catch (error) {
+          log("ERROR: Exception creating Stockfish: " + error);
         }
+      }
 
-        // Set up exports for UMD module
-        window.exports = {};
+      function testMinimalClient() {
+        log("=== Starting Minimal Client Test ===");
 
-        function testStockfish() {
-            log('=== Starting Direct Stockfish Test ===');
-            
-            if (typeof window.Stockfish === 'undefined') {
-                log('ERROR: window.Stockfish is undefined');
-                return;
-            }
-            
-            log('✓ window.Stockfish is available');
-            
-            // Test creating a Stockfish instance
-            try {
-                window.Stockfish().then(function(stockfish) {
-                    log('✓ Stockfish instance created successfully');
-                    log('✓ Stockfish ready for use');
-                }).catch(function(error) {
-                    log('ERROR: Failed to create Stockfish instance: ' + error);
-                });
-            } catch (error) {
-                log('ERROR: Exception creating Stockfish: ' + error);
-            }
+        try {
+          const client = new MinimalStockfishClient();
+          log("Minimal client created");
+          client
+            .initialize()
+            .then(function () {
+              log("✓ Minimal client initialized successfully");
+            })
+            .catch(function (error) {
+              log("ERROR: Minimal client failed: " + error);
+            });
+        } catch (error) {
+          log("ERROR: Exception in minimal client: " + error);
         }
+      }
 
-        function testMinimalClient() {
-            log('=== Starting Minimal Client Test ===');
-            
-            try {
-                const client = new MinimalStockfishClient();
-                log('Minimal client created');
-                client.initialize().then(function() {
-                    log('✓ Minimal client initialized successfully');
-                }).catch(function(error) {
-                    log('ERROR: Minimal client failed: ' + error);
-                });
-            } catch (error) {
-                log('ERROR: Exception in minimal client: ' + error);
-            }
+      // Check availability on page load
+      window.addEventListener("load", function () {
+        log("Page loaded");
+        log(
+          "Stockfish available: " + (typeof window.Stockfish !== "undefined"),
+        );
+        log(
+          "MinimalStockfishClient available: " +
+            (typeof MinimalStockfishClient !== "undefined"),
+        );
+      });
+
+      // Load Stockfish script
+      var stockfishScript = document.createElement("script");
+      stockfishScript.src = "dist/stockfish.js";
+      stockfishScript.onload = function () {
+        log("✓ Stockfish script loaded successfully");
+        // The UMD module should have set window.exports.Stockfish
+        if (typeof window.exports.Stockfish !== "undefined") {
+          window.Stockfish = window.exports.Stockfish;
+          log("✓ Stockfish exposed to window.Stockfish");
+        } else {
+          log("ERROR: window.exports.Stockfish is undefined");
         }
-
-        // Check availability on page load
-        window.addEventListener('load', function() {
-            log('Page loaded');
-            log('Stockfish available: ' + (typeof window.Stockfish !== 'undefined'));
-            log('MinimalStockfishClient available: ' + (typeof MinimalStockfishClient !== 'undefined'));
-        });
-
-        // Load Stockfish script
-        var stockfishScript = document.createElement('script');
-        stockfishScript.src = 'dist/stockfish.js';
-        stockfishScript.onload = function() {
-            log('✓ Stockfish script loaded successfully');
-            // The UMD module should have set window.exports.Stockfish
-            if (typeof window.exports.Stockfish !== 'undefined') {
-                window.Stockfish = window.exports.Stockfish;
-                log('✓ Stockfish exposed to window.Stockfish');
-            } else {
-                log('ERROR: window.exports.Stockfish is undefined');
-            }
-        };
-        stockfishScript.onerror = function() {
-            log('ERROR: Failed to load stockfish.js');
-        };
-        document.head.appendChild(stockfishScript);
+      };
+      stockfishScript.onerror = function () {
+        log("ERROR: Failed to load stockfish.js");
+      };
+      document.head.appendChild(stockfishScript);
     </script>
     <script src="test-stockfish-client.js"></script>
-</body>
-</html> 
+  </body>
+</html>

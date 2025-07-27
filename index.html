@@ -1,202 +1,231 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Best Chess Line Discovery - by Peter van der Zee, July 2025</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-</head>
-<body>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  </head>
+  <body>
     <div class="container">
-        <h1>Best Chess Line Discovery</h1>
-        <small>
-            A simple tool to discover the next best move using Stockfish (v16). You can select how many lines 
-            Stockfish should report, which may be different for the current player (only the best move for white 
-            but best 5 responses for black, etc.). Peter van der Zee, &copy; <a href="https://pvdz.ee" target="_blank">pvdz.ee</a> , July 2025.
+      <h1>Best Chess Line Discovery</h1>
+      <small>
+        A simple tool to discover the next best move using Stockfish (v16). You
+        can select how many lines Stockfish should report, which may be
+        different for the current player (only the best move for white but best
+        5 responses for black, etc.). Peter van der Zee, &copy;
+        <a href="https://pvdz.ee" target="_blank">pvdz.ee</a> , July 2025.
+      </small>
 
-        </small>
-        
-        <div class="main-content">
-            <!-- Chess Board -->
-            <div class="board-section">
-                <h2>Chess Board</h2>
-                <div id="chess-board"></div>
-                <div class="current-player-control">
-                    <label>Current Player:</label>
-                    <div class="radio-group">
-                        <label class="radio-label">
-                            <input type="radio" name="current-player" value="w" checked>
-                            <span>White</span>
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="current-player" value="b">
-                            <span>Black</span>
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="board-controls">
-                    <button id="reset-board">Reset</button>
-                    <button id="clear-board">Clear</button>
-                    <div class="fen-input">
-                        <input type="text" id="fen-input" placeholder="Enter FEN position..." value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
-                        <button id="load-fen">Load FEN</button>
-                    </div>
-                    
-                    <div class="game-import">
-                        <textarea id="game-notation" placeholder="Enter game notation (e.g., 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6)">
+      <div class="main-content">
+        <!-- Chess Board -->
+        <div class="board-section">
+          <h2>Chess Board</h2>
+          <div id="chess-board"></div>
+          <div class="current-player-control">
+            <label>Current Player:</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="current-player" value="w" checked />
+                <span>White</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="current-player" value="b" />
+                <span>Black</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="board-controls">
+            <button id="reset-board">Reset</button>
+            <button id="clear-board">Clear</button>
+            <div class="fen-input">
+              <input
+                type="text"
+                id="fen-input"
+                placeholder="Enter FEN position..."
+                value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+              />
+              <button id="load-fen">Load FEN</button>
+            </div>
+
+            <div class="game-import">
+              <textarea
+                id="game-notation"
+                placeholder="Enter game notation (e.g., 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6)"
+              >
 1.e4 e5 2.f4 exf4 3.Bc4 Qh4+ 4.Kf1 b5 5.Bxb5 Nf6 6.Nf3 Qh6
 7.d3 Nh5 8.Nh4 Qg5 9.Nf5 c6 10.g4 Nf6 11.Rg1 cxb5 12.h4 Qg6
 13.h5 Qg5 14.Qf3 Ng8 15.Bxf4 Qf6 16.Nc3 Bc5 17.Nd5 Qxb2 18.Bd6
 Bxg1 {suggestion here like 19. e1 e2 etc} 19. e5 Qxa1+ 20. Ke2
 Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
-                        </textarea>
-                        <button id="import-game">Import Game</button>
-                    </div>
+                        </textarea
+              >
+              <button id="import-game">Import Game</button>
+            </div>
+          </div>
+
+          <div class="position-controls">
+            <div class="control-row">
+              <div class="control-group castling">
+                <label>White Castling:</label>
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="white-kingside" checked />
+                    <span>Kingside (K)</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="white-queenside" checked />
+                    <span>Queenside (Q)</span>
+                  </label>
                 </div>
-                
-                <div class="position-controls">
-                    <div class="control-row">
-                        <div class="control-group castling">
-                            <label>White Castling:</label>
-                            <div class="checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="white-kingside" checked>
-                                    <span>Kingside (K)</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="white-queenside" checked>
-                                    <span>Queenside (Q)</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-row">
-                        <div class="control-group castling">
-                            <label>Black Castling:</label>
-                            <div class="checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="black-kingside" checked>
-                                    <span>Kingside (k)</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="black-queenside" checked>
-                                    <span>Queenside (q)</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-row">
-                        <div class="control-group en-passant">
-                            <label for="en-passant">En Passant:</label>
-                            <input type="text" id="en-passant" placeholder="e.g., e3, f6, or -" maxlength="2">
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
 
-            <!-- Analysis Controls -->
-            <div class="controls-section">
-                <h2>Controls</h2>
-                <div class="control-group">
-                    <label for="max-depth">Max Depth:</label>
-                    <input type="number" id="max-depth" min="1" max="50" value="20">
+            <div class="control-row">
+              <div class="control-group castling">
+                <label>Black Castling:</label>
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="black-kingside" checked />
+                    <span>Kingside (k)</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="black-queenside" checked />
+                    <span>Queenside (q)</span>
+                  </label>
                 </div>
-                <div class="control-group">
-                    <label for="white-moves">White Moves:</label>
-                    <input type="number" id="white-moves" min="1" max="20" value="5">
-                </div>
-                <div class="control-group">
-                    <label for="black-moves">Black Moves:</label>
-                    <input type="number" id="black-moves" min="1" max="20" value="5">
-                </div>
-                <div class="control-group">
-                    <label for="threads">Threads:</label>
-                    <input type="number" id="threads" min="1" max="8" value="1">
-                </div>
-                
-                <div class="analysis-controls">
-                    <button id="start-analysis">Start</button>
-                    <button id="pause-analysis" disabled>Pause</button>
-                    <button id="stop-analysis" disabled>Stop</button>
-                </div>
-                
-                <div class="status">
-                    <p id="status">Ready</p>
-                </div>
+              </div>
             </div>
 
-            <!-- Game Moves -->
-            <div class="game-moves-section">
-                <h2>Game Moves</h2>
-                <div class="game-moves-content">
-                    <div class="game-moves-controls">
-                        <button id="prev-move" disabled>← Previous</button>
-                        <button id="next-move" disabled>Next →</button>
-                    </div>
-                    <div id="game-moves" class="moves-panel"></div>
-                </div>
+            <div class="control-row">
+              <div class="control-group en-passant">
+                <label for="en-passant">En Passant:</label>
+                <input
+                  type="text"
+                  id="en-passant"
+                  placeholder="e.g., e3, f6, or -"
+                  maxlength="2"
+                />
+              </div>
             </div>
-
-            <!-- Analysis Results -->
-            <div class="results-section">
-                <h2>Analysis Results</h2>
-                <div class="results-controls">
-                    <div class="control-group">
-                        <label>Results Format:</label>
-                        <div class="radio-row">
-                            <div class="radio-column">
-                                <label class="radio-label">
-                                    <input type="radio" name="notation-format" value="algebraic" checked>
-                                    <span>Algebraic</span>
-                                </label>
-                                <label class="radio-label">
-                                    <input type="radio" name="notation-format" value="descriptive">
-                                    <span>Descriptive</span>
-                                </label>
-                            </div>
-                            <div class="radio-column">
-                                <label class="radio-label">
-                                    <input type="radio" name="piece-format" value="symbols" checked>
-                                    <span>Symbols</span>
-                                </label>
-                                <label class="radio-label">
-                                    <input type="radio" name="piece-format" value="letters">
-                                    <span>Letters</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="analysis-results" class="results-panel"></div>
-            </div>
+          </div>
         </div>
+
+        <!-- Analysis Controls -->
+        <div class="controls-section">
+          <h2>Controls</h2>
+          <div class="control-group">
+            <label for="max-depth">Max Depth:</label>
+            <input type="number" id="max-depth" min="1" max="50" value="20" />
+          </div>
+          <div class="control-group">
+            <label for="white-moves">White Moves:</label>
+            <input type="number" id="white-moves" min="1" max="20" value="5" />
+          </div>
+          <div class="control-group">
+            <label for="black-moves">Black Moves:</label>
+            <input type="number" id="black-moves" min="1" max="20" value="5" />
+          </div>
+          <div class="control-group">
+            <label for="threads">Threads:</label>
+            <input type="number" id="threads" min="1" max="8" value="1" />
+          </div>
+
+          <div class="analysis-controls">
+            <button id="start-analysis">Start</button>
+            <button id="pause-analysis" disabled>Pause</button>
+            <button id="stop-analysis" disabled>Stop</button>
+          </div>
+
+          <div class="status">
+            <p id="status">Ready</p>
+          </div>
+        </div>
+
+        <!-- Game Moves -->
+        <div class="game-moves-section">
+          <h2>Game Moves</h2>
+          <div class="game-moves-content">
+            <div class="game-moves-controls">
+              <button id="prev-move" disabled>← Previous</button>
+              <button id="next-move" disabled>Next →</button>
+            </div>
+            <div id="game-moves" class="moves-panel"></div>
+          </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div class="results-section">
+          <h2>Analysis Results</h2>
+          <div class="results-controls">
+            <div class="control-group">
+              <label>Results Format:</label>
+              <div class="radio-row">
+                <div class="radio-column">
+                  <label class="radio-label">
+                    <input
+                      type="radio"
+                      name="notation-format"
+                      value="algebraic"
+                      checked
+                    />
+                    <span>Algebraic</span>
+                  </label>
+                  <label class="radio-label">
+                    <input
+                      type="radio"
+                      name="notation-format"
+                      value="descriptive"
+                    />
+                    <span>Descriptive</span>
+                  </label>
+                </div>
+                <div class="radio-column">
+                  <label class="radio-label">
+                    <input
+                      type="radio"
+                      name="piece-format"
+                      value="symbols"
+                      checked
+                    />
+                    <span>Symbols</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="piece-format" value="letters" />
+                    <span>Letters</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="analysis-results" class="results-panel"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Stockfish loading script -->
     <script>
-        // Load Stockfish WebAssembly module
-        window.exports = {};
-        window.Stockfish = window.exports.Stockfish;
+      // Load Stockfish WebAssembly module
+      window.exports = {};
+      window.Stockfish = window.exports.Stockfish;
     </script>
     <script src="dist/stockfish.js"></script>
-    
+
     <!-- Application script -->
     <script type="module">
-        import { initializeApp } from './dist/main-functional.js';
-        
-        // Initialize the application when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                initializeApp();
-                console.log('Functional Chess Analysis App initialized successfully');
-            } catch (error) {
-                console.error('Failed to initialize application:', error);
-            }
-        });
+      import { initializeApp } from "./dist/main-functional.js";
+
+      // Initialize the application when DOM is loaded
+      document.addEventListener("DOMContentLoaded", () => {
+        try {
+          initializeApp();
+          console.log("Functional Chess Analysis App initialized successfully");
+        } catch (error) {
+          console.error("Failed to initialize application:", error);
+        }
+      });
     </script>
-</body>
-</html> 
+  </body>
+</html>
