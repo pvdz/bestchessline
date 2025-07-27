@@ -244,6 +244,10 @@ export class ChessBoard {
             if (this.state.position.turn === 'w') {
                 this.state.position.fullMoveNumber++;
             }
+            // Notify move made
+            if (this.onMoveMade) {
+                this.onMoveMade({ from, to, piece });
+            }
             // Notify position change
             if (this.onPositionChange) {
                 this.onPositionChange(this.state.position);
@@ -312,6 +316,9 @@ export class ChessBoard {
     }
     setOnPositionChange(callback) {
         this.onPositionChange = callback;
+    }
+    setOnMoveMade(callback) {
+        this.onMoveMade = callback;
     }
     showMoveArrow(from, to, piece) {
         // Remove any existing arrows

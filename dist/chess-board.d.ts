@@ -1,8 +1,9 @@
-import { ChessPosition } from './types.js';
+import { ChessPosition, ChessMove } from './types.js';
 export declare class ChessBoard {
     private element;
     private state;
     private onPositionChange?;
+    private onMoveMade?;
     private dragElement;
     private dragOffset;
     private isDragging;
@@ -28,6 +29,7 @@ export declare class ChessBoard {
     getPosition(): ChessPosition;
     getFEN(): string;
     setOnPositionChange(callback: (position: ChessPosition) => void): void;
+    setOnMoveMade(callback: (move: ChessMove) => void): void;
     showMoveArrow(from: string, to: string, piece: string): void;
     hideMoveArrow(): void;
     private positionArrow;

@@ -9,8 +9,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>Chess Best Line Discovery</h1>
-        <p>A simple tool to discover the next best move using Stockfish (v16). You can select how many lines Stockfish should report, which may be different for the current player (only the best move for white but best 5 responses for black, etc.).</p>
+        <h1>Best Chess Line Discovery</h1>
+        <small>
+            A simple tool to discover the next best move using Stockfish (v16). You can select how many lines 
+            Stockfish should report, which may be different for the current player (only the best move for white 
+            but best 5 responses for black, etc.). Peter van der Zee, &copy; <a href="https://pvdz.ee" target="_blank">pvdz.ee</a> , July 2025.
+
+        </small>
         
         <div class="main-content">
             <!-- Chess Board -->
@@ -35,8 +40,19 @@
                     <button id="reset-board">Reset</button>
                     <button id="clear-board">Clear</button>
                     <div class="fen-input">
-                        <input type="text" id="fen-input" placeholder="Enter FEN position">
-                        <button id="load-fen">Load</button>
+                        <input type="text" id="fen-input" placeholder="Enter FEN position..." value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
+                        <button id="load-fen">Load FEN</button>
+                    </div>
+                    
+                    <div class="game-import">
+                        <textarea id="game-notation" placeholder="Enter game notation (e.g., 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6)">
+1.e4 e5 2.f4 exf4 3.Bc4 Qh4+ 4.Kf1 b5 5.Bxb5 Nf6 6.Nf3 Qh6
+7.d3 Nh5 8.Nh4 Qg5 9.Nf5 c6 10.g4 Nf6 11.Rg1 cxb5 12.h4 Qg6
+13.h5 Qg5 14.Qf3 Ng8 15.Bxf4 Qf6 16.Nc3 Bc5 17.Nd5 Qxb2 18.Bd6
+Bxg1 {suggestion here like 19. e1 e2 etc} 19. e5 Qxa1+ 20. Ke2
+Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
+                        </textarea>
+                        <button id="import-game">Import Game</button>
                     </div>
                 </div>
                 
@@ -114,6 +130,16 @@
                 
                 <div class="status">
                     <p id="status">Ready</p>
+                </div>
+            </div>
+
+            <!-- Game Moves -->
+            <div class="game-moves-section">
+                <h2>Game Moves</h2>
+                <div class="game-moves-content">
+                    <div id="game-moves" class="moves-panel">
+                        <p>No moves yet.</p>
+                    </div>
                 </div>
             </div>
 

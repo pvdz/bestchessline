@@ -5,6 +5,7 @@ export class ChessBoard {
   private element: HTMLElement;
   private state: BoardState;
   private onPositionChange?: (position: ChessPosition) => void;
+  private onMoveMade?: (move: ChessMove) => void;
   private dragElement: HTMLElement | null = null;
   private dragOffset = { x: 0, y: 0 };
   private isDragging = false;
@@ -301,6 +302,11 @@ export class ChessBoard {
         this.state.position.fullMoveNumber++;
       }
 
+      // Notify move made
+      if (this.onMoveMade) {
+        this.onMoveMade({ from, to, piece });
+      }
+
       // Notify position change
       if (this.onPositionChange) {
         this.onPositionChange(this.state.position);
@@ -387,6 +393,10 @@ export class ChessBoard {
 
   public setOnPositionChange(callback: (position: ChessPosition) => void): void {
     this.onPositionChange = callback;
+  }
+
+  public setOnMoveMade(callback: (move: ChessMove) => void): void {
+    this.onMoveMade = callback;
   }
 
   public showMoveArrow(from: string, to: string, piece: string): void {
