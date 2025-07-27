@@ -8,7 +8,7 @@ export declare function getPieceColor(piece: string): Color | null;
 export declare function getPieceType(piece: string): PieceType | null;
 export declare function formatScore(score: number): string;
 export declare function formatTime(ms: number): string;
-export declare function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void;
+export declare function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void;
 export declare function moveToNotation(move: ChessMove, format?: 'short' | 'long', pieceFormat?: 'unicode' | 'english', fen?: string): string;
 export declare function getPieceSymbol(type: PieceType, color: Color, format?: 'unicode' | 'english'): string;
 export declare function pvToNotation(pv: ChessMove[], format?: 'short' | 'long', pieceFormat?: 'unicode' | 'english', fen?: string): string;
@@ -24,9 +24,9 @@ export declare function isLoggingEnabled(): boolean;
  * Logging utility function
  * @param args - Arguments to pass to console.log
  */
-export declare function log(...args: any[]): void;
+export declare function log(...args: unknown[]): void;
 /**
  * Error logging utility function
  * @param args - Arguments to pass to console.error
  */
-export declare function logError(...args: any[]): void;
+export declare function logError(...args: unknown[]): void;

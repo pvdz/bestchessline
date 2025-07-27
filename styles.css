@@ -504,11 +504,20 @@ h2 {
     border-radius: 4px;
     padding: 8px;
     margin-bottom: 6px;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
 }
 
 .move-item:hover {
     background: #e9ecef;
+    border-color: #adb5bd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.move-item:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .move-header {
@@ -546,7 +555,12 @@ h2 {
     gap: 8px;
 }
 
-.depth-info,
+.depth-info {
+    cursor: help;
+    color: #1e3a8a;
+    font-weight: bold;
+}
+
 .nodes-info,
 .time-info {
     cursor: help;

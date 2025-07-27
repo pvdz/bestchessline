@@ -158,10 +158,7 @@ class ChessAnalysisApp {
         const whiteMoves = parseInt(document.getElementById('white-moves').value);
         return {
             depth: parseInt(document.getElementById('max-depth').value),
-            whiteMoves: whiteMoves,
-            blackMoves: parseInt(document.getElementById('black-moves').value),
             threads: parseInt(document.getElementById('threads').value),
-            hash: parseInt(document.getElementById('hash-size').value),
             multiPV: whiteMoves // Set MultiPV to the number of moves we want
         };
     }

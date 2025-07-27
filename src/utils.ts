@@ -127,7 +127,7 @@ export function formatTime(ms: number): string {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
 }
 
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -268,7 +268,7 @@ export function isLoggingEnabled(): boolean {
  * Logging utility function
  * @param args - Arguments to pass to console.log
  */
-export function log(...args: any[]): void {
+export function log(...args: unknown[]): void {
   if (loggingEnabled) {
     console.log(...args);
   }
@@ -278,7 +278,7 @@ export function log(...args: any[]): void {
  * Error logging utility function
  * @param args - Arguments to pass to console.error
  */
-export function logError(...args: any[]): void {
+export function logError(...args: unknown[]): void {
   if (loggingEnabled) {
     console.error(...args);
   }

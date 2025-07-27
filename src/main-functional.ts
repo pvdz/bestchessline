@@ -1,4 +1,4 @@
-import { ChessMove, AnalysisResult, ChessPosition } from './types.js';
+import { ChessMove, AnalysisResult, ChessPosition, AnalysisOptions, AnalysisMove } from './types.js';
 import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, setLoggingEnabled } from './utils.js';
 import * as Board from './chess-board-functional.js';
 import * as Stockfish from './stockfish-client-functional.js';
@@ -292,7 +292,7 @@ const stopAnalysis = (): void => {
 /**
  * Get analysis options from UI
  */
-const getAnalysisOptions = (): any => {
+const getAnalysisOptions = (): AnalysisOptions => {
   const maxDepth = (document.getElementById('max-depth') as HTMLInputElement)?.value || '20';
   const whiteMoves = (document.getElementById('white-moves') as HTMLInputElement)?.value || '5';
   const blackMoves = (document.getElementById('black-moves') as HTMLInputElement)?.value || '5';
@@ -335,7 +335,7 @@ const updateResults = (result: AnalysisResult): void => {
 /**
  * Update results panel
  */
-const updateResultsPanel = (moves: any[]): void => {
+const updateResultsPanel = (moves: AnalysisMove[]): void => {
   const resultsPanel = document.getElementById('analysis-results');
   if (!resultsPanel) return;
 

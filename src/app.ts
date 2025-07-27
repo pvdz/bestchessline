@@ -1,13 +1,13 @@
 import { ChessBoard } from './chess-board.js';
 import { StockfishClient } from './stockfish-client.js';
 import { moveToNotation, pvToNotation } from './utils.js';
-import { ChessMove } from './types.js';
+import { ChessMove, AnalysisResult, AnalysisOptions, AnalysisMove, ProcessedMoveItem } from './types.js';
 
 class ChessAnalysisApp {
   private board: ChessBoard;
   private stockfish: StockfishClient;
   private isAnalyzing = false;
-  private currentResults: any = null;
+  private currentResults: AnalysisResult | null = null;
   private moves: ChessMove[] = [];
   private initialFEN: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   private currentMoveIndex: number = -1;
@@ -171,14 +171,11 @@ class ChessAnalysisApp {
     this.updateStatus('Analysis stopped');
   }
 
-  private getAnalysisOptions(): any {
+  private getAnalysisOptions(): AnalysisOptions {
     const whiteMoves = parseInt((document.getElementById('white-moves') as HTMLInputElement).value);
     return {
       depth: parseInt((document.getElementById('max-depth') as HTMLInputElement).value),
-      whiteMoves: whiteMoves,
-      blackMoves: parseInt((document.getElementById('black-moves') as HTMLInputElement).value),
       threads: parseInt((document.getElementById('threads') as HTMLInputElement).value),
-      hash: parseInt((document.getElementById('hash-size') as HTMLInputElement).value),
       multiPV: whiteMoves // Set MultiPV to the number of moves we want
     };
   }
@@ -200,7 +197,7 @@ class ChessAnalysisApp {
     }
   }
 
-  private updateResults(result: any): void {
+  private updateResults(result: AnalysisResult): void {
     if (!result || !result.moves) {
       return;
     }
@@ -209,7 +206,7 @@ class ChessAnalysisApp {
     const pieceFormat = (document.querySelector('input[name="piece-format"]:checked') as HTMLInputElement)?.value || 'unicode';
 
     // Convert all moves to the proper format
-    const moves = result.moves.map((move: any) => {
+    const moves = result.moves.map((move: AnalysisMove) => {
       console.log('Processing move:', move);
       console.log('PV before formatting:', move.pv);
       
@@ -225,10 +222,10 @@ class ChessAnalysisApp {
     });
 
     // Filter to show each individual piece only once (keep the best move for each piece)
-    const uniqueMoves = moves.reduce((acc: any[], move: any) => {
+    const uniqueMoves = moves.reduce((acc: ProcessedMoveItem[], move: ProcessedMoveItem) => {
       // Create a unique key for each piece based on the move's starting square
       const pieceKey = `${move.move.from}-${move.move.piece}`;
-      const existingIndex = acc.findIndex((m: any) => {
+      const existingIndex = acc.findIndex((m: ProcessedMoveItem) => {
         const existingKey = `${m.move.from}-${m.move.piece}`;
         return existingKey === pieceKey;
       });
@@ -247,13 +244,13 @@ class ChessAnalysisApp {
     }, []);
 
     // Sort by score to maintain best moves first
-    uniqueMoves.sort((a: any, b: any) => b.score - a.score);
+    uniqueMoves.sort((a: ProcessedMoveItem, b: ProcessedMoveItem) => b.score - a.score);
 
     // Update the single results panel with all moves
     this.updateResultsPanel(uniqueMoves);
   }
 
-  private updateResultsPanel(moves: any[]): void {
+  private updateResultsPanel(moves: ProcessedMoveItem[]): void {
     const panel = document.getElementById('analysis-results');
     if (!panel) return;
 
