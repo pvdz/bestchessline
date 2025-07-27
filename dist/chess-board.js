@@ -342,6 +342,13 @@ export class ChessBoard {
             existingArrow.remove();
         }
     }
+    clearLastMoveHighlight() {
+        // Remove highlight classes from all squares
+        const highlightedSquares = this.element.querySelectorAll('.last-move-from, .last-move-to');
+        highlightedSquares.forEach(square => {
+            square.classList.remove('last-move-from', 'last-move-to');
+        });
+    }
     positionArrow(arrow, from, to) {
         const fromSquare = this.element.querySelector(`[data-square="${from}"]`);
         const toSquare = this.element.querySelector(`[data-square="${to}"]`);

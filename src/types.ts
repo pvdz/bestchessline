@@ -13,6 +13,10 @@ export interface ChessMove {
   piece: string;
   promotion?: string;
   san?: string;
+  special?: 'castling' | 'en-passant';
+  rookFrom?: string;
+  rookTo?: string;
+  capturedSquare?: string; // For en passant captures
 }
 
 export interface AnalysisMove {

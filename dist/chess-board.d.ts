@@ -32,6 +32,7 @@ export declare class ChessBoard {
     setOnMoveMade(callback: (move: ChessMove) => void): void;
     showMoveArrow(from: string, to: string, piece: string): void;
     hideMoveArrow(): void;
+    clearLastMoveHighlight(): void;
     private positionArrow;
     destroy(): void;
 }
