@@ -1,6 +1,7 @@
-import { moveToNotation, pvToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName, } from "./utils.js";
+import { moveToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName, } from "./utils.js";
 import * as Board from "./chess-board-functional.js";
 import * as Stockfish from "./stockfish-client-functional.js";
+import { validateMove } from "./move-validator.js";
 /**
  * Application state instance
  */
@@ -10,6 +11,9 @@ let appState = {
     currentMoveIndex: -1,
     isAnalyzing: false,
     currentResults: null,
+    branchMoves: [],
+    branchStartIndex: -1,
+    isInBranch: false,
 };
 /**
  * Update application state
@@ -265,6 +269,61 @@ const updateResults = (result) => {
     updateResultsPanel(result.moves);
     updateStatus(`Analysis complete: ${result.moves.length} moves found`);
 };
+const formatPVWithEffects = (pv, position, format, pieceFormat) => {
+    if (pv.length === 0)
+        return "";
+    // Get current game state to determine starting move number
+    const appState = getAppState();
+    const currentMoveCount = appState.currentMoveIndex + 1; // +1 because currentMoveIndex is 0-based
+    const currentMoveNumber = Math.floor(currentMoveCount / 2) + 1;
+    const isBlackTurn = currentMoveCount % 2 === 1; // Black's turn if odd number of moves
+    // Process moves in the context of the actual position
+    let currentPosition = parseFEN(position);
+    const moves = pv.map((move, index) => {
+        // Validate each move against the current position
+        const validation = validateMove(currentPosition, move);
+        // Update the move with effect information
+        const enhancedMove = {
+            ...move,
+            effect: validation.effect,
+        };
+        const notation = moveToNotation(enhancedMove, format, pieceFormat, toFEN(currentPosition));
+        // Apply the move to get the position for the next move
+        if (validation.isValid) {
+            const newFEN = applyMoveToFEN(toFEN(currentPosition), move);
+            currentPosition = parseFEN(newFEN);
+        }
+        // Create clickable move with data attributes
+        return `<span class="pv-move" data-move-from="${move.from}" data-move-to="${move.to}" data-move-piece="${move.piece}" data-original-position="${position}" data-move-index="${index}" title="Click to apply all moves up to this point">${notation}</span>`;
+    });
+    if (format === "long") {
+        // Long format: just show the moves with piece symbols
+        return moves.join(" ");
+    }
+    else {
+        // Short format: standard game notation with move numbers
+        let result = "";
+        for (let i = 0; i < moves.length; i++) {
+            if (i % 2 === 0) {
+                // White move
+                const moveNumber = currentMoveNumber + Math.floor(i / 2);
+                result += `${moveNumber}.${moves[i]}`;
+            }
+            else {
+                // Black move
+                result += ` ${moves[i]}`;
+            }
+            // Add line breaks every 6 moves (3 full moves)
+            if ((i + 1) % 6 === 0 && i < moves.length - 1) {
+                result += "\n";
+            }
+            else if (i < moves.length - 1) {
+                result += " ";
+            }
+        }
+        return result;
+    }
+};
 /**
  * Update results panel
  */
@@ -280,6 +339,14 @@ const updateResultsPanel = (moves) => {
     const pieceType = pieceFormat === "symbols" ? "unicode" : "english";
     resultsPanel.innerHTML = "";
     moves.forEach((move, index) => {
+        // Determine move effects if not already present
+        if (!move.move.effect) {
+            const position = parseFEN(Board.getFEN());
+            const validationResult = validateMove(position, move.move);
+            if (validationResult.isValid) {
+                move.move.effect = validationResult.effect;
+            }
+        }
         const moveItem = document.createElement("div");
         moveItem.className = "move-item";
         moveItem.dataset.moveFrom = move.move.from;
@@ -288,7 +355,7 @@ const updateResultsPanel = (moves) => {
         const rank = index + 1;
         const notation = moveToNotation(move.move, notationType, pieceType, Board.getFEN());
         const score = move.score > 0 ? `+${move.score / 100}` : `${move.score / 100}`;
-        const pv = pvToNotation(move.pv);
+        const pv = formatPVWithEffects(move.pv, Board.getFEN(), notationType, pieceType);
         // Add multipv indicator if this is not the first variation
         const multipvIndicator = move.multipv && move.multipv > 1 ? ` (${move.multipv})` : "";
         moveItem.innerHTML = `
@@ -313,11 +380,20 @@ const updateResultsPanel = (moves) => {
         resultsPanel.appendChild(moveItem);
     });
     addMoveHoverListeners();
+    addPVClickListeners();
 };
 /**
  * Make a move from analysis results
  */
 const makeAnalysisMove = (move) => {
+    // Determine move effects if not already present
+    if (!move.effect) {
+        const position = parseFEN(Board.getFEN());
+        const validationResult = validateMove(position, move);
+        if (validationResult.isValid) {
+            move.effect = validationResult.effect;
+        }
+    }
     // Add the move to the game history
     addMove(move);
     // Update the board position
@@ -369,6 +445,115 @@ const addMoveHoverListeners = () => {
         });
         item.addEventListener("mouseleave", () => {
             Board.hideMoveArrow();
+        });
+    });
+};
+/**
+ * Create a branch from the current position
+ */
+const createBranch = (branchMoves, originalPosition) => {
+    const appState = getAppState();
+    // Find the move index that corresponds to the original position
+    let branchStartIndex = -1;
+    // Apply moves from initial position to find where we branched from
+    let currentFEN = appState.initialFEN;
+    for (let i = 0; i < appState.moves.length; i++) {
+        if (currentFEN === originalPosition) {
+            branchStartIndex = i - 1; // The move before this position
+            break;
+        }
+        currentFEN = applyMoveToFEN(currentFEN, appState.moves[i]);
+    }
+    // If we didn't find it, use the current move index
+    if (branchStartIndex === -1) {
+        branchStartIndex = appState.currentMoveIndex;
+    }
+    updateAppState({
+        branchMoves,
+        branchStartIndex,
+        isInBranch: true,
+    });
+    updateMoveList();
+};
+/**
+ * Clear the current branch
+ */
+const clearBranch = () => {
+    updateAppState({
+        branchMoves: [],
+        branchStartIndex: -1,
+        isInBranch: false,
+    });
+    updateMoveList();
+};
+/**
+ * Update branch moves
+ */
+const updateBranch = (branchMoves) => {
+    if (appState.isInBranch) {
+        updateAppState({
+            branchMoves,
+        });
+        updateMoveList();
+    }
+};
+/**
+ * Add PV move click listeners
+ */
+const addPVClickListeners = () => {
+    const pvMoves = document.querySelectorAll(".pv-move");
+    pvMoves.forEach((move) => {
+        move.addEventListener("click", (e) => {
+            e.stopPropagation(); // Prevent triggering the parent move-item click
+            const target = e.currentTarget;
+            const originalPosition = target.dataset.originalPosition;
+            const moveIndex = target.dataset.moveIndex;
+            if (originalPosition && moveIndex !== undefined) {
+                // Get the PV moves from the current analysis results
+                const appState = getAppState();
+                const currentResults = appState.currentResults;
+                if (currentResults && currentResults.moves.length > 0) {
+                    // Find the PV moves from the first analysis result
+                    const pvMoves = currentResults.moves[0].pv;
+                    const clickedIndex = parseInt(moveIndex);
+                    if (pvMoves && clickedIndex < pvMoves.length) {
+                        const appState = getAppState();
+                        const isAtLastMove = appState.currentMoveIndex === appState.moves.length - 1;
+                        if (isAtLastMove) {
+                            // At the last move - append to the main game list
+                            const moveToAdd = pvMoves[clickedIndex];
+                            addMove(moveToAdd);
+                        }
+                        else {
+                            // Not at the last move - create or update a branch
+                            // Only include moves that come after the current position
+                            const movesAfterCurrent = pvMoves.slice(0, clickedIndex + 1);
+                            if (appState.isInBranch) {
+                                // Update existing branch
+                                updateBranch(movesAfterCurrent);
+                            }
+                            else {
+                                // Create new branch
+                                createBranch(movesAfterCurrent, originalPosition);
+                            }
+                        }
+                        // Apply all moves up to and including the clicked move
+                        let currentFEN = originalPosition;
+                        for (let i = 0; i <= clickedIndex; i++) {
+                            const move = pvMoves[i];
+                            currentFEN = applyMoveToFEN(currentFEN, move);
+                        }
+                        // Set the board to this position
+                        Board.setPosition(currentFEN);
+                        // Update the FEN input
+                        updateFENInput();
+                        // Highlight the last move in the branch
+                        if (clickedIndex >= 0) {
+                            highlightLastMove(pvMoves[clickedIndex]);
+                        }
+                    }
+                }
+            }
         });
     });
 };
@@ -472,6 +657,14 @@ const updatePositionFromControls = () => {
  * Add move to game history
  */
 const addMove = (move) => {
+    // Determine move effects if not already present
+    if (!move.effect) {
+        const position = parseFEN(Board.getFEN());
+        const validationResult = validateMove(position, move);
+        if (validationResult.isValid) {
+            move.effect = validationResult.effect;
+        }
+    }
     updateAppState({
         moves: [...appState.moves, move],
         currentMoveIndex: appState.moves.length,
@@ -527,9 +720,19 @@ const parseGameNotation = (notation) => {
         }
         const move = parseMove(token, currentFEN);
         if (move) {
-            moves.push(move);
-            // Apply move to current FEN for next iteration
-            currentFEN = applyMoveToFEN(currentFEN, move);
+            // Determine move effects using the move validator
+            const position = parseFEN(currentFEN);
+            const validationResult = validateMove(position, move);
+            if (validationResult.isValid) {
+                // Add effect information to the move
+                move.effect = validationResult.effect;
+                moves.push(move);
+                // Apply move to current FEN for next iteration
+                currentFEN = applyMoveToFEN(currentFEN, move);
+            }
+            else {
+                console.warn("Invalid move during parsing:", token, validationResult.error);
+            }
         }
     }
     return moves;
@@ -538,7 +741,7 @@ const parseGameNotation = (notation) => {
  * Parse individual move
  */
 const parseMove = (moveText, currentFEN) => {
-    console.log("Parsing move:", moveText, "from FEN:", currentFEN);
+    log("Parsing move:", moveText, "from FEN:", currentFEN);
     const position = parseFEN(currentFEN);
     const isWhiteTurn = position.turn === "w";
     // Handle castling
@@ -927,6 +1130,24 @@ const nextMove = () => {
     }
 };
 /**
+ * Navigate to a specific move index
+ */
+const navigateToMove = (moveIndex) => {
+    if (moveIndex < -1 || moveIndex >= appState.moves.length) {
+        return;
+    }
+    // Clear any existing branch
+    clearBranch();
+    // Update the current move index
+    updateAppState({ currentMoveIndex: moveIndex });
+    // Apply moves up to the specified index
+    applyMovesUpToIndex(moveIndex);
+    // Update the move list to reflect the new current position
+    updateMoveList();
+    updateNavigationButtons();
+    updateStatus(`Navigated to move ${moveIndex + 1}`);
+};
+/**
  * Apply moves up to specified index
  */
 const applyMovesUpToIndex = (index) => {
@@ -986,18 +1207,100 @@ const updateMoveList = () => {
     const notationType = notationFormat === "algebraic" ? "short" : "long";
     const pieceType = pieceFormat === "symbols" ? "unicode" : "english";
     movesPanel.innerHTML = "";
+    // Display main game moves
     for (let i = 0; i < appState.moves.length; i += 2) {
         const moveEntry = document.createElement("div");
         moveEntry.className = "move-entry";
         const moveNumber = Math.floor(i / 2) + 1;
         const whiteMove = appState.moves[i];
         const blackMove = appState.moves[i + 1];
-        moveEntry.innerHTML = `
-      <span class="move-number">${moveNumber}.</span>
-      <span class="move-text ${i === appState.currentMoveIndex ? "current-move" : ""}">${whiteMove ? moveToNotation(whiteMove, notationType, pieceType, "") : "..."}</span>
-      <span class="move-text ${i + 1 === appState.currentMoveIndex ? "current-move" : ""}">${blackMove ? moveToNotation(blackMove, notationType, pieceType, "") : ""}</span>
-    `;
+        // Create clickable move elements
+        const whiteMoveElement = document.createElement("span");
+        whiteMoveElement.className = `move-text clickable ${i === appState.currentMoveIndex ? "current-move" : ""}`;
+        whiteMoveElement.textContent = whiteMove
+            ? moveToNotation(whiteMove, notationType, pieceType, "")
+            : "...";
+        whiteMoveElement.dataset.moveIndex = i.toString();
+        whiteMoveElement.title = "Click to go to this position";
+        const blackMoveElement = document.createElement("span");
+        blackMoveElement.className = `move-text clickable ${i + 1 === appState.currentMoveIndex ? "current-move" : ""}`;
+        blackMoveElement.textContent = blackMove
+            ? moveToNotation(blackMove, notationType, pieceType, "")
+            : "";
+        blackMoveElement.dataset.moveIndex = (i + 1).toString();
+        blackMoveElement.title = "Click to go to this position";
+        // Add click handlers
+        whiteMoveElement.addEventListener("click", () => {
+            if (whiteMove) {
+                clearBranch();
+                navigateToMove(i);
+            }
+        });
+        blackMoveElement.addEventListener("click", () => {
+            if (blackMove) {
+                clearBranch();
+                navigateToMove(i + 1);
+            }
+        });
+        moveEntry.innerHTML = `<span class="move-number">${moveNumber}.</span>`;
+        moveEntry.appendChild(whiteMoveElement);
+        moveEntry.appendChild(blackMoveElement);
         movesPanel.appendChild(moveEntry);
+        // Display branch moves if this is where the branch should appear
+        const isAtWhiteMove = appState.branchStartIndex % 2 === 0;
+        const isAtBlackMove = appState.branchStartIndex % 2 === 1;
+        if (appState.isInBranch &&
+            appState.branchMoves.length > 0 &&
+            ((isAtWhiteMove && i === appState.branchStartIndex) ||
+                (isAtBlackMove && i === Math.floor(appState.branchStartIndex / 2) * 2))) {
+            const branchEntry = document.createElement("div");
+            branchEntry.className = "move-entry branch-entry";
+            branchEntry.style.marginLeft = "20px";
+            branchEntry.style.borderLeft = "2px solid #007bff";
+            branchEntry.style.paddingLeft = "10px";
+            // Determine the starting move number for the branch
+            const currentMoveNumber = Math.floor(appState.branchStartIndex / 2) + 1;
+            if (isAtWhiteMove) {
+                // At a white move - create branch at same move number
+                const moveNumberSpan = document.createElement("span");
+                moveNumberSpan.className = "move-number";
+                moveNumberSpan.textContent = `${currentMoveNumber}.`;
+                branchEntry.appendChild(moveNumberSpan);
+                // Add "..." for the white move (since we're branching from it)
+                const whitePlaceholder = document.createElement("span");
+                whitePlaceholder.className = "move-text";
+                whitePlaceholder.textContent = "...";
+                branchEntry.appendChild(whitePlaceholder);
+                // Add the black move from the branch
+                if (appState.branchMoves.length > 0) {
+                    const blackMove = appState.branchMoves[0];
+                    const blackMoveElement = document.createElement("span");
+                    blackMoveElement.className =
+                        "move-text clickable branch-move current-move";
+                    blackMoveElement.textContent = moveToNotation(blackMove, notationType, pieceType, "");
+                    blackMoveElement.title = "Branch move";
+                    branchEntry.appendChild(blackMoveElement);
+                }
+            }
+            else if (isAtBlackMove) {
+                // At a black move - create branch under the current move
+                const moveNumberSpan = document.createElement("span");
+                moveNumberSpan.className = "move-number";
+                moveNumberSpan.textContent = `${currentMoveNumber + 1}.`;
+                branchEntry.appendChild(moveNumberSpan);
+                // Add the white move from the branch
+                if (appState.branchMoves.length > 0) {
+                    const whiteMove = appState.branchMoves[0];
+                    const whiteMoveElement = document.createElement("span");
+                    whiteMoveElement.className =
+                        "move-text clickable branch-move current-move";
+                    whiteMoveElement.textContent = moveToNotation(whiteMove, notationType, pieceType, "");
+                    whiteMoveElement.title = "Branch move";
+                    branchEntry.appendChild(whiteMoveElement);
+                }
+            }
+            movesPanel.appendChild(branchEntry);
+        }
     }
 };
 /**

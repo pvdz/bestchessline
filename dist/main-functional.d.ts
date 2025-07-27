@@ -8,6 +8,9 @@ interface AppState {
     currentMoveIndex: number;
     isAnalyzing: boolean;
     currentResults: AnalysisResult | null;
+    branchMoves: ChessMove[];
+    branchStartIndex: number;
+    isInBranch: boolean;
 }
 /**
  * Update application state

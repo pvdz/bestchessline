@@ -4,7 +4,7 @@ This file serves as the AI memory/description for this application. It should re
 
 ## Application Overview
 
-A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, and real-time analysis capabilities. Built with TypeScript, HTML/CSS, and WebAssembly.
+A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, and enhanced move validation with effect detection. Built with TypeScript, HTML/CSS, and WebAssembly.
 
 ## Core Architecture
 
@@ -102,6 +102,7 @@ interface DragState {
 // 2. Split into individual moves
 // 3. Apply moves sequentially to maintain board context
 // 4. Use board-aware move finding for accurate from-square determination
+// 5. Determine move effects (capture, check, mate) during parsing
 ```
 
 **Complexities Handled:**
@@ -111,6 +112,24 @@ interface DragState {
 - **Move Numbers**: `1.`, `2.`, etc. removal
 - **Disambiguation**: Multiple pieces of same type
 - **Special Moves**: Castling (`O-O`, `O-O-O`) and en passant
+- **Effect Detection**: Captures, checks, and mates determined during parsing
+
+#### Clickable Move Navigation
+
+```typescript
+// Enhanced move list with clickable navigation:
+// - Each move is a clickable element with hover effects
+// - Clicking a move navigates to that position
+// - Visual feedback shows current position and clickable moves
+// - Immediate board updates when moves are clicked
+```
+
+**Features:**
+
+- **Direct Navigation**: Click any move to jump to that position
+- **Visual Feedback**: Hover effects and current move highlighting
+- **State Synchronization**: Board, FEN, and controls update together
+- **Move Effects**: Capture, check, and mate indicators in notation
 
 #### Move Disambiguation Algorithm
 
@@ -129,7 +148,51 @@ interface DragState {
 - **Jumping Pieces**: Knight, King can jump over pieces
 - **Pawns**: Special diagonal capture rules and en passant
 
-### 3. Stockfish Integration
+### 3. Move Validation & Effect Detection
+
+#### Move Validator System (`src/move-validator.ts`)
+
+```typescript
+// Comprehensive move validation with effect detection:
+// - Validates move legality according to chess rules
+// - Determines move effects (capture, check, mate, en-passant)
+// - Provides detailed error messages for invalid moves
+// - Integrates with existing application structure
+```
+
+**Key Functions:**
+
+- `validateMove(position, move)` - Main validation function
+- `analyzeMove(fen, move)` - Convenience function for FEN strings
+- `getLegalMoves(position)` - Gets all legal moves for a position
+- `isKingInCheck(position, color)` - Checks if a king is in check
+
+**Effect Detection:**
+
+- **Captures**: Detects when a piece captures another piece
+- **Checks**: Detects when a move puts the opponent's king in check
+- **Mates**: Detects when a move results in checkmate
+- **En Passant**: Detects special en passant captures
+
+#### Enhanced Notation Display
+
+```typescript
+// Move notation now includes effect indicators:
+// - Regular move: e4
+// - Capture: exd5
+// - Check: Qh5+
+// - Mate: Qxf7#
+// - En passant: exd6 (with en-passant effect)
+```
+
+**Integration Points:**
+
+- **Game Import**: Effects determined during move parsing
+- **Manual Moves**: Effects calculated when adding moves via board
+- **Analysis Results**: Stockfish moves have effects determined before display
+- **Move List**: Effects displayed in standard notation
+
+### 4. Stockfish Integration
 
 #### WebAssembly Worker Setup
 
@@ -146,6 +209,7 @@ interface DragState {
 - **Thread Control**: 1-8 CPU threads
 - **Move Limits**: Analyze top N moves per side
 - **Real-time Results**: Live updates during analysis
+- **Enhanced Results**: Move effects included in analysis display
 
 #### Result Processing
 
@@ -155,9 +219,10 @@ interface DragState {
 // - principal variation (PV)
 // - multiple variations (MultiPV)
 // - mate sequences and evaluations
+// - Move effects determined for each analysis move
 ```
 
-### 4. Format Controls & UI
+### 5. Format Controls & UI
 
 #### Dynamic Formatting
 
@@ -174,11 +239,29 @@ interface DragState {
 - **Piece Format**: Unicode symbols vs English letters
 - **Conversion**: Maps UI values to internal function parameters
 
+#### Enhanced Move List
+
+```typescript
+// Clickable move navigation:
+// - Each move is a clickable element with hover effects
+// - Visual feedback shows current position
+// - Immediate navigation to any move in the game
+// - State synchronization across all UI elements
+```
+
+**Visual Features:**
+
+- **Hover Effects**: Light blue background with darker text
+- **Current Move Highlighting**: Blue background for current position
+- **Clickable Cursor**: Pointer cursor for interactive moves
+- **Tooltips**: "Click to go to this position" on hover
+
 #### Responsive Design
 
 - **4-column Grid**: Board, controls, game moves, analysis results
 - **Mobile Support**: Touch events and responsive breakpoints
 - **Visual Hierarchy**: Clear information architecture
+- **Test Pages**: Quick access links to validation and testing tools
 
 ## Critical Implementation Details
 
@@ -336,18 +419,28 @@ npm run serve        # Start development server
 
 ### Key Files
 
-- **`src/main-functional.ts`** (1112 lines): Main application logic
+- **`src/main-functional.ts`** (1431 lines): Main application logic with enhanced navigation
 - **`src/chess-board-functional.ts`**: Interactive board component
 - **`src/stockfish-client-functional.ts`**: Engine integration
-- **`src/types.ts`** (112 lines): TypeScript interfaces
-- **`src/utils.ts`** (245 lines): Utility functions
+- **`src/move-validator.ts`** (435 lines): Move validation and effect detection
+- **`src/types.ts`** (246 lines): TypeScript interfaces with effect support
+- **`src/utils.ts`** (435 lines): Utility functions with enhanced notation
+
+### Test Files
+
+- **`test/move-validator/test-move-validator.html`**: Interactive move validation testing
+- **`test/enhanced-notation/test-enhanced-notation.html`**: Enhanced notation demonstration
+- **`test/stockfish/test-stockfish.html`**: Stockfish integration testing
+- **`index.html`**: Main application with test page links
 
 ### Testing Approach
 
 - **Manual Testing**: Interactive board and game import
 - **Edge Case Testing**: Ambiguous moves, special moves
+- **Move Validation Testing**: Comprehensive move effect detection
 - **Performance Testing**: Large games and deep analysis
 - **Browser Testing**: Cross-browser compatibility
+- **Integration Testing**: Move validator with game import and analysis
 
 ## Common Issues & Solutions
 
@@ -379,25 +472,32 @@ npm run serve        # Start development server
 
 ### Planned Features
 
-- **PGN Export**: Save games in standard format
-- **Opening Book**: Integrate opening database
-- **Position Evaluation**: Historical evaluation tracking
+- **PGN Export**: Save games in standard format with move effects
+- **Opening Book**: Integrate opening database with move validation
+- **Position Evaluation**: Historical evaluation tracking with effect analysis
 - **Advanced Analysis**: More engine options and configurations
-- **Game Annotation**: Add comments and variations
+- **Game Annotation**: Add comments and variations with effect highlighting
+- **Move History**: Enhanced move history with effect visualization
+- **Position Database**: Store and retrieve positions with move effects
 
 ### Technical Improvements
 
-- **Performance**: Optimize large game handling
-- **Memory**: Better state management for large games
-- **UI**: Enhanced visual feedback and animations
-- **Accessibility**: Screen reader and keyboard support
+- **Performance**: Optimize large game handling and move validation
+- **Memory**: Better state management for large games with effects
+- **UI**: Enhanced visual feedback and animations for move effects
+- **Accessibility**: Screen reader and keyboard support for move navigation
+- **Validation**: More comprehensive move validation (castling rights, etc.)
+- **Analysis**: Enhanced analysis with move effect predictions
 
 ## Key Insights
 
 1. **State Management**: Global state objects work well for this scale
 2. **Event Handling**: Delegation and re-attachment are critical
-3. **Move Validation**: Board-aware validation is essential for accuracy
+3. **Move Validation**: Board-aware validation with effect detection enhances user experience
 4. **UI Synchronization**: Bidirectional updates prevent inconsistencies
 5. **Performance**: WebAssembly provides excellent chess engine performance
+6. **Interactive Navigation**: Clickable moves provide intuitive game exploration
+7. **Effect Detection**: Real-time capture, check, and mate detection improves analysis quality
+8. **Modular Architecture**: Move validator integrates seamlessly with existing components
 
-The application provides a solid foundation for chess analysis with room for enhancement and expansion.
+The application provides a comprehensive chess analysis platform with advanced move validation, interactive navigation, and enhanced notation display. The modular architecture allows for easy extension and enhancement of features.

@@ -1,6 +1,8 @@
 import { ChessMove, AnalysisMove, AnalysisResult } from "./types.js";
 import { moveToNotation, pvToNotation } from "./utils.js";
 
+console.log("am i still running at all?");
+
 // ============================================================================
 // STATE MANAGEMENT
 // ============================================================================

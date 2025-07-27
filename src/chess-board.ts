@@ -14,6 +14,7 @@ import {
   getPieceColor,
   getPieceType,
   isHTMLElement,
+  PIECE_TYPES,
 } from "./utils.js";
 
 export class ChessBoard {
@@ -339,7 +340,7 @@ export class ChessBoard {
 
       // Update move counters
       if (
-        piece.toLowerCase() === "p" ||
+        piece.toLowerCase() === PIECE_TYPES.PAWN.toLowerCase() ||
         this.state.position.board[toRank][toFile] !== ""
       ) {
         this.state.position.halfMoveClock = 0;
@@ -383,7 +384,7 @@ export class ChessBoard {
     const fileDiff = Math.abs(toFile - fromFile);
 
     switch (pieceType) {
-      case "P": // Pawn
+      case PIECE_TYPES.PAWN: // Pawn
         const direction = pieceColor === "w" ? -1 : 1;
         const startRank = pieceColor === "w" ? 6 : 1;
 
@@ -410,22 +411,22 @@ export class ChessBoard {
         }
         break;
 
-      case "R": // Rook
+      case PIECE_TYPES.ROOK: // Rook
         return rankDiff === 0 || fileDiff === 0;
 
-      case "N": // Knight
+      case PIECE_TYPES.KNIGHT: // Knight
         return (
           (rankDiff === 2 && fileDiff === 1) ||
           (rankDiff === 1 && fileDiff === 2)
         );
 
-      case "B": // Bishop
+      case PIECE_TYPES.BISHOP: // Bishop
         return rankDiff === fileDiff;
 
-      case "Q": // Queen
+      case PIECE_TYPES.QUEEN: // Queen
         return rankDiff === 0 || fileDiff === 0 || rankDiff === fileDiff;
 
-      case "K": // King
+      case PIECE_TYPES.KING: // King
         return rankDiff <= 1 && fileDiff <= 1;
     }
 

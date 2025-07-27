@@ -17,6 +17,14 @@ export interface ChessMove {
   rookFrom?: string;
   rookTo?: string;
   capturedSquare?: string; // For en passant captures
+  effect?: {
+    isCapture: boolean;
+    isCheck: boolean;
+    isMate: boolean;
+    isEnPassant: boolean;
+    capturedPiece?: string;
+    capturedSquare?: string;
+  };
 }
 
 export interface AnalysisMove {

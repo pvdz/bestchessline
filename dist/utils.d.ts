@@ -5,6 +5,14 @@ export declare function squareToCoords(square: string): [number, number];
 export declare function coordsToSquare(rank: number, file: number): string;
 export declare function isValidSquare(square: string): boolean;
 export declare function getPieceColor(piece: string): Color | null;
+export declare const PIECE_TYPES: {
+    readonly KING: "K";
+    readonly QUEEN: "Q";
+    readonly ROOK: "R";
+    readonly BISHOP: "B";
+    readonly KNIGHT: "N";
+    readonly PAWN: "P";
+};
 export declare function getPieceType(piece: string): PieceType | null;
 export declare function formatScore(score: number): string;
 export declare function formatTime(ms: number): string;

@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Move Notation Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-case {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 3px;
+      }
+      .notation {
+        font-family: monospace;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .effect-info {
+        margin-top: 5px;
+        font-size: 12px;
+        color: #666;
+      }
+      .capture {
+        color: #d32f2f;
+      }
+      .check {
+        color: #1976d2;
+      }
+      .mate {
+        color: #388e3c;
+      }
+      .en-passant {
+        color: #f57c00;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Enhanced Move Notation Test</h1>
+
+    <div class="test-section">
+      <h2>Game Import with Effect Detection</h2>
+      <div>
+        <label>Game Notation:</label><br />
+        <textarea
+          id="gameInput"
+          rows="4"
+          cols="80"
+          style="font-family: monospace"
+        >
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. Qh5 Nf6 5. Qxf7#</textarea
+        >
+      </div>
+      <button onclick="importGame()">Import Game</button>
+      <div id="gameResult"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Analysis Results with Effect Detection</h2>
+      <div>
+        <label>FEN Position:</label><br />
+        <input
+          type="text"
+          id="analysisFEN"
+          style="width: 100%; font-family: monospace"
+          value="rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+        />
+      </div>
+      <button onclick="testAnalysisMoves()">Test Analysis Moves</button>
+      <div id="analysisResult"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Individual Move Testing</h2>
+      <div>
+        <label>FEN:</label><br />
+        <input
+          type="text"
+          id="testFEN"
+          style="width: 100%; font-family: monospace"
+          value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        />
+      </div>
+      <div>
+        <label>Move (from-to):</label><br />
+        <input
+          type="text"
+          id="testMove"
+          placeholder="e2-e4"
+          style="width: 200px"
+        />
+      </div>
+      <button onclick="testMove()">Test Move</button>
+      <div id="moveResult"></div>
+    </div>
+
+    <script type="module">
+      import { analyzeMove } from "./dist/move-validator.js";
+      import { parseFEN, moveToNotation } from "./dist/utils.js";
+
+      window.analyzeMove = analyzeMove;
+      window.parseFEN = parseFEN;
+      window.moveToNotation = moveToNotation;
+
+      // Test cases for different move effects
+      const testMoves = [
+        {
+          name: "Pawn Capture",
+          fen: "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+          move: { from: "e4", to: "d5", piece: "P" },
+          expected: "capture",
+        },
+        {
+          name: "Check Move",
+          fen: "rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: "check",
+        },
+        {
+          name: "Mate Move",
+          fen: "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: "check",
+        },
+        {
+          name: "En Passant",
+          fen: "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+          move: {
+            from: "e5",
+            to: "d6",
+            piece: "P",
+            special: "en-passant",
+            capturedSquare: "d5",
+          },
+          expected: "en-passant capture",
+        },
+      ];
+
+      function testAnalysisMoves() {
+        const fen = document.getElementById("analysisFEN").value;
+        const resultDiv = document.getElementById("analysisResult");
+
+        let html = "<h3>Analysis Moves with Effects:</h3>";
+
+        testMoves.forEach((testCase) => {
+          const result = analyzeMove(testCase.fen, testCase.move);
+          const notation = moveToNotation(
+            testCase.move,
+            "short",
+            "unicode",
+            testCase.fen,
+          );
+
+          html += `
+                    <div class="test-case">
+                        <h4>${testCase.name}</h4>
+                        <p><strong>FEN:</strong> ${testCase.fen}</p>
+                        <p><strong>Move:</strong> ${testCase.move.from}-${testCase.move.to}</p>
+                        <p><strong>Notation:</strong> <span class="notation">${notation}</span></p>
+                        <div class="effect-info">
+                            <p><strong>Effects:</strong></p>
+                            <ul>
+                                <li class="${result.effect.isCapture ? "capture" : ""}">Capture: ${result.effect.isCapture ? "Yes" : "No"}</li>
+                                <li class="${result.effect.isCheck ? "check" : ""}">Check: ${result.effect.isCheck ? "Yes" : "No"}</li>
+                                <li class="${result.effect.isMate ? "mate" : ""}">Mate: ${result.effect.isMate ? "Yes" : "No"}</li>
+                                <li class="${result.effect.isEnPassant ? "en-passant" : ""}">En Passant: ${result.effect.isEnPassant ? "Yes" : "No"}</li>
+                            </ul>
+                            ${result.effect.capturedPiece ? `<p><strong>Captured:</strong> ${result.effect.capturedPiece}</p>` : ""}
+                        </div>
+                    </div>
+                `;
+        });
+
+        resultDiv.innerHTML = html;
+      }
+
+      function testMove() {
+        const fen = document.getElementById("testFEN").value;
+        const moveText = document.getElementById("testMove").value;
+        const resultDiv = document.getElementById("moveResult");
+
+        if (!moveText.includes("-")) {
+          alert("Please enter move in format: from-to (e.g., e2-e4)");
+          return;
+        }
+
+        const [from, to] = moveText.split("-");
+        const position = parseFEN(fen);
+        const [rank, file] = from.split("");
+        const rankIndex = 8 - parseInt(rank);
+        const fileIndex = file.charCodeAt(0) - 97;
+        const piece = position.board[rankIndex][fileIndex];
+
+        if (!piece) {
+          alert("No piece at " + from);
+          return;
+        }
+
+        const move = { from, to, piece };
+        const result = analyzeMove(fen, move);
+        const notation = moveToNotation(move, "short", "unicode", fen);
+
+        resultDiv.innerHTML = `
+                <div class="test-case">
+                    <h4>Move Analysis</h4>
+                    <p><strong>Move:</strong> ${move.from}-${move.to}</p>
+                    <p><strong>Notation:</strong> <span class="notation">${notation}</span></p>
+                    <div class="effect-info">
+                        <p><strong>Effects:</strong></p>
+                        <ul>
+                            <li class="${result.effect.isCapture ? "capture" : ""}">Capture: ${result.effect.isCapture ? "Yes" : "No"}</li>
+                            <li class="${result.effect.isCheck ? "check" : ""}">Check: ${result.effect.isCheck ? "Yes" : "No"}</li>
+                            <li class="${result.effect.isMate ? "mate" : ""}">Mate: ${result.effect.isMate ? "Yes" : "No"}</li>
+                            <li class="${result.effect.isEnPassant ? "en-passant" : ""}">En Passant: ${result.effect.isEnPassant ? "Yes" : "No"}</li>
+                        </ul>
+                        ${result.effect.capturedPiece ? `<p><strong>Captured:</strong> ${result.effect.capturedPiece}</p>` : ""}
+                    </div>
+                </div>
+            `;
+      }
+
+      function importGame() {
+        const notation = document.getElementById("gameInput").value;
+        const resultDiv = document.getElementById("gameResult");
+
+        // Simulate the game import process
+        const moves = parseGameNotation(notation);
+
+        let html = "<h3>Imported Game with Effects:</h3>";
+        html +=
+          '<div style="font-family: monospace; font-size: 14px; line-height: 1.5;">';
+
+        for (let i = 0; i < moves.length; i += 2) {
+          const moveNumber = Math.floor(i / 2) + 1;
+          const whiteMove = moves[i];
+          const blackMove = moves[i + 1];
+
+          html += `${moveNumber}. `;
+
+          if (whiteMove) {
+            const notation = moveToNotation(whiteMove, "short", "unicode");
+            const effects = [];
+            if (whiteMove.effect?.isCapture) effects.push("capture");
+            if (whiteMove.effect?.isCheck) effects.push("check");
+            if (whiteMove.effect?.isMate) effects.push("mate");
+            if (whiteMove.effect?.isEnPassant) effects.push("en-passant");
+
+            html += `<span class="notation">${notation}</span>`;
+            if (effects.length > 0) {
+              html += ` <span style="color: #666; font-size: 12px;">(${effects.join(", ")})</span>`;
+            }
+          }
+
+          html += " ";
+
+          if (blackMove) {
+            const notation = moveToNotation(blackMove, "short", "unicode");
+            const effects = [];
+            if (blackMove.effect?.isCapture) effects.push("capture");
+            if (blackMove.effect?.isCheck) effects.push("check");
+            if (blackMove.effect?.isMate) effects.push("mate");
+            if (blackMove.effect?.isEnPassant) effects.push("en-passant");
+
+            html += `<span class="notation">${notation}</span>`;
+            if (effects.length > 0) {
+              html += ` <span style="color: #666; font-size: 12px;">(${effects.join(", ")})</span>`;
+            }
+          }
+
+          html += "<br>";
+        }
+
+        html += "</div>";
+        resultDiv.innerHTML = html;
+      }
+
+      // Simple game notation parser for demo
+      function parseGameNotation(notation) {
+        const moves = [];
+        const tokens = notation.replace(/\d+\./g, "").trim().split(/\s+/);
+        let currentFEN =
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+        for (const token of tokens) {
+          if (
+            !token ||
+            token === "1-0" ||
+            token === "0-1" ||
+            token === "1/2-1/2"
+          )
+            continue;
+
+          // Simple move parsing for demo
+          const move = parseSimpleMove(token, currentFEN);
+          if (move) {
+            const result = analyzeMove(currentFEN, move);
+            if (result.isValid) {
+              move.effect = result.effect;
+              moves.push(move);
+              // Update FEN for next move
+              currentFEN = applyMoveToFEN(currentFEN, move);
+            }
+          }
+        }
+
+        return moves;
+      }
+
+      function parseSimpleMove(moveText, fen) {
+        const position = parseFEN(fen);
+        const isWhiteTurn = position.turn === "w";
+
+        // Handle castling
+        if (moveText === "O-O" || moveText === "0-0") {
+          return {
+            from: isWhiteTurn ? "e1" : "e8",
+            to: isWhiteTurn ? "g1" : "g8",
+            piece: isWhiteTurn ? "K" : "k",
+            special: "castling",
+          };
+        }
+
+        // Handle basic moves (simplified for demo)
+        if (moveText.length >= 2) {
+          const to = moveText.slice(-2);
+          const from = findFromSquare(moveText, to, fen);
+          if (from) {
+            const [rank, file] = from.split("");
+            const rankIndex = 8 - parseInt(rank);
+            const fileIndex = file.charCodeAt(0) - 97;
+            const piece = position.board[rankIndex][fileIndex];
+            return { from, to, piece };
+          }
+        }
+
+        return null;
+      }
+
+      function findFromSquare(moveText, to, fen) {
+        const position = parseFEN(fen);
+        const isWhiteTurn = position.turn === "w";
+
+        // Simplified piece detection
+        let pieceType = "P";
+        if (moveText.includes("N")) pieceType = "N";
+        else if (moveText.includes("B")) pieceType = "B";
+        else if (moveText.includes("R")) pieceType = "R";
+        else if (moveText.includes("Q")) pieceType = "Q";
+        else if (moveText.includes("K")) pieceType = "K";
+
+        const piece = isWhiteTurn ? pieceType : pieceType.toLowerCase();
+
+        // Find the piece on the board
+        for (let rank = 0; rank < 8; rank++) {
+          for (let file = 0; file < 8; file++) {
+            if (position.board[rank][file] === piece) {
+              const square = String.fromCharCode(97 + file) + (8 - rank);
+              return square;
+            }
+          }
+        }
+
+        return null;
+      }
+
+      function applyMoveToFEN(fen, move) {
+        const position = parseFEN(fen);
+        const [fromRank, fromFile] = squareToCoords(move.from);
+        const [toRank, toFile] = squareToCoords(move.to);
+
+        // Apply the move
+        const piece = position.board[fromRank][fromFile];
+        position.board[fromRank][fromFile] = "";
+        position.board[toRank][toFile] = piece;
+        position.turn = position.turn === "w" ? "b" : "w";
+
+        return toFEN(position);
+      }
+
+      function squareToCoords(square) {
+        const file = square.charCodeAt(0) - "a".charCodeAt(0);
+        const rank = 8 - parseInt(square[1]);
+        return [rank, file];
+      }
+
+      function toFEN(position) {
+        let fen = "";
+
+        // Board
+        for (let rank = 0; rank < 8; rank++) {
+          let emptyCount = 0;
+          for (let file = 0; file < 8; file++) {
+            const piece = position.board[rank][file];
+            if (piece === "") {
+              emptyCount++;
+            } else {
+              if (emptyCount > 0) {
+                fen += emptyCount;
+                emptyCount = 0;
+              }
+              fen += piece;
+            }
+          }
+          if (emptyCount > 0) {
+            fen += emptyCount;
+          }
+          if (rank < 7) fen += "/";
+        }
+
+        // Turn
+        fen += ` ${position.turn}`;
+
+        // Castling
+        fen += ` ${position.castling}`;
+
+        // En passant
+        fen += ` ${position.enPassant || "-"}`;
+
+        // Half move clock
+        fen += ` ${position.halfMoveClock}`;
+
+        // Full move number
+        fen += ` ${position.fullMoveNumber}`;
+
+        return fen;
+      }
+
+      // Initialize
+      window.importGame = importGame;
+      window.testAnalysisMoves = testAnalysisMoves;
+      window.testMove = testMove;
+    </script>
+  </body>
+</html>

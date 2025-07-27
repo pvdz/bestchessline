@@ -1,3 +1,4 @@
+console.log("am i still running at all?");
 /**
  * Initial application state
  */

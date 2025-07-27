@@ -102,10 +102,28 @@ export function getPieceColor(piece: string): Color | null {
   return piece === piece.toUpperCase() ? "w" : "b";
 }
 
+// Constants for piece types (uppercase, used for type matching)
+export const PIECE_TYPES = {
+  KING: "K",
+  QUEEN: "Q",
+  ROOK: "R",
+  BISHOP: "B",
+  KNIGHT: "N",
+  PAWN: "P",
+} as const;
+
 export function getPieceType(piece: string): PieceType | null {
   if (!piece) return null;
   const upperPiece = piece.toUpperCase();
-  if (["P", "R", "N", "B", "Q", "K"].includes(upperPiece)) {
+  const validPieceTypes = [
+    PIECE_TYPES.PAWN,
+    PIECE_TYPES.ROOK,
+    PIECE_TYPES.KNIGHT,
+    PIECE_TYPES.BISHOP,
+    PIECE_TYPES.QUEEN,
+    PIECE_TYPES.KING,
+  ];
+  if (validPieceTypes.includes(upperPiece as PieceType)) {
     return upperPiece as PieceType;
   }
   return null;
@@ -158,33 +176,50 @@ export function moveToNotation(
     return `${pieceSymbol}${move.from}-${move.to}`;
   } else {
     // Standard algebraic notation
-    if (piece === "P") {
+    let notation = "";
+
+    if (piece === PIECE_TYPES.PAWN) {
       // Pawn moves
       if (move.from.charAt(0) === move.to.charAt(0)) {
         // Same file (e.g., e2e4 -> e4)
-        return move.to;
+        notation = move.to;
       } else {
         // Capture (e.g., e2d3 -> exd3)
-        return `${move.from.charAt(0)}x${move.to}`;
+        notation = `${move.from.charAt(0)}x${move.to}`;
       }
     } else {
       // Piece moves
       const pieceChar = pieceFormat === "unicode" ? pieceSymbol : piece;
-      // Check if it's a capture by looking at the target square
-      const position = fen
-        ? parseFEN(fen)
-        : parseFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-      const toRank = 8 - parseInt(move.to[1]);
-      const toFile = move.to.charCodeAt(0) - "a".charCodeAt(0);
-      const targetPiece = position.board[toRank][toFile];
-      const isCapture = targetPiece && targetPiece !== "";
+      // Check if it's a capture by looking at the target square or move effect
+      let isCapture = false;
+
+      if (move.effect?.isCapture) {
+        isCapture = true;
+      } else if (fen) {
+        const position = parseFEN(fen);
+        const toRank = 8 - parseInt(move.to[1]);
+        const toFile = move.to.charCodeAt(0) - "a".charCodeAt(0);
+        const targetPiece = position.board[toRank][toFile];
+        isCapture = Boolean(targetPiece && targetPiece !== "");
+      }
 
       if (isCapture) {
-        return `${pieceChar}x${move.to}`;
+        notation = `${pieceChar}x${move.to}`;
       } else {
-        return `${pieceChar}${move.to}`;
+        notation = `${pieceChar}${move.to}`;
       }
     }
+
+    // Add effect indicators
+    if (move.effect) {
+      if (move.effect.isMate) {
+        notation += "#";
+      } else if (move.effect.isCheck) {
+        notation += "+";
+      }
+    }
+
+    return notation;
   }
 }
 

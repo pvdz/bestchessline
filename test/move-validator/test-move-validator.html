@@ -1,0 +1,1601 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Move Validator Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-case {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 3px;
+      }
+      .result {
+        margin-top: 10px;
+        padding: 8px;
+        border-radius: 3px;
+      }
+      .valid {
+        background: #d4edda;
+        color: #155724;
+      }
+      .invalid {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+      .fen-input {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+        font-family: monospace;
+      }
+      .move-input {
+        width: 200px;
+        padding: 8px;
+        margin: 5px 0;
+      }
+      button {
+        padding: 8px 16px;
+        margin: 5px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .board {
+        display: grid;
+        grid-template-columns: repeat(8, 40px);
+        grid-template-rows: repeat(8, 40px);
+        gap: 1px;
+        margin: 20px 0;
+      }
+      .square {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        border: 1px solid #ccc;
+      }
+      .square.light {
+        background: #f0d9b5;
+      }
+      .square.dark {
+        background: #b58863;
+      }
+      .square.selected {
+        background: #7b61ff;
+        color: white;
+      }
+      .square.target {
+        background: #ff6b6b;
+        color: white;
+      }
+      .notation-help {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 20px;
+      }
+      .notation-help h3 {
+        margin-top: 0;
+        color: #495057;
+      }
+      .notation-help ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .notation-help li {
+        margin: 5px 0;
+        color: #6c757d;
+      }
+      .expected-result {
+        background-color: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 3px;
+        padding: 10px;
+        margin-top: 10px;
+      }
+      .expected-result p {
+        margin: 0 0 8px 0;
+        font-weight: bold;
+        color: #1976d2;
+      }
+      .expected-result ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .expected-result li {
+        margin: 2px 0;
+        color: #1565c0;
+      }
+      .test-status {
+        margin-top: 10px;
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-weight: bold;
+      }
+      .test-status.passed {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .test-status.failed {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .results-summary {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+      }
+      .failed-tests {
+        margin-top: 15px;
+      }
+      .failed-test {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 3px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .mini-board {
+        display: inline-block;
+        border: 2px solid #333;
+        margin: 10px 0;
+      }
+      .mini-row {
+        display: flex;
+      }
+      .mini-square {
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .mini-square.light {
+        background: #f0d9b5;
+      }
+      .mini-square.dark {
+        background: #b58863;
+      }
+      .mini-square.from-square {
+        background: #7b61ff !important;
+        color: white;
+      }
+      .mini-square.to-square {
+        background: #ff6b6b !important;
+        color: white;
+      }
+      .mini-square.to-square.valid {
+        background: #28a745 !important;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Chess Move Validator Test</h1>
+
+    <div class="test-section">
+      <h2>Interactive Test</h2>
+      <div>
+        <label>FEN Position:</label><br />
+        <input
+          type="text"
+          id="fenInput"
+          class="fen-input"
+          value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        />
+      </div>
+      <div>
+        <label>Move (short notation or from-to):</label><br />
+        <input
+          type="text"
+          id="moveInput"
+          class="move-input"
+          placeholder="e.g., e4, Nf3, Qxd5, or e2-e4"
+        />
+      </div>
+      <button onclick="testMove()">Test Move</button>
+      <div id="moveResult"></div>
+
+      <div class="notation-help">
+        <h3>Supported Notation Formats:</h3>
+        <ul>
+          <li><strong>Short Notation:</strong> e4, Nf3, Qxd5, O-O, O-O-O</li>
+          <li><strong>From-To Format:</strong> e2-e4, b1-c3, d1-h5</li>
+          <li><strong>Piece Moves:</strong> Nc3, Bf4, Qh5, Rxd1</li>
+          <li><strong>Pawn Moves:</strong> e4, d5, exd5, e5</li>
+          <li><strong>Castling:</strong> O-O (kingside), O-O-O (queenside)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Board Visualization</h2>
+      <div id="board" class="board"></div>
+      <div>
+        <p>Click squares to select from and to positions for move testing.</p>
+        <p>Selected: <span id="selectedSquare">None</span></p>
+        <p>Target: <span id="targetSquare">None</span></p>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Predefined Test Cases</h2>
+      <div id="testCases"></div>
+    </div>
+
+    <script type="module">
+      import { analyzeMove, getLegalMoves } from "./dist/move-validator.js";
+      import { parseFEN } from "./dist/utils.js";
+
+      window.analyzeMove = analyzeMove;
+      window.parseFEN = parseFEN;
+      window.getLegalMoves = getLegalMoves;
+
+      // Helper function to create FEN from piece positions
+      function createFENFromPieces(
+        pieces,
+        turn = "w",
+        castling = "KQkq",
+        enPassant = "-",
+        halfMove = 0,
+        fullMove = 1,
+      ) {
+        // Initialize empty board
+        const board = Array(8)
+          .fill()
+          .map(() => Array(8).fill(""));
+
+        // Place pieces
+        for (const [square, piece] of Object.entries(pieces)) {
+          const [file, rank] = square.split("");
+          const fileIndex = file.charCodeAt(0) - 97; // a=0, b=1, etc.
+          const rankIndex = 8 - parseInt(rank); // 8=0, 7=1, etc.
+          board[rankIndex][fileIndex] = piece;
+        }
+
+        // Convert board to FEN
+        let fen = "";
+        for (let rank = 0; rank < 8; rank++) {
+          let emptyCount = 0;
+          for (let file = 0; file < 8; file++) {
+            const piece = board[rank][file];
+            if (piece === "") {
+              emptyCount++;
+            } else {
+              if (emptyCount > 0) {
+                fen += emptyCount;
+                emptyCount = 0;
+              }
+              fen += piece;
+            }
+          }
+          if (emptyCount > 0) {
+            fen += emptyCount;
+          }
+          if (rank < 7) fen += "/";
+        }
+
+        return `${fen} ${turn} ${castling} ${enPassant} ${halfMove} ${fullMove}`;
+      }
+
+      // Test cases
+      const testCases = [
+        {
+          name: "Illegal Pawn Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "e2", to: "d3", piece: "P" },
+          expected: { isValid: false, reason: "Illegal pawn move" },
+        },
+        {
+          name: "Legal Pawn Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "e2", to: "e4", piece: "P" },
+          expected: { isValid: true, isCapture: false, isCheck: false },
+        },
+        {
+          name: "Knight Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "b1", to: "c3", piece: "N" },
+          expected: { isValid: true, isCapture: false, isCheck: false },
+        },
+        {
+          name: "Pawn Capture",
+          fen: "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+          move: { from: "e4", to: "d5", piece: "P" },
+          expected: { isValid: true, isCapture: true, isCheck: false },
+        },
+        {
+          name: "Queen Check",
+          fen: "rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Short Notation - Pawn Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "e2", to: "e4", piece: "P" },
+          shortNotation: "e4",
+          expected: { isValid: true, isCapture: false, isCheck: false },
+        },
+        {
+          name: "Short Notation - Knight Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "b1", to: "c3", piece: "N" },
+          shortNotation: "Nc3",
+          expected: { isValid: true, isCapture: false, isCheck: false },
+        },
+        {
+          name: "Short Notation - Queen Check",
+          fen: "rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          shortNotation: "Qh5",
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Short Notation - Castling",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "e1", to: "g1", piece: "K", special: "castling" },
+          shortNotation: "O-O",
+          expected: {
+            isValid: false,
+            reason: "Castling not fully implemented",
+          },
+        },
+        {
+          name: "Check but Not Mate",
+          fen: "r1bk2nr/p2p1pNp/n2B4/1p1NP2P/6P1/3P1Q2/P1P1K3/q5b1 w - - 0 1",
+          move: { from: "f3", to: "f6", piece: "Q" },
+          shortNotation: "Qf6",
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: true,
+            isMate: false,
+          },
+        },
+        {
+          name: "Bishop Capture",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "f1", to: "b5", piece: "B" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Rook Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "a1", to: "a3", piece: "R" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "King Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "e1", to: "e2", piece: "K" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Illegal Queen Move (Blocked)",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by own piece" },
+        },
+        {
+          name: "Illegal Bishop Move (Blocked)",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "f1", to: "b5", piece: "B" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Illegal Rook Move (Blocked)",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "a1", to: "a3", piece: "R" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Move (After pawn advance)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/3P4/1PP1P1PP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Move (Clear path)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/3P4/1PP1P1PP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Check",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/3P4/1PP1P1PP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Move (After more pawn advances)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/3P4/1PP1P1PP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "a4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Check (Simple position)",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Check (After pawn advance)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: { isValid: true, isCapture: false, isCheck: false },
+        },
+        {
+          name: "Legal Queen Check (Clear path)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Check (After more pawn advances)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/3P4/1PP1P1PP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Check (Clear diagonal)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "a4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Check (Working example)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Legal Queen Move (After pawn advance)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/3P4/1PP1P1PP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Bishop Checkmate",
+          fen: "r1bk3r/p2p1pNp/n2B1n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1 w - - 0 1",
+          move: { from: "d6", to: "e7", piece: "B" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: true,
+            isMate: true,
+          },
+        },
+        {
+          name: "Simple Checkmate - Queen to d8",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Actual Checkmate Position - Back Rank",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "a1", to: "a8", piece: "R" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Position - King in Corner",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "e1", to: "e2", piece: "K" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Simple Checkmate - Queen vs King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Position - Fool's Mate",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "f2", to: "f3", piece: "P" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Actual Checkmate - Queen vs Trapped King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Position - King Escape",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "e1", to: "e2", piece: "K" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Simple Checkmate Position",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Test - King vs Queen",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "e1", to: "e2", piece: "K" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Proper Checkmate Test - Queen Checkmate",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Position - Back Rank Mate",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "a1", to: "a8", piece: "R" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Simple Checkmate - Queen vs King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Position - King Escape",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "e1", to: "e2", piece: "K" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Queen Checkmate",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Simple Check (Not Mate)",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "f1", to: "b5", piece: "B" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Scholar's Mate",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "h5", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Fool's Mate",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "f2", to: "f3", piece: "P" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Back Rank Mate",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Smothered Mate",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "b1", to: "c3", piece: "N" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Simple Checkmate Position",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate with Queen",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "e1", to: "e2", piece: "K" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Checkmate with Bishop",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "c4", to: "f7", piece: "B" },
+          expected: {
+            isValid: true,
+            isCapture: true,
+            isCheck: true,
+            isMate: false,
+          },
+        },
+        {
+          name: "Simple Checkmate Position - Queen",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate with Rook",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "a1", to: "a8", piece: "R" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Proper Checkmate Test - Queen vs Trapped King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Actual Checkmate Position - Queen vs Cornered King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Simple Checkmate - Queen vs King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate with Knight",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "b1", to: "c3", piece: "N" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Actual Checkmate Test - Queen vs Trapped King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Proper Checkmate Position - Queen vs Cornered King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Simple Checkmate - Queen vs King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Actual Checkmate Position",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "e1", to: "e2", piece: "K" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+        {
+          name: "Proper Checkmate Test - Queen vs Trapped King",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Position - Queen to d8",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "d1", to: "d8", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Checkmate Position - Rook to a8",
+          fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1",
+          move: { from: "a1", to: "a8", piece: "R" },
+          expected: { isValid: false, reason: "Blocked by pieces" },
+        },
+        {
+          name: "Legal Bishop Move (After pawn advance)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "f1", to: "b5", piece: "B" },
+          expected: { isValid: true, isCapture: false, isCheck: false },
+        },
+        {
+          name: "Legal Rook Move (After pawn advance)",
+          fen: "rnbqkbnr/pppppppp/8/8/4P3/3P4/1PP1P1PP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "a1", to: "a3", piece: "R" },
+          expected: { isValid: true, isCapture: false, isCheck: false },
+        },
+        {
+          name: "Queen Diagonal Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "a4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Queen Horizontal Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "a1", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Queen Vertical Move",
+          fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          move: { from: "d1", to: "d4", piece: "Q" },
+          expected: { isValid: false, reason: "Blocked by pawn" },
+        },
+        {
+          name: "Simple Check - Queen's Kiss",
+          fen: "3k4/8/8/8/8/8/8/3QK3 w KQkq - 0 1",
+          move: { from: "d1", to: "d7", piece: "Q" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: true,
+            isMate: false,
+          },
+        },
+        {
+          name: "Checkmate - Queen's Kiss with Pawns",
+          fen: "3k4/pp6/8/8/8/8/8/3QK3 w KQkq - 0 1",
+          move: { from: "d1", to: "d7", piece: "Q" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: true,
+            isMate: false,
+          },
+        },
+        {
+          name: "Bishop Checkmate - Proper Position",
+          fen: "3k4/8/8/8/8/3B4/8/4K3 w - - 0 1",
+          move: { from: "d3", to: "e4", piece: "B" },
+          expected: {
+            isValid: true,
+            isCapture: false,
+            isCheck: false,
+            isMate: false,
+          },
+        },
+      ];
+
+      function createBoardVisualization(fen, move) {
+        const position = parseFEN(fen);
+        const pieceSymbols = {
+          K: "♔",
+          Q: "♕",
+          R: "♖",
+          B: "♗",
+          N: "♘",
+          P: "♙",
+          k: "♚",
+          q: "♛",
+          r: "♜",
+          b: "♝",
+          n: "♞",
+          p: "♟",
+        };
+
+        // Test if the move is valid
+        const result = analyzeMove(fen, move);
+        const isValidMove = result.isValid;
+
+        let boardHtml = '<div class="mini-board">';
+        for (let rank = 0; rank < 8; rank++) {
+          boardHtml += '<div class="mini-row">';
+          for (let file = 0; file < 8; file++) {
+            const square = coordsToSquare(rank, file);
+            const piece = position.board[rank][file];
+            const isFromSquare = square === move.from;
+            const isToSquare = square === move.to;
+
+            let squareClass = "mini-square";
+            if (isFromSquare) squareClass += " from-square";
+            if (isToSquare) {
+              squareClass += " to-square";
+              if (isValidMove) squareClass += " valid";
+            }
+            if ((rank + file) % 2 === 0) squareClass += " light";
+            else squareClass += " dark";
+
+            const pieceSymbol = piece ? pieceSymbols[piece] : "";
+            boardHtml += `<div class="${squareClass}">${pieceSymbol}</div>`;
+          }
+          boardHtml += "</div>";
+        }
+        boardHtml += "</div>";
+        return boardHtml;
+      }
+
+      function runTestCases() {
+        const container = document.getElementById("testCases");
+        const resultsSummary = [];
+
+        testCases.forEach((testCase, index) => {
+          const div = document.createElement("div");
+          div.className = "test-case";
+
+          const result = analyzeMove(testCase.fen, testCase.move);
+
+          // Check if test passed
+          const isValidMatch = result.isValid === testCase.expected.isValid;
+          const isCaptureMatch =
+            testCase.expected.isCapture === undefined ||
+            result.effect.isCapture === testCase.expected.isCapture;
+          const isCheckMatch =
+            testCase.expected.isCheck === undefined ||
+            result.effect.isCheck === testCase.expected.isCheck;
+          const isMateMatch =
+            testCase.expected.isMate === undefined ||
+            result.effect.isMate === testCase.expected.isMate;
+
+          const testPassed =
+            isValidMatch && isCaptureMatch && isCheckMatch && isMateMatch;
+
+          // Store result for summary
+          resultsSummary.push({
+            name: testCase.name,
+            passed: testPassed,
+            expected: testCase.expected,
+            actual: {
+              isValid: result.isValid,
+              isCapture: result.effect.isCapture,
+              isCheck: result.effect.isCheck,
+              isMate: result.effect.isMate,
+              error: result.error,
+            },
+            index: index, // Add index to resultsSummary
+          });
+
+          // Create board visualization
+          const boardHtml = createBoardVisualization(
+            testCase.fen,
+            testCase.move,
+          );
+
+          div.innerHTML = `
+                    <h3>${testCase.name}</h3>
+                    <p><strong>FEN:</strong> ${testCase.fen}</p>
+                    <p><strong>Move:</strong> ${testCase.move.from}-${testCase.move.to} (${testCase.move.piece})</p>
+                    ${testCase.shortNotation ? `<p><strong>Short Notation:</strong> ${testCase.shortNotation}</p>` : ""}
+                    <div class="board-visualization">
+                        <h4>Board Position (Before Move):</h4>
+                        ${boardHtml}
+                    </div>
+                    <div class="result">
+                        <p><strong>Result:</strong> ${result.isValid ? "Valid" : "Invalid"}</p>
+                        ${result.error ? `<p><strong>Error:</strong> ${result.error}</p>` : ""}
+                        <p><strong>Effects Comparison:</strong></p>
+                        <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                            <thead>
+                                <tr style="background: #f8f9fa;">
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Property</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Expected</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Actual</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Valid</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${testCase.expected.isValid ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${result.isValid ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: ${result.isValid === testCase.expected.isValid ? "green" : "red"}; font-weight: bold;">${result.isValid === testCase.expected.isValid ? "✓" : "✗"}</td>
+                                </tr>
+                                ${
+                                  testCase.expected.isCapture !== undefined
+                                    ? `
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Capture</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${testCase.expected.isCapture ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${result.effect.isCapture ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: ${result.effect.isCapture === testCase.expected.isCapture ? "green" : "red"}; font-weight: bold;">${result.effect.isCapture === testCase.expected.isCapture ? "✓" : "✗"}</td>
+                                </tr>
+                                `
+                                    : ""
+                                }
+                                ${
+                                  testCase.expected.isCheck !== undefined
+                                    ? `
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Check</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${testCase.expected.isCheck ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${result.effect.isCheck ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: ${result.effect.isCheck === testCase.expected.isCheck ? "green" : "red"}; font-weight: bold;">${result.effect.isCheck === testCase.expected.isCheck ? "✓" : "✗"}</td>
+                                </tr>
+                                `
+                                    : ""
+                                }
+                                ${
+                                  testCase.expected.isMate !== undefined
+                                    ? `
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Mate</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${testCase.expected.isMate ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${result.effect.isMate ? "Yes" : "No"}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: ${result.effect.isMate === testCase.expected.isMate ? "green" : "red"}; font-weight: bold;">${result.effect.isMate === testCase.expected.isMate ? "✓" : "✗"}</td>
+                                </tr>
+                                `
+                                    : ""
+                                }
+                                ${
+                                  testCase.expected.reason
+                                    ? `
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Reason</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="2">${testCase.expected.reason}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
+                                </tr>
+                                `
+                                    : ""
+                                }
+                            </tbody>
+                        </table>
+                        ${result.effect.capturedPiece ? `<p><strong>Captured:</strong> ${result.effect.capturedPiece}</p>` : ""}
+                        <p><strong>En Passant:</strong> ${result.effect.isEnPassant ? "Yes" : "No"}</p>
+                    </div>
+                    <div class="test-status ${testPassed ? "passed" : "failed"}">
+                        <strong>Status: ${testPassed ? "PASS" : "FAIL"}</strong>
+                        <button onclick="runSingleTest(${index})" style="margin-left: 10px; background: #28a745; font-size: 12px;">Run Single Test</button>
+                    </div>
+                `;
+
+          container.appendChild(div);
+        });
+
+        // Add results summary
+        const summaryDiv = document.createElement("div");
+        summaryDiv.className = "results-summary";
+
+        const passedTests = resultsSummary.filter((r) => r.passed);
+        const failedTests = resultsSummary.filter((r) => !r.passed);
+
+        summaryDiv.innerHTML = `
+          <h2>Test Results Summary</h2>
+          <p><strong>Total Tests:</strong> ${resultsSummary.length}</p>
+          <p><strong>Passed:</strong> ${passedTests.length}</p>
+          <p><strong>Failed:</strong> ${failedTests.length}</p>
+          
+          ${
+            failedTests.length > 0
+              ? `
+            <h3>Failed Tests:</h3>
+            <div class="failed-tests">
+              ${failedTests
+                .map(
+                  (test, idx) => `
+                <div class="failed-test">
+                  <a href="#testcase-${test.index}" style="color: #721c24; text-decoration: underline; font-weight: bold;">Jump to test</a><br>
+                  <strong>${test.name}</strong><br>
+                  Expected: Valid=${test.expected.isValid}, Capture=${test.expected.isCapture}, Check=${test.expected.isCheck}, Mate=${test.expected.isMate}<br>
+                  Actual: Valid=${test.actual.isValid}, Capture=${test.actual.isCapture}, Check=${test.actual.isCheck}, Mate=${test.actual.isMate}
+                  ${test.actual.error ? `<br>Error: ${test.actual.error}` : ""}
+                </div>
+              `,
+                )
+                .join("")}
+            </div>
+          `
+              : ""
+          }
+          
+          <h3>Copy Results (Failed Tests Only):</h3>
+          <textarea id="resultsCopy" readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px;">${resultsSummary
+            .filter((test) => !test.passed)
+            .map(
+              (test) =>
+                `${test.name}: Expected ${JSON.stringify(test.expected)}, Got ${JSON.stringify(test.actual)}`,
+            )
+            .join("\n")}</textarea>
+          <button onclick="copyResults()">Copy Results</button>
+          
+          <h3>Quick Test Links:</h3>
+          <button onclick="runSingleTest(1)" style="background: #dc3545; color: white; margin: 5px;">Test Bishop Checkmate (Index 1)</button>
+        `;
+
+        container.appendChild(summaryDiv);
+
+        // Add IDs to test case divs for jump links
+        document.querySelectorAll(".test-case").forEach((div, idx) => {
+          div.id = `testcase-${idx}`;
+        });
+      }
+
+      window.copyResults = function () {
+        const textarea = document.getElementById("resultsCopy");
+        textarea.select();
+        document.execCommand("copy");
+        alert("Results copied to clipboard!");
+      };
+
+      window.runSingleTest = function (testIndex) {
+        const testCase = testCases[testIndex];
+        if (!testCase) {
+          console.error("Test case not found!");
+          return;
+        }
+
+        console.log(`Running single test: ${testCase.name}`);
+        console.log(`FEN: ${testCase.fen}`);
+        console.log(
+          `Move: ${testCase.move.from}-${testCase.move.to} (${testCase.move.piece})`,
+        );
+
+        const result = analyzeMove(testCase.fen, testCase.move);
+
+        console.log("Test Result:", result);
+        console.log("Expected:", testCase.expected);
+
+        // Check if test passed
+        const isValidMatch = result.isValid === testCase.expected.isValid;
+        const isCaptureMatch =
+          testCase.expected.isCapture === undefined ||
+          result.effect.isCapture === testCase.expected.isCapture;
+        const isCheckMatch =
+          testCase.expected.isCheck === undefined ||
+          result.effect.isCheck === testCase.expected.isCheck;
+        const isMateMatch =
+          testCase.expected.isMate === undefined ||
+          result.effect.isMate === testCase.expected.isMate;
+
+        const testPassed =
+          isValidMatch && isCaptureMatch && isCheckMatch && isMateMatch;
+
+        console.log(`Test ${testPassed ? "PASSED" : "FAILED"}`);
+      };
+
+      function renderBoard(fen) {
+        const board = document.getElementById("board");
+        board.innerHTML = "";
+
+        const position = parseFEN(fen);
+        const pieces = {
+          K: "♔",
+          Q: "♕",
+          R: "♖",
+          B: "♗",
+          N: "♘",
+          P: "♙",
+          k: "♚",
+          q: "♛",
+          r: "♜",
+          b: "♝",
+          n: "♞",
+          p: "♟",
+        };
+
+        for (let rank = 0; rank < 8; rank++) {
+          for (let file = 0; file < 8; file++) {
+            const square = document.createElement("div");
+            square.className = `square ${(rank + file) % 2 === 0 ? "light" : "dark"}`;
+            square.dataset.rank = rank;
+            square.dataset.file = file;
+            square.dataset.square = String.fromCharCode(97 + file) + (8 - rank);
+
+            const piece = position.board[rank][file];
+            if (piece) {
+              square.textContent = pieces[piece] || piece;
+            }
+
+            square.onclick = () => selectSquare(square.dataset.square);
+            board.appendChild(square);
+          }
+        }
+      }
+
+      let selectedSquare = null;
+
+      function selectSquare(square) {
+        const squares = document.querySelectorAll(".square");
+        squares.forEach((sq) => {
+          sq.classList.remove("selected", "target");
+        });
+
+        if (selectedSquare === null) {
+          // First click - select from square
+          selectedSquare = square;
+          document
+            .querySelector(`[data-square="${square}"]`)
+            .classList.add("selected");
+          document.getElementById("selectedSquare").textContent = square;
+        } else {
+          // Second click - select to square and test move
+          const targetSquare = square;
+          document
+            .querySelector(`[data-square="${square}"]`)
+            .classList.add("target");
+          document.getElementById("targetSquare").textContent = square;
+
+          // Get the piece at the selected square
+          const position = parseFEN(document.getElementById("fenInput").value);
+          const [rank, file] = selectedSquare.split("");
+          const rankIndex = 8 - parseInt(rank);
+          const fileIndex = file.charCodeAt(0) - 97;
+          const piece = position.board[rankIndex][fileIndex];
+
+          if (piece) {
+            const move = {
+              from: selectedSquare,
+              to: targetSquare,
+              piece: piece,
+            };
+
+            testMoveWithData(move);
+          }
+
+          selectedSquare = null;
+          document.getElementById("selectedSquare").textContent = "None";
+          document.getElementById("targetSquare").textContent = "None";
+        }
+      }
+
+      function testMove() {
+        const moveText = document.getElementById("moveInput").value;
+        const fen = document.getElementById("fenInput").value;
+
+        // Try to parse as short notation first
+        const parsedMove = parseShortNotation(moveText, fen);
+        if (parsedMove) {
+          testMoveWithData(parsedMove);
+          return;
+        }
+
+        // Fall back to from-to format
+        if (!moveText.includes("-")) {
+          alert(
+            "Please enter move in format: from-to (e.g., e2-e4) or short notation (e.g., e4, Nf3, Qxd5)",
+          );
+          return;
+        }
+
+        const [from, to] = moveText.split("-");
+        const position = parseFEN(fen);
+        const [rank, file] = from.split("");
+        const rankIndex = 8 - parseInt(rank);
+        const fileIndex = file.charCodeAt(0) - 97;
+        const piece = position.board[rankIndex][fileIndex];
+
+        if (!piece) {
+          alert("No piece at " + from);
+          return;
+        }
+
+        const move = { from, to, piece };
+        testMoveWithData(move);
+      }
+
+      function parseShortNotation(moveText, fen) {
+        const position = parseFEN(fen);
+        const isWhiteTurn = position.turn === "w";
+
+        // Handle castling
+        if (moveText === "O-O" || moveText === "0-0") {
+          if (isWhiteTurn) {
+            return {
+              from: "e1",
+              to: "g1",
+              piece: "K",
+              special: "castling",
+              rookFrom: "h1",
+              rookTo: "f1",
+            };
+          } else {
+            return {
+              from: "e8",
+              to: "g8",
+              piece: "k",
+              special: "castling",
+              rookFrom: "h8",
+              rookTo: "f8",
+            };
+          }
+        }
+        if (moveText === "O-O-O" || moveText === "0-0-0") {
+          if (isWhiteTurn) {
+            return {
+              from: "e1",
+              to: "c1",
+              piece: "K",
+              special: "castling",
+              rookFrom: "a1",
+              rookTo: "d1",
+            };
+          } else {
+            return {
+              from: "e8",
+              to: "c8",
+              piece: "k",
+              special: "castling",
+              rookFrom: "a8",
+              rookTo: "d8",
+            };
+          }
+        }
+
+        // Handle pawn moves (both white and black)
+        if (moveText.match(/^[a-h][2-7]$/)) {
+          const toSquare = moveText;
+          const fromSquare = findFromSquare("P", toSquare, fen);
+          if (fromSquare) {
+            const piece = isWhiteTurn ? "P" : "p";
+            return { from: fromSquare, to: toSquare, piece };
+          }
+        }
+
+        // Handle pawn captures (both white and black)
+        if (moveText.match(/^[a-h]x[a-h][2-7]$/)) {
+          const fromFile = moveText[0];
+          const toSquare = moveText.substring(2);
+          const fromSquare = findFromSquare("P", toSquare, fen);
+          if (fromSquare) {
+            const piece = isWhiteTurn ? "P" : "p";
+            return { from: fromSquare, to: toSquare, piece };
+          }
+        }
+
+        // Handle piece moves
+        const pieceMatch = moveText.match(
+          /^([KQRBN])([a-h]?[1-8]?)?x?([a-h][1-8])([+#])?$/,
+        );
+
+        if (pieceMatch) {
+          const pieceType = pieceMatch[1];
+          const disambiguation = pieceMatch[2] || "";
+          const toSquare = pieceMatch[3];
+          const fromSquare = findFromSquareWithDisambiguation(
+            pieceType,
+            toSquare,
+            disambiguation,
+            fen,
+          );
+          if (fromSquare) {
+            const piece = isWhiteTurn ? pieceType : pieceType.toLowerCase();
+            return { from: fromSquare, to: toSquare, piece };
+          }
+        }
+
+        return null;
+      }
+
+      function findFromSquare(pieceType, toSquare, fen) {
+        const position = parseFEN(fen);
+        const isWhiteTurn = position.turn === "w";
+        const piece = isWhiteTurn ? pieceType : pieceType.toLowerCase();
+
+        // Find the piece on the board
+        for (let rank = 0; rank < 8; rank++) {
+          for (let file = 0; file < 8; file++) {
+            if (position.board[rank][file] === piece) {
+              const square = String.fromCharCode(97 + file) + (8 - rank);
+              // Check if this piece can move to the target square
+              if (canPieceMoveTo(square, toSquare, piece, position.board)) {
+                return square;
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      function findFromSquareWithDisambiguation(
+        pieceType,
+        toSquare,
+        disambiguation,
+        fen,
+      ) {
+        const position = parseFEN(fen);
+        const isWhiteTurn = position.turn === "w";
+        const piece = isWhiteTurn ? pieceType : pieceType.toLowerCase();
+
+        const candidates = [];
+
+        // Find all pieces of the correct type
+        for (let rank = 0; rank < 8; rank++) {
+          for (let file = 0; file < 8; file++) {
+            if (position.board[rank][file] === piece) {
+              const square = String.fromCharCode(97 + file) + (8 - rank);
+              if (canPieceMoveTo(square, toSquare, piece, position.board)) {
+                candidates.push(square);
+              }
+            }
+          }
+        }
+
+        if (candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0];
+
+        // Apply disambiguation
+        if (disambiguation) {
+          const filtered = candidates.filter((square) =>
+            square.includes(disambiguation),
+          );
+          return filtered.length === 1 ? filtered[0] : null;
+        }
+
+        return null;
+      }
+
+      function canPieceMoveTo(fromSquare, toSquare, piece, board) {
+        const [fromRank, fromFile] = squareToCoords(fromSquare);
+        const [toRank, toFile] = squareToCoords(toSquare);
+
+        // Check if target square has own piece
+        const targetPiece = board[toRank][toFile];
+        if (
+          targetPiece &&
+          getPieceColor(targetPiece) === getPieceColor(piece)
+        ) {
+          return false;
+        }
+
+        const pieceType = getPieceType(piece);
+        if (!pieceType) return false;
+
+        switch (pieceType) {
+          case "P":
+            return canPawnMoveTo(fromSquare, toSquare, board);
+          case "R":
+            return canRookMoveTo(fromSquare, toSquare, board);
+          case "N":
+            return canKnightMoveTo(fromSquare, toSquare, board);
+          case "B":
+            return canBishopMoveTo(fromSquare, toSquare, board);
+          case "Q":
+            return canQueenMoveTo(fromSquare, toSquare, board);
+          case "K":
+            return canKingMoveTo(fromSquare, toSquare, board);
+          default:
+            return false;
+        }
+      }
+
+      function canPawnMoveTo(fromSquare, toSquare, board) {
+        const [fromRank, fromFile] = squareToCoords(fromSquare);
+        const [toRank, toFile] = squareToCoords(toSquare);
+        const piece = board[fromRank][fromFile];
+        const color = getPieceColor(piece);
+        const direction = color === "w" ? -1 : 1;
+
+        const rankDiff = toRank - fromRank;
+        const fileDiff = Math.abs(toFile - fromFile);
+
+        // Forward move
+        if (fileDiff === 0) {
+          if (rankDiff === direction) {
+            return board[toRank][toFile] === "";
+          }
+          if (rankDiff === 2 * direction) {
+            const startRank = color === "w" ? 6 : 1;
+            if (fromRank === startRank) {
+              const middleRank = fromRank + direction;
+              return (
+                board[middleRank][toFile] === "" && board[toRank][toFile] === ""
+              );
+            }
+          }
+          return false;
+        }
+
+        // Diagonal move (capture)
+        if (fileDiff === 1 && rankDiff === direction) {
+          return board[toRank][toFile] !== "";
+        }
+
+        return false;
+      }
+
+      function canRookMoveTo(fromSquare, toSquare, board) {
+        const [fromRank, fromFile] = squareToCoords(fromSquare);
+        const [toRank, toFile] = squareToCoords(toSquare);
+
+        if (fromRank !== toRank && fromFile !== toFile) return false;
+        return isPathClear(fromRank, fromFile, toRank, toFile, board);
+      }
+
+      function canKnightMoveTo(fromSquare, toSquare, board) {
+        const [fromRank, fromFile] = squareToCoords(fromSquare);
+        const [toRank, toFile] = squareToCoords(toSquare);
+
+        const rankDiff = Math.abs(toRank - fromRank);
+        const fileDiff = Math.abs(toFile - fromFile);
+
+        return (
+          (rankDiff === 2 && fileDiff === 1) ||
+          (rankDiff === 1 && fileDiff === 2)
+        );
+      }
+
+      function canBishopMoveTo(fromSquare, toSquare, board) {
+        const [fromRank, fromFile] = squareToCoords(fromSquare);
+        const [toRank, toFile] = squareToCoords(toSquare);
+
+        if (Math.abs(toRank - fromRank) !== Math.abs(toFile - fromFile))
+          return false;
+        return isPathClear(fromRank, fromFile, toRank, toFile, board);
+      }
+
+      function canQueenMoveTo(fromSquare, toSquare, board) {
+        const [fromRank, fromFile] = squareToCoords(fromSquare);
+        const [toRank, toFile] = squareToCoords(toSquare);
+
+        const rankDiff = Math.abs(toRank - fromRank);
+        const fileDiff = Math.abs(toFile - fromFile);
+
+        if (fromRank === toRank || fromFile === toFile) {
+          return isPathClear(fromRank, fromFile, toRank, toFile, board);
+        }
+
+        if (rankDiff === fileDiff) {
+          return isPathClear(fromRank, fromFile, toRank, toFile, board);
+        }
+
+        return false;
+      }
+
+      function canKingMoveTo(fromSquare, toSquare, board) {
+        const [fromRank, fromFile] = squareToCoords(fromSquare);
+        const [toRank, toFile] = squareToCoords(toSquare);
+
+        const rankDiff = Math.abs(toRank - fromRank);
+        const fileDiff = Math.abs(toFile - fromFile);
+
+        return rankDiff <= 1 && fileDiff <= 1;
+      }
+
+      function isPathClear(fromRank, fromFile, toRank, toFile, board) {
+        const rankStep =
+          fromRank === toRank
+            ? 0
+            : (toRank - fromRank) / Math.abs(toRank - fromRank);
+        const fileStep =
+          fromFile === toFile
+            ? 0
+            : (toFile - fromFile) / Math.abs(toFile - fromFile);
+
+        let currentRank = fromRank + rankStep;
+        let currentFile = fromFile + fileStep;
+
+        while (currentRank !== toRank || currentFile !== toFile) {
+          if (board[currentRank][currentFile] !== "") {
+            return false;
+          }
+          currentRank += rankStep;
+          currentFile += fileStep;
+        }
+
+        return true;
+      }
+
+      function getPieceColor(piece) {
+        if (!piece) return null;
+        return piece === piece.toUpperCase() ? "w" : "b";
+      }
+
+      function getPieceType(piece) {
+        if (!piece) return null;
+        const upperPiece = piece.toUpperCase();
+        if (["P", "R", "N", "B", "Q", "K"].includes(upperPiece)) {
+          return upperPiece;
+        }
+        return null;
+      }
+
+      function squareToCoords(square) {
+        const file = square.charCodeAt(0) - 97; // 'a' = 0
+        const rank = 8 - parseInt(square[1]); // '1' = 7, '8' = 0
+        return [rank, file];
+      }
+
+      function coordsToSquare(rank, file) {
+        const fileChar = String.fromCharCode(97 + file);
+        const rankNum = 8 - rank;
+        return fileChar + rankNum;
+      }
+
+      function testMoveWithData(move) {
+        const fen = document.getElementById("fenInput").value;
+        const result = analyzeMove(fen, move);
+
+        const resultDiv = document.getElementById("moveResult");
+        resultDiv.innerHTML = `
+                <div class="result ${result.isValid ? "valid" : "invalid"}">
+                    <h3>Move Analysis: ${move.from}-${move.to}</h3>
+                    <p><strong>Valid:</strong> ${result.isValid ? "Yes" : "No"}</p>
+                    ${result.error ? `<p><strong>Error:</strong> ${result.error}</p>` : ""}
+                    <p><strong>Effects:</strong></p>
+                    <ul>
+                        <li>Capture: ${result.effect.isCapture ? "Yes" : "No"}</li>
+                        <li>Check: ${result.effect.isCheck ? "Yes" : "No"}</li>
+                        <li>Mate: ${result.effect.isMate ? "Yes" : "No"}</li>
+                        <li>En Passant: ${result.effect.isEnPassant ? "Yes" : "No"}</li>
+                    </ul>
+                    ${result.effect.capturedPiece ? `<p><strong>Captured Piece:</strong> ${result.effect.capturedPiece}</p>` : ""}
+                    ${result.effect.capturedSquare ? `<p><strong>Captured Square:</strong> ${result.effect.capturedSquare}</p>` : ""}
+                </div>
+            `;
+      }
+
+      // Initialize
+      window.testMove = testMove;
+      renderBoard(document.getElementById("fenInput").value);
+      runTestCases();
+
+      // Update board when FEN changes
+      document
+        .getElementById("fenInput")
+        .addEventListener("input", function () {
+          renderBoard(this.value);
+        });
+    </script>
+  </body>
+</html>
