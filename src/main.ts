@@ -382,11 +382,14 @@ const formatPVWithEffects = (
 ): string => {
   if (pv.length === 0) return "";
 
+  // Parse the position to determine whose turn it is
+  const parsedPosition = parseFEN(position);
+  const isBlackTurn = parsedPosition.turn === "b";
+
   // Get current game state to determine starting move number
   const appState = getAppState();
   const currentMoveCount = appState.currentMoveIndex + 1; // +1 because currentMoveIndex is 0-based
   const currentMoveNumber = Math.floor(currentMoveCount / 2) + 1;
-  const isBlackTurn = currentMoveCount % 2 === 1; // Black's turn if odd number of moves
 
   // Process moves in the context of the actual position
   let currentPosition = parseFEN(position);
@@ -423,14 +426,36 @@ const formatPVWithEffects = (
   } else {
     // Short format: standard game notation with move numbers
     let result = "";
+    let currentMoveNum = currentMoveNumber;
+
     for (let i = 0; i < moves.length; i++) {
-      if (i % 2 === 0) {
-        // White move
-        const moveNumber = currentMoveNumber + Math.floor(i / 2);
-        result += `${moveNumber}.${moves[i]}`;
+      if (isBlackTurn) {
+        // If it's black's turn, the first move is black's move
+        if (i % 2 === 0) {
+          // Black move - only show move number with dots for the very first move
+          if (i === 0) {
+            result += `${currentMoveNum}...${moves[i]}`;
+          } else {
+            result += ` ${moves[i]}`;
+          }
+        } else {
+          // White move (second move)
+          result += ` ${currentMoveNum + 1}.${moves[i]}`;
+        }
       } else {
-        // Black move
-        result += ` ${moves[i]}`;
+        // If it's white's turn, the first move is white's move
+        if (i % 2 === 0) {
+          // White move (first move)
+          result += `${currentMoveNum}.${moves[i]}`;
+        } else {
+          // Black move (second move)
+          result += ` ${moves[i]}`;
+        }
+      }
+
+      // Increment move number after every second move (complete move pair)
+      if (i % 2 === 1) {
+        currentMoveNum++;
       }
 
       // Add line breaks every 6 moves (3 full moves)
@@ -515,9 +540,10 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
     `;
 
     // Add click handler to make the move
-    moveItem.addEventListener("click", () => {
-      makeAnalysisMove(move.move);
-    });
+    // Temporarily disabled to test PV click handling
+    // moveItem.addEventListener("click", () => {
+    //   makeAnalysisMove(move.move);
+    // });
 
     resultsPanel.appendChild(moveItem);
   });
@@ -530,6 +556,8 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
  * Make a move from analysis results
  */
 const makeAnalysisMove = (move: ChessMove): void => {
+  console.log("makeAnalysisMove called with:", move);
+
   // Determine move effects if not already present
   if (!move.effect) {
     const position = parseFEN(Board.getFEN());
@@ -614,6 +642,8 @@ const createBranch = (
   branchMoves: ChessMove[],
   originalPosition: string,
 ): void => {
+  console.log("createBranch called with:", { branchMoves, originalPosition });
+
   const appState = getAppState();
 
   // Find the move index that corresponds to the original position
@@ -634,18 +664,28 @@ const createBranch = (
     branchStartIndex = appState.currentMoveIndex;
   }
 
+  console.log("createBranch updating state with:", {
+    branchMoves,
+    branchStartIndex,
+    isInBranch: true,
+  });
+
   updateAppState({
     branchMoves,
     branchStartIndex,
     isInBranch: true,
   });
   updateMoveList();
+
+  console.log("createBranch completed, new appState:", getAppState());
 };
 
 /**
  * Clear the current branch
  */
 const clearBranch = (): void => {
+  console.log("clearBranch called - clearing branch state");
+  console.trace("clearBranch stack trace");
   updateAppState({
     branchMoves: [],
     branchStartIndex: -1,
@@ -655,84 +695,160 @@ const clearBranch = (): void => {
 };
 
 /**
- * Update branch moves
- */
-const updateBranch = (branchMoves: ChessMove[]): void => {
-  if (appState.isInBranch) {
-    updateAppState({
-      branchMoves,
-    });
-    updateMoveList();
-  }
-};
-
-/**
  * Add PV move click listeners
  */
 const addPVClickListeners = (): void => {
-  const pvMoves = document.querySelectorAll(".pv-move");
-  pvMoves.forEach((move) => {
-    move.addEventListener("click", (e) => {
-      e.stopPropagation(); // Prevent triggering the parent move-item click
-      const target = e.currentTarget as HTMLElement;
-      const originalPosition = target.dataset.originalPosition;
-      const moveIndex = target.dataset.moveIndex;
+  // Use event delegation on the results panel
+  const resultsPanel = document.getElementById("analysis-results");
+  if (!resultsPanel) return;
 
-      if (originalPosition && moveIndex !== undefined) {
-        // Get the PV moves from the current analysis results
-        const appState = getAppState();
-        const currentResults = appState.currentResults;
+  // Remove any existing listeners to prevent duplicates
+  resultsPanel.removeEventListener("click", handlePVClick);
 
-        if (currentResults && currentResults.moves.length > 0) {
-          // Find the PV moves from the first analysis result
-          const pvMoves = currentResults.moves[0].pv;
-          const clickedIndex = parseInt(moveIndex);
+  // Add the event listener
+  resultsPanel.addEventListener("click", handlePVClick);
+};
 
-          if (pvMoves && clickedIndex < pvMoves.length) {
-            const appState = getAppState();
-            const isAtLastMove =
-              appState.currentMoveIndex === appState.moves.length - 1;
+const handlePVClick = (e: Event): void => {
+  const target = e.target as HTMLElement;
 
-            if (isAtLastMove) {
-              // At the last move - append to the main game list
-              const moveToAdd = pvMoves[clickedIndex];
-              addMove(moveToAdd);
-            } else {
-              // Not at the last move - create or update a branch
-              // Only include moves that come after the current position
-              const movesAfterCurrent = pvMoves.slice(0, clickedIndex + 1);
+  console.log("Event delegation caught click on:", target);
 
-              if (appState.isInBranch) {
-                // Update existing branch
-                updateBranch(movesAfterCurrent);
-              } else {
-                // Create new branch
-                createBranch(movesAfterCurrent, originalPosition);
-              }
-            }
+  // Check if the clicked element is a PV move
+  if (!target.classList.contains("pv-move")) {
+    console.log("Not a PV move, ignoring");
+    return;
+  }
 
-            // Apply all moves up to and including the clicked move
-            let currentFEN = originalPosition;
-            for (let i = 0; i <= clickedIndex; i++) {
-              const move = pvMoves[i];
-              currentFEN = applyMoveToFEN(currentFEN, move);
-            }
+  console.log("PV move clicked, processing...");
 
-            // Set the board to this position
-            Board.setPosition(currentFEN);
+  e.preventDefault();
+  e.stopPropagation(); // Prevent triggering the parent move-item click
+  e.stopImmediatePropagation(); // Prevent any other handlers from executing
 
-            // Update the FEN input
-            updateFENInput();
+  const originalPosition = target.dataset.originalPosition;
+  const moveIndex = target.dataset.moveIndex;
 
-            // Highlight the last move in the branch
-            if (clickedIndex >= 0) {
-              highlightLastMove(pvMoves[clickedIndex]);
-            }
+  console.log("PV click detected:", { originalPosition, moveIndex });
+
+  if (originalPosition && moveIndex !== undefined) {
+    // Get the PV moves from the current analysis results
+    const appState = getAppState();
+    console.log("Current appState before processing:", appState);
+    const currentResults = appState.currentResults;
+
+    if (currentResults && currentResults.moves.length > 0) {
+      // Find the analysis result that matches the clicked move
+      const clickedIndex = parseInt(moveIndex);
+      const clickedMoveFrom = target.dataset.moveFrom;
+      const clickedMoveTo = target.dataset.moveTo;
+
+      console.log("Looking for analysis result:", {
+        clickedIndex,
+        clickedMove: `${clickedMoveFrom}${clickedMoveTo}`,
+        totalResults: currentResults.moves.length,
+      });
+
+      // Find the analysis result that contains this specific move
+      let matchingResult = null;
+      for (let i = 0; i < currentResults.moves.length; i++) {
+        const result = currentResults.moves[i];
+        if (result.pv && result.pv.length > clickedIndex) {
+          const pvMove = result.pv[clickedIndex];
+          if (pvMove.from === clickedMoveFrom && pvMove.to === clickedMoveTo) {
+            matchingResult = result;
+            break;
           }
         }
       }
-    });
-  });
+
+      if (!matchingResult) {
+        console.error(
+          "Could not find matching analysis result for clicked move",
+        );
+        return;
+      }
+
+      // Use the PV moves from the matching result
+      const pvMoves = matchingResult.pv;
+
+      console.log("Found matching result:", {
+        resultIndex: currentResults.moves.indexOf(matchingResult),
+        pvLength: pvMoves.length,
+        clickedIndex,
+        pvMoves: pvMoves.map((m) => `${m.from}${m.to}`),
+      });
+
+      console.log("PV click processing:", {
+        clickedIndex,
+        isInBranch: appState.isInBranch,
+      });
+
+      console.log("PV moves check:", {
+        pvMoves: pvMoves ? pvMoves.length : null,
+        clickedIndex,
+        condition: pvMoves && clickedIndex < pvMoves.length,
+      });
+
+      // If clickedIndex is out of bounds, limit it to the available moves
+      const validClickedIndex = pvMoves
+        ? Math.min(clickedIndex, pvMoves.length - 1)
+        : 0;
+
+      console.log("Valid clicked index:", validClickedIndex);
+
+      if (pvMoves && validClickedIndex >= 0) {
+        const appState = getAppState();
+        const isAtLastMove =
+          appState.currentMoveIndex === appState.moves.length - 1;
+
+        // Always create or update a branch, regardless of position
+        const movesAfterCurrent = pvMoves.slice(0, validClickedIndex + 1);
+
+        console.log("Branch logic:", {
+          isInBranch: appState.isInBranch,
+          movesAfterCurrent,
+        });
+
+        if (appState.isInBranch) {
+          // Update existing branch
+          console.log("Updating existing branch");
+          updateAppState({
+            branchMoves: movesAfterCurrent,
+          });
+          updateMoveList();
+        } else {
+          // Create new branch with the original position
+          console.log("Creating new branch");
+          createBranch(movesAfterCurrent, originalPosition);
+          console.log("createBranch completed, calling updateMoveList");
+          updateMoveList();
+        }
+
+        console.log("After branch logic, appState:", getAppState());
+
+        // Apply all moves up to and including the clicked move
+        let currentFEN = originalPosition;
+        for (let i = 0; i <= validClickedIndex; i++) {
+          const move = pvMoves[i];
+          currentFEN = applyMoveToFEN(currentFEN, move);
+        }
+
+        // Set the board to this position
+        Board.setPosition(currentFEN);
+
+        // Update the FEN input
+        updateFENInput();
+
+        // Highlight the last move in the branch
+        if (validClickedIndex >= 0) {
+          highlightLastMove(pvMoves[validClickedIndex]);
+        }
+
+        console.log("After all updates, final appState:", getAppState());
+      }
+    }
+  }
 };
 
 // ============================================================================
@@ -1625,17 +1741,34 @@ const updateMoveList = (): void => {
     const isAtWhiteMove = appState.branchStartIndex % 2 === 0;
     const isAtBlackMove = appState.branchStartIndex % 2 === 1;
 
+    console.log("Branch display check:", {
+      i,
+      branchStartIndex: appState.branchStartIndex,
+      isInBranch: appState.isInBranch,
+      branchMovesLength: appState.branchMoves.length,
+      isAtWhiteMove,
+      isAtBlackMove,
+      shouldDisplay:
+        appState.isInBranch &&
+        appState.branchMoves.length > 0 &&
+        ((isAtWhiteMove && i === appState.branchStartIndex) ||
+          (isAtBlackMove &&
+            i === Math.floor(appState.branchStartIndex / 2) * 2)),
+    });
+
     if (
       appState.isInBranch &&
       appState.branchMoves.length > 0 &&
-      ((isAtWhiteMove && i === appState.branchStartIndex) ||
-        (isAtBlackMove && i === Math.floor(appState.branchStartIndex / 2) * 2))
+      i === appState.currentMoveIndex
     ) {
       const branchEntry = document.createElement("div");
-      branchEntry.className = "move-entry branch-entry";
-      branchEntry.style.marginLeft = "20px";
+      branchEntry.className = "branch-entry";
+      branchEntry.style.marginLeft = "12px";
+      branchEntry.style.marginRight = "-12px"; // tbh, i dunno why specifically -12 but this does prevent a horizontal scrollbar.
+      branchEntry.style.position = "relative";
       branchEntry.style.borderLeft = "2px solid #007bff";
       branchEntry.style.paddingLeft = "10px";
+      branchEntry.style.boxSizing = "border-box";
 
       // Determine the starting move number for the branch
       const currentMoveNumber = Math.floor(appState.branchStartIndex / 2) + 1;
@@ -1653,20 +1786,41 @@ const updateMoveList = (): void => {
         whitePlaceholder.textContent = "...";
         branchEntry.appendChild(whitePlaceholder);
 
-        // Add the black move from the branch
-        if (appState.branchMoves.length > 0) {
-          const blackMove = appState.branchMoves[0];
-          const blackMoveElement = document.createElement("span");
-          blackMoveElement.className =
-            "move-text clickable branch-move current-move";
-          blackMoveElement.textContent = moveToNotation(
-            blackMove,
-            notationType,
-            pieceType,
-            "",
-          );
-          blackMoveElement.title = "Branch move";
-          branchEntry.appendChild(blackMoveElement);
+        // Add all branch moves
+        for (let i = 0; i < appState.branchMoves.length; i += 2) {
+          const branchMoveNumber = currentMoveNumber + Math.floor(i / 2);
+
+          // Add black move
+          if (i < appState.branchMoves.length) {
+            const blackMove = appState.branchMoves[i];
+            const blackMoveElement = document.createElement("span");
+            blackMoveElement.className = "move-text clickable branch-move";
+            blackMoveElement.textContent = moveToNotation(
+              blackMove,
+              notationType,
+              pieceType,
+              "",
+            );
+            blackMoveElement.title = "Branch move";
+            branchEntry.appendChild(blackMoveElement);
+          }
+
+          // Add white move
+          if (i + 1 < appState.branchMoves.length) {
+            const whiteMove = appState.branchMoves[i + 1];
+            const whiteMoveElement = document.createElement("span");
+            whiteMoveElement.className = "move-text clickable branch-move";
+            // Add move number for all white moves in the branch
+            const moveNumberText = ` ${branchMoveNumber + 1}.`;
+            whiteMoveElement.textContent = `${moveNumberText}${moveToNotation(
+              whiteMove,
+              notationType,
+              pieceType,
+              "",
+            )}`;
+            whiteMoveElement.title = "Branch move";
+            branchEntry.appendChild(whiteMoveElement);
+          }
         }
       } else if (isAtBlackMove) {
         // At a black move - create branch under the current move
@@ -1675,20 +1829,41 @@ const updateMoveList = (): void => {
         moveNumberSpan.textContent = `${currentMoveNumber + 1}.`;
         branchEntry.appendChild(moveNumberSpan);
 
-        // Add the white move from the branch
-        if (appState.branchMoves.length > 0) {
-          const whiteMove = appState.branchMoves[0];
-          const whiteMoveElement = document.createElement("span");
-          whiteMoveElement.className =
-            "move-text clickable branch-move current-move";
-          whiteMoveElement.textContent = moveToNotation(
-            whiteMove,
-            notationType,
-            pieceType,
-            "",
-          );
-          whiteMoveElement.title = "Branch move";
-          branchEntry.appendChild(whiteMoveElement);
+        // Add all branch moves
+        for (let i = 0; i < appState.branchMoves.length; i += 2) {
+          const branchMoveNumber = currentMoveNumber + Math.floor(i / 2);
+
+          // Add white move
+          if (i < appState.branchMoves.length) {
+            const whiteMove = appState.branchMoves[i];
+            const whiteMoveElement = document.createElement("span");
+            whiteMoveElement.className = "move-text clickable branch-move";
+            // Add move number for all white moves in the branch
+            const moveNumberText = ` ${branchMoveNumber + 1}.`;
+            whiteMoveElement.textContent = `${moveNumberText}${moveToNotation(
+              whiteMove,
+              notationType,
+              pieceType,
+              "",
+            )}`;
+            whiteMoveElement.title = "Branch move";
+            branchEntry.appendChild(whiteMoveElement);
+          }
+
+          // Add black move
+          if (i + 1 < appState.branchMoves.length) {
+            const blackMove = appState.branchMoves[i + 1];
+            const blackMoveElement = document.createElement("span");
+            blackMoveElement.className = "move-text clickable branch-move";
+            blackMoveElement.textContent = moveToNotation(
+              blackMove,
+              notationType,
+              pieceType,
+              "",
+            );
+            blackMoveElement.title = "Branch move";
+            branchEntry.appendChild(blackMoveElement);
+          }
         }
       }
 

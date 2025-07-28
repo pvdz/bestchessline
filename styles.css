@@ -291,8 +291,9 @@ h2 {
   padding: 16px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: fit-content;
+  width: 300px;
   min-width: 200px;
+  max-width: 300px;
 }
 
 .game-moves-content {
@@ -338,6 +339,8 @@ h2 {
   font-family: "Courier New", monospace;
   font-size: 12px;
   line-height: 1.4;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .moves-panel .move-entry {
@@ -395,11 +398,26 @@ h2 {
   background-color: #f0f8ff;
   border-radius: 4px;
   margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  font-size: 0.9em;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .moves-panel .branch-move {
   color: #007bff;
   font-style: italic;
+  margin-left: 4px;
+  margin-right: 4px;
+  flex-shrink: 1;
+  min-width: 0;
+  word-break: break-all;
 }
 
 .moves-panel .branch-move.current-move {
