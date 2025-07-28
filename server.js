@@ -28,6 +28,13 @@ const server = http.createServer((req, res) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
 
+  // Set cache-busting headers to prevent any caching
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Last-Modified", new Date().toUTCString());
+  res.setHeader("ETag", `"${Date.now()}-${Math.random().toString(36).substr(2, 9)}"`);
+
   let filePath = "." + req.url;
   if (filePath === "./") {
     filePath = "./index.html";
@@ -65,4 +72,5 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}/`);
   console.log("Headers set for SharedArrayBuffer support");
+  console.log("Cache-busting headers enabled - always serving fresh content");
 });
