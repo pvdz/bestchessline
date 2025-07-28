@@ -1,5 +1,5 @@
 {
-  "name": "chess-analysis",
+  "name": "best-chess-line",
   "version": "1.0.0",
   "author": "Peter van der Zee",
   "description": "Best Chess Line Discovery App - Chess position analysis using Stockfish",
@@ -22,7 +22,7 @@
     "stockfish": "16.0.0"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
-    "typescript": "^5.0.0"
+    "prettier": "3.6.2",
+    "typescript": "5.8.3"
   }
 }
