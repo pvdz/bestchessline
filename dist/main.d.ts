@@ -3,14 +3,14 @@ import { ChessMove, AnalysisResult } from "./types.js";
  * Application state interface
  */
 interface AppState {
-    moves: ChessMove[];
-    initialFEN: string;
-    currentMoveIndex: number;
-    isAnalyzing: boolean;
-    currentResults: AnalysisResult | null;
-    branchMoves: ChessMove[];
-    branchStartIndex: number;
-    isInBranch: boolean;
+  moves: ChessMove[];
+  initialFEN: string;
+  currentMoveIndex: number;
+  isAnalyzing: boolean;
+  currentResults: AnalysisResult | null;
+  branchMoves: ChessMove[];
+  branchStartIndex: number;
+  isInBranch: boolean;
 }
 /**
  * Update application state
@@ -28,10 +28,6 @@ declare const initializeApp: () => void;
  * Start analysis
  */
 declare const startAnalysis: () => Promise<void>;
-/**
- * Pause analysis
- */
-declare const pauseAnalysis: () => void;
 /**
  * Stop analysis
  */
@@ -76,4 +72,20 @@ declare const updateMoveList: () => void;
  * Update navigation buttons
  */
 declare const updateNavigationButtons: () => void;
-export { initializeApp, getAppState, updateAppState, startAnalysis, pauseAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight, };
+export {
+  initializeApp,
+  getAppState,
+  updateAppState,
+  startAnalysis,
+  stopAnalysis,
+  addMove,
+  importGame,
+  previousMove,
+  nextMove,
+  updateResults,
+  updateStatus,
+  updateMoveList,
+  updateNavigationButtons,
+  highlightLastMove,
+  clearLastMoveHighlight,
+};

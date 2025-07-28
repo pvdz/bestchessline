@@ -132,6 +132,18 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
           </div>
         </div>
 
+        <!-- Game Moves -->
+        <div class="game-moves-section">
+          <h2>Game Moves</h2>
+          <div class="game-moves-content">
+            <div class="game-moves-controls">
+              <button id="prev-move" disabled>← Previous</button>
+              <button id="next-move" disabled>Next →</button>
+            </div>
+            <div id="game-moves" class="moves-panel"></div>
+          </div>
+        </div>
+
         <!-- Analysis Controls -->
         <div class="controls-section">
           <h2>Controls</h2>
@@ -154,70 +166,59 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
 
           <div class="analysis-controls">
             <button id="start-analysis">Start</button>
-            <button id="pause-analysis" disabled>Pause</button>
             <button id="stop-analysis" disabled>Stop</button>
           </div>
 
-          <div class="status">
-            <p id="status">Ready</p>
-          </div>
-        </div>
-
-        <!-- Game Moves -->
-        <div class="game-moves-section">
-          <h2>Game Moves</h2>
-          <div class="game-moves-content">
-            <div class="game-moves-controls">
-              <button id="prev-move" disabled>← Previous</button>
-              <button id="next-move" disabled>Next →</button>
+          <div class="format-controls">
+            <div class="control-group">
+              <label>Algebraic:</label>
+              <div class="radio-row">
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="notation-format"
+                    value="algebraic-short"
+                    checked
+                  />
+                  <span>Short</span>
+                </label>
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="notation-format"
+                    value="algebraic-long"
+                  />
+                  <span>Long</span>
+                </label>
+              </div>
             </div>
-            <div id="game-moves" class="moves-panel"></div>
+            <div class="control-group">
+              <label>Notation:</label>
+              <div class="radio-row">
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="piece-format"
+                    value="symbols"
+                    checked
+                  />
+                  <span>Symbols</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="piece-format" value="letters" />
+                  <span>Letters</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Analysis Results -->
         <div class="results-section">
           <h2>Analysis Results</h2>
-          <div class="results-controls">
-            <div class="control-group">
-              <label>Results Format:</label>
-              <div class="radio-row">
-                <div class="radio-column">
-                  <label class="radio-label">
-                    <input
-                      type="radio"
-                      name="notation-format"
-                      value="algebraic"
-                      checked
-                    />
-                    <span>Algebraic</span>
-                  </label>
-                  <label class="radio-label">
-                    <input
-                      type="radio"
-                      name="notation-format"
-                      value="descriptive"
-                    />
-                    <span>Descriptive</span>
-                  </label>
-                </div>
-                <div class="radio-column">
-                  <label class="radio-label">
-                    <input
-                      type="radio"
-                      name="piece-format"
-                      value="symbols"
-                      checked
-                    />
-                    <span>Symbols</span>
-                  </label>
-                  <label class="radio-label">
-                    <input type="radio" name="piece-format" value="letters" />
-                    <span>Letters</span>
-                  </label>
-                </div>
-              </div>
-            </div>
+          <div class="status">
+            <div class="status-title">Stockfish</div>
+            <p id="engine-status">Ready</p>
           </div>
           <div id="analysis-results" class="results-panel"></div>
         </div>

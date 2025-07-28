@@ -12,7 +12,7 @@
   "main": "index.html",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "npm run format && tsc && npm run copy-stockfish",
+    "build": "tsc && npm run copy-stockfish",
     "copy-stockfish": "cp node_modules/stockfish/src/stockfish-nnue-16.js dist/stockfish.js && cp node_modules/stockfish/src/stockfish-nnue-16.wasm dist/stockfish-nnue-16.wasm && echo 'Stockfish files copied'",
     "format": "prettier --no-config --no-editorconfig --log-level warn --write .",
     "serve": "node server.js"

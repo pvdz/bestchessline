@@ -393,9 +393,6 @@ const analyzePosition = async (
   });
 };
 
-/**
- * Stop current analysis
- */
 const stopAnalysis = (): void => {
   if (stockfishState.isAnalyzing) {
     uciCmd("stop");

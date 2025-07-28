@@ -1,6 +1,6 @@
-# Chess Moves Coach
+# Best Chess Line Discovery
 
-A comprehensive web-based chess analysis application with interactive board, Stockfish integration, and game management features. Built with functional TypeScript architecture for maintainability and clean code.
+A comprehensive web-based chess analysis application with interactive board, Stockfish integration, and (naive/simple) game management features.
 
 ## Features
 
@@ -10,6 +10,9 @@ A comprehensive web-based chess analysis application with interactive board, Sto
 - **Stockfish Integration**: Multi-threaded analysis using Stockfish 16.0.0 WebAssembly
 - **Real-time Results**: Live analysis with scores, depths, and principal variations
 - **Configurable Analysis**: Set depth, move count, threads, and engine options
+- **Color-Coded Arrows**: Visual analysis arrows with quality-based coloring
+- **Analysis Status**: Real-time status indicator showing analysis progress and depth
+- **Enhanced PV Display**: Clickable principal variations (best engine lines) with move effects
 
 ### 🎮 Game Management
 
@@ -20,10 +23,12 @@ A comprehensive web-based chess analysis application with interactive board, Sto
 
 ### 🎨 User Experience
 
-- **Format Controls**: Dynamic notation (Algebraic/Descriptive) and piece format (Symbols/Letters)
+- **Format Controls**: Dynamic notation (Short/Long Algebraic) and piece format (Symbols/Letters)
 - **Visual Feedback**: Hover effects, move arrows, square highlighting, and last move indication
 - **Responsive Design**: Optimized for desktop and mobile devices
 - **Modern UI**: Clean interface with smooth animations and intuitive controls
+- **Branching System**: Explore variations by clicking on analysis moves
+- **Enhanced Navigation**: Improved layout with Game Moves, Controls, and Analysis Results sections
 
 ### 🔧 Technical Features
 
@@ -97,7 +102,7 @@ npm run dev
 - **Max Depth**: Maximum search depth for Stockfish (1-50)
 - **White/Black Moves**: Number of top moves to analyze for each side (1-20)
 - **Threads**: Number of CPU threads for Stockfish (1-8)
-- **Format Options**: Choose notation format (Algebraic/Descriptive) and piece format (Symbols/Letters)
+- **Format Options**: Choose notation format (Short/Long Algebraic) and piece format (Symbols/Letters)
 
 ### Running Analysis
 
@@ -105,19 +110,22 @@ npm run dev
 2. Configure analysis parameters
 3. Click "Start Analysis" to begin
 4. Monitor real-time progress and results
-5. Use "Pause" or "Stop" to control the analysis
-6. Hover over results to see move arrows on the board
+5. Use "Stop" to end the analysis
+6. View color-coded arrows on the board showing move quality
+7. Click on analysis moves to explore variations
 
 ### Understanding Results
 
 Each move result shows:
 
-- **Move Notation**: The move in selected notation format
+- **Move Notation**: The move in selected notation format with effects (captures, checks, mates)
 - **Score**: Evaluation in centipawns or mate notation
 - **Depth**: Search depth reached
 - **Nodes**: Number of positions evaluated
 - **Time**: Analysis time for this move
 - **Principal Variation**: Best line of play following this move
+- **Color-Coded Arrows**: Visual indication of move quality on the board
+- **Analysis Status**: Real-time progress and depth information
 
 ## Technical Details
 
@@ -131,8 +139,8 @@ Each move result shows:
 
 ### Key Components
 
-- **`main.ts`**: Main application logic and state management with branching system
-- **`chess-board.ts`**: Interactive board with drag & drop
+- **`main.ts`**: Main application logic and state management with branching system and analysis management
+- **`chess-board.ts`**: Interactive board with drag & drop, color-coded arrows, and score labels
 - **`stockfish-client.ts`**: Engine integration and analysis
 - **`types.ts`**: TypeScript interfaces and type definitions
 - **`utils.ts`**: Chess utilities and notation functions
@@ -141,15 +149,15 @@ Each move result shows:
 
 ```
 chessmovescoach/
-├── index.html                    # Main HTML structure (4-column grid)
-├── styles.css                    # Modern responsive CSS (835 lines)
+├── index.html                    # Main HTML structure (Game Moves, Controls, Analysis Results)
+├── styles.css                    # Modern responsive CSS (1052 lines)
 ├── favicon.svg                   # Custom chess piece icon
 ├── src/
-│   ├── main.ts                   # Main application logic (1748 lines)
-│   ├── chess-board.ts            # Board component with drag & drop
+│   ├── main.ts                   # Main application logic (2021 lines)
+│   ├── chess-board.ts            # Board component with drag & drop and arrow system
 │   ├── stockfish-client.ts       # Engine integration
-│   ├── types.ts                  # TypeScript definitions (112 lines)
-│   └── utils.ts                  # Utility functions (245 lines)
+│   ├── types.ts                  # TypeScript definitions (246 lines)
+│   └── utils.ts                  # Utility functions (435 lines)
 ├── dist/
 │   ├── stockfish.js              # Stockfish WebAssembly worker
 │   └── stockfish-nnue-16.wasm   # Stockfish binary
@@ -181,6 +189,9 @@ chessmovescoach/
 - **Format Controls**: Dynamic notation and piece format selection
 - **Move Navigation**: Game replay with proper state management
 - **Visual Feedback**: Hover effects, move arrows, and highlighting
+- **Color-Coded Analysis**: Visual arrows showing move quality with score labels
+- **Branching System**: Explore variations by clicking analysis moves
+- **Analysis Status**: Real-time progress and depth information
 
 ## Browser Support
 
@@ -201,6 +212,8 @@ Requires WebAssembly support for Stockfish engine.
 ## Troubleshooting
 
 ### Stockfish Not Loading
+
+This requires the files to be served with a particular header to support the shared buffers. There's probably a better way but I didn't try to resolve that yet.
 
 - Check that `dist/stockfish.js` and `dist/stockfish-nnue-16.wasm` exist
 - Ensure browser supports WebAssembly
@@ -231,24 +244,18 @@ Requires WebAssembly support for Stockfish engine.
 npm run dev          # TypeScript watch mode
 npm run build        # Build and copy Stockfish files
 npm run serve        # Start development server
+npm run format       # Run Prettier on the code
 
 # Stockfish files
 npm run copy-stockfish  # Copy stockfish-nnue-16.js and stockfish-nnue-16.wasm
 ```
 
-## Contributing
+## Author
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
+Peter van der Zee
+(c) http://pvdz.ee
+July 2025
 
 ## Acknowledgments
 
 - [Stockfish](https://stockfishchess.org/) - Chess engine
-- [Chess Unicode Symbols](https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode) - Piece representation

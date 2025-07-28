@@ -1,4 +1,4 @@
-import { ChessPosition, ChessMove } from "./types.js";
+import { ChessPosition, ChessMove, AnalysisMove } from "./types.js";
 import { parseFEN, toFEN, squareToCoords, coordsToSquare } from "./utils.js";
 
 // ============================================================================
@@ -53,7 +53,7 @@ let dragState: DragState = {
 /**
  * Arrow state for move visualization
  */
-let arrowElement: HTMLElement | null = null;
+let arrowElements: Map<string, HTMLElement> = new Map();
 
 // ============================================================================
 // STATE UPDATE FUNCTIONS
@@ -420,6 +420,9 @@ const findSquareAtPosition = (
  * Make a move on the board
  */
 const makeMove = (from: string, to: string, piece: string): void => {
+  // Clear any existing arrows and labels before re-rendering
+  hideMoveArrow();
+
   // Update board state
   const newPosition = applyMoveToPosition(boardState.position, from, to, piece);
   updateBoardState({ position: newPosition });
@@ -472,6 +475,9 @@ const applyMoveToPosition = (
  * Set board position
  */
 const setPosition = (fen: string): void => {
+  // Clear any existing arrows and labels before re-rendering
+  hideMoveArrow();
+
   updateBoardState({ position: parseFEN(fen) });
   const boardElement = document.querySelector("#chess-board") as HTMLElement;
   if (boardElement) {
@@ -510,12 +516,139 @@ const setOnMoveMade = (callback: (move: ChessMove) => void): void => {
 /**
  * Show move arrow
  */
-const showMoveArrow = (from: string, to: string, piece: string): void => {
-  hideMoveArrow();
+const showMoveArrow = (
+  from: string,
+  to: string,
+  piece: string,
+  score?: number,
+  allMoves?: AnalysisMove[],
+  index?: number,
+): void => {
+  // Create a unique identifier for this arrow based on the move
+  const arrowId = `${piece}-${from}-${to}`;
+
+  // Remove existing arrow for this piece if it exists
+  hideMoveArrow(arrowId);
 
   const arrow = document.createElement("div");
   arrow.className = "move-arrow";
-  arrow.innerHTML = "→";
+  arrow.setAttribute("data-arrow-id", arrowId);
+
+  // Calculate arrow color based on move quality
+  let arrowColor = "#ff6b6b"; // Default red
+  if (score !== undefined && allMoves && allMoves.length > 0) {
+    const bestMove = allMoves[0]; // Best move is always first
+    const bestScore = bestMove.score;
+    const currentScore = score;
+
+    // Check if this move is a mate
+    const isMate = Math.abs(currentScore) >= 10000;
+    const isBestMate = Math.abs(bestScore) >= 10000;
+
+    if (isMate) {
+      // Mate moves are always pastel green
+      arrowColor = "#90EE90"; // pastel green
+    } else if (isBestMate) {
+      // Best move is mate but this move is not - bright red for preventing mate
+      arrowColor = "#FF4444"; // bright red
+    } else {
+      // Calculate delta from best move
+      const delta = currentScore - bestScore;
+      const deltaInPawns = Math.abs(delta) / 100;
+
+      // Calculate the rounded delta to match the display logic
+      let roundedDeltaInPawns;
+      if (Math.abs(delta) < 100) {
+        // Small difference, round to 1 decimal place
+        roundedDeltaInPawns = Math.round(Math.abs(delta) / 10) / 10;
+      } else {
+        // Large difference, round to integer
+        roundedDeltaInPawns = Math.round(Math.abs(delta) / 100);
+      }
+
+      if (roundedDeltaInPawns <= 0.2) {
+        // Small deviation (0.1-0.2) is light green
+        arrowColor = "#98FB98"; // light green
+      } else if (roundedDeltaInPawns <= 1.0) {
+        // Linear scale from pastel yellow to tomato red (0.3-1.0)
+        const normalizedDelta = (roundedDeltaInPawns - 0.2) / 0.8; // 0 to 1 scale
+        const yellow = [255, 255, 224]; // pastel yellow
+        const tomato = [255, 99, 71]; // tomato red
+
+        const r = Math.round(
+          yellow[0] + (tomato[0] - yellow[0]) * normalizedDelta,
+        );
+        const g = Math.round(
+          yellow[1] + (tomato[1] - yellow[1]) * normalizedDelta,
+        );
+        const b = Math.round(
+          yellow[2] + (tomato[2] - yellow[2]) * normalizedDelta,
+        );
+
+        arrowColor = `rgb(${r}, ${g}, ${b})`;
+      } else {
+        // Beyond 1.0 pawns is tomato red
+        arrowColor = "#FF6347"; // tomato red
+      }
+    }
+  }
+
+  arrow.style.backgroundColor = arrowColor;
+
+  // Also set the arrow head color to match
+  arrow.style.setProperty("--arrow-color", arrowColor);
+
+  // Set z-index based on analysis result position (higher index = higher z-index)
+  const zIndex = index !== undefined ? 100 + index : 100;
+  arrow.style.zIndex = zIndex.toString();
+
+  // Calculate the label text based on the scoring rules
+  let labelText = "";
+  if (score !== undefined && allMoves && allMoves.length > 0) {
+    const bestMove = allMoves[0]; // Best move is always first
+    const bestScore = bestMove.score;
+    const currentScore = score;
+
+    // Check if this move is a mate
+    const isMate = Math.abs(currentScore) >= 10000;
+    const isBestMate = Math.abs(bestScore) >= 10000;
+
+    if (isMate) {
+      // This move is a mate
+      if (currentScore > 0) {
+        labelText = "+#"; // White mates
+      } else {
+        labelText = "-#"; // Black mates
+      }
+    } else if (isBestMate) {
+      // Best move is mate but this move is not
+      labelText = "!?"; // Indicates not a mate when best move is mate
+    } else {
+      // Calculate delta from best move
+      const delta = currentScore - bestScore;
+
+      if (Math.abs(delta) < 100) {
+        // Small difference, show as fraction
+        labelText =
+          delta > 0
+            ? `+${(delta / 100).toFixed(1)}`
+            : `${(delta / 100).toFixed(1)}`;
+      } else {
+        // Large difference, round to integer
+        const roundedDelta = Math.round(delta / 100);
+        labelText = roundedDelta > 0 ? `+${roundedDelta}` : `${roundedDelta}`;
+      }
+    }
+  }
+
+  // Format score with + or - prefix for arrow data attribute
+  if (score !== undefined) {
+    const scoreText =
+      score > 0
+        ? `+${(score / 100).toFixed(1)}`
+        : `${(score / 100).toFixed(1)}`;
+    arrow.setAttribute("data-score", scoreText);
+  }
 
   positionArrow(arrow, from, to);
 
@@ -524,16 +657,101 @@ const showMoveArrow = (from: string, to: string, piece: string): void => {
     boardElement.appendChild(arrow);
   }
 
-  arrowElement = arrow;
+  // Add score label if score is provided
+  if (score !== undefined) {
+    const scoreLabel = document.createElement("div");
+    scoreLabel.className = "move-score-label";
+    scoreLabel.textContent =
+      labelText ||
+      (score > 0
+        ? `+${(score / 100).toFixed(1)}`
+        : `${(score / 100).toFixed(1)}`);
+
+    // Set CSS custom property for the arrow color
+    scoreLabel.style.setProperty("--arrow-color", arrowColor);
+    scoreLabel.setAttribute("data-arrow-id", arrowId);
+
+    // Position the score label at the end of the arrow
+    const fromElement = document.querySelector(`[data-square="${from}"]`);
+    const toElement = document.querySelector(`[data-square="${to}"]`);
+
+    if (fromElement && toElement) {
+      const fromRect = fromElement.getBoundingClientRect();
+      const toRect = toElement.getBoundingClientRect();
+
+      const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+      const fromCenter = {
+        x: fromRect.left + fromRect.width / 2 + scrollX,
+        y: fromRect.top + fromRect.height / 2 + scrollY,
+      };
+
+      const toCenter = {
+        x: toRect.left + toRect.width / 2 + scrollX,
+        y: toRect.top + toRect.height / 2 + scrollY,
+      };
+
+      // Calculate angle for positioning
+      const angle = Math.atan2(
+        toCenter.y - fromCenter.y,
+        toCenter.x - fromCenter.x,
+      );
+
+      scoreLabel.style.position = "absolute";
+      // Position at the connection point between shaft and head
+      const connectionPoint = {
+        x: toCenter.x - 24 * Math.cos(angle), // 24px is arrow head width
+        y: toCenter.y - 24 * Math.sin(angle),
+      };
+
+      // Position the label at the connection point, centered
+      scoreLabel.style.left = `${connectionPoint.x - 16}px`; // 32px width / 2
+      scoreLabel.style.top = `${connectionPoint.y - 8 + 4}px`; // 16px height / 2 - half font size (10px/2 = 5px)
+      scoreLabel.style.width = "32px";
+      scoreLabel.style.height = "16px";
+
+      // Set z-index for the label to match the arrow
+      scoreLabel.style.zIndex = zIndex.toString();
+
+      document.body.appendChild(scoreLabel);
+      arrowElements.set(`${arrowId}-score`, scoreLabel);
+    }
+  }
+
+  arrowElements.set(arrowId, arrow);
 };
 
 /**
  * Hide move arrow
  */
-const hideMoveArrow = (): void => {
-  if (arrowElement) {
-    arrowElement.remove();
-    arrowElement = null;
+const hideMoveArrow = (arrowId?: string): void => {
+  if (arrowId) {
+    // Hide specific arrow and its score label
+    const arrow = arrowElements.get(arrowId);
+    if (arrow) {
+      arrow.remove();
+      arrowElements.delete(arrowId);
+    }
+
+    const scoreLabel = arrowElements.get(`${arrowId}-score`);
+    if (scoreLabel) {
+      scoreLabel.remove();
+      arrowElements.delete(`${arrowId}-score`);
+    }
+  } else {
+    // Hide all arrows and score labels
+    const elementsToRemove = Array.from(arrowElements.values());
+    elementsToRemove.forEach((element) => {
+      element.remove();
+    });
+    arrowElements.clear();
+
+    // Also remove any orphaned score labels from document.body
+    const orphanedLabels = document.querySelectorAll(".move-score-label");
+    orphanedLabels.forEach((label) => {
+      label.remove();
+    });
   }
 };
 
@@ -561,14 +779,18 @@ const positionArrow = (arrow: HTMLElement, from: string, to: string): void => {
   const fromRect = fromElement.getBoundingClientRect();
   const toRect = toElement.getBoundingClientRect();
 
+  // Account for page scroll
+  const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
   const fromCenter = {
-    x: fromRect.left + fromRect.width / 2,
-    y: fromRect.top + fromRect.height / 2,
+    x: fromRect.left + fromRect.width / 2 + scrollX,
+    y: fromRect.top + fromRect.height / 2 + scrollY,
   };
 
   const toCenter = {
-    x: toRect.left + toRect.width / 2,
-    y: toRect.top + toRect.height / 2,
+    x: toRect.left + toRect.width / 2 + scrollX,
+    y: toRect.top + toRect.height / 2 + scrollY,
   };
 
   const angle = Math.atan2(
@@ -583,7 +805,7 @@ const positionArrow = (arrow: HTMLElement, from: string, to: string): void => {
   arrow.style.position = "absolute";
   arrow.style.left = `${fromCenter.x}px`;
   arrow.style.top = `${fromCenter.y}px`;
-  arrow.style.width = `${distance}px`;
+  arrow.style.width = `${distance - 24}px`; // Subtract arrow head width to compensate
   arrow.style.transform = `rotate(${angle}rad)`;
   arrow.style.transformOrigin = "0 50%";
 };

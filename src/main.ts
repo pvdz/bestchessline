@@ -111,6 +111,8 @@ const initializeApp = (): void => {
   });
 
   Board.setOnMoveMade((move) => {
+    // Clear analysis arrows when a move is made on the board
+    Board.hideMoveArrow();
     addMove(move);
   });
 
@@ -213,9 +215,7 @@ const initializeEventListeners = (): void => {
   if (startBtn) {
     startBtn.addEventListener("click", () => startAnalysis());
   }
-  if (pauseBtn) {
-    pauseBtn.addEventListener("click", () => pauseAnalysis());
-  }
+
   if (stopBtn) {
     stopBtn.addEventListener("click", () => stopAnalysis());
   }
@@ -242,6 +242,25 @@ const initializeEventListeners = (): void => {
       updateResultsPanel(appState.currentResults?.moves || []);
     });
   });
+
+  // Analysis configuration controls
+  const whiteMovesInput = getInputElement("white-moves");
+  const blackMovesInput = getInputElement("black-moves");
+  const maxDepthInput = getInputElement("max-depth");
+  const threadsInput = getInputElement("threads");
+
+  [whiteMovesInput, blackMovesInput, maxDepthInput, threadsInput].forEach(
+    (input) => {
+      if (input) {
+        input.addEventListener("change", () => {
+          // Update results panel to reflect new configuration
+          if (appState.currentResults?.moves) {
+            updateResultsPanel(appState.currentResults.moves);
+          }
+        });
+      }
+    },
+  );
 };
 
 /**
@@ -292,8 +311,12 @@ const startAnalysis = async (): Promise<void> => {
       fen,
       options,
       (analysisResult) => {
-        updateAppState({ currentResults: analysisResult });
+        updateAppState({
+          currentResults: analysisResult,
+          isAnalyzing: !analysisResult.completed,
+        });
         updateResults(analysisResult);
+        updateButtonStates();
       },
     );
 
@@ -307,15 +330,6 @@ const startAnalysis = async (): Promise<void> => {
     updateAppState({ isAnalyzing: false });
     updateButtonStates();
   }
-};
-
-/**
- * Pause analysis
- */
-const pauseAnalysis = (): void => {
-  Stockfish.stopAnalysis();
-  updateAppState({ isAnalyzing: false });
-  updateButtonStates();
 };
 
 /**
@@ -352,11 +366,9 @@ const getAnalysisOptions = (): AnalysisOptions => {
  */
 const updateButtonStates = (): void => {
   const startBtn = getButtonElement("start-analysis");
-  const pauseBtn = getButtonElement("pause-analysis");
   const stopBtn = getButtonElement("stop-analysis");
 
   if (startBtn) startBtn.disabled = appState.isAnalyzing;
-  if (pauseBtn) pauseBtn.disabled = !appState.isAnalyzing;
   if (stopBtn) stopBtn.disabled = !appState.isAnalyzing;
 };
 
@@ -476,18 +488,109 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
   const resultsPanel = document.getElementById("analysis-results");
   if (!resultsPanel) return;
 
+  // Clear all arrows when updating results
+  Board.hideMoveArrow();
+
   // Get current format settings
   const notationFormat =
-    getCheckedRadioByName("notation-format")?.value || "algebraic";
+    getCheckedRadioByName("notation-format")?.value || "algebraic-short";
   const pieceFormat = getCheckedRadioByName("piece-format")?.value || "symbols";
 
   // Convert format values to match moveToNotation parameters
-  const notationType = notationFormat === "algebraic" ? "short" : "long";
+  const notationType = notationFormat === "algebraic-short" ? "short" : "long";
   const pieceType = pieceFormat === "symbols" ? "unicode" : "english";
+
+  // Filter moves based on analysis criteria
+  const appState = getAppState();
+  const isAnalyzing = appState.isAnalyzing;
+  const targetDepth = getAnalysisOptions().depth;
+
+  // First, separate mate lines from non-mate lines
+  const mateLines = moves.filter((move) => Math.abs(move.score) >= 10000);
+  const nonMateLines = moves.filter((move) => Math.abs(move.score) < 10000);
+
+  // Sort mate lines by score (best mate first)
+  mateLines.sort((a, b) => b.score - a.score);
+
+  // Sort non-mate lines by depth (descending), then by score (descending), then by multipv
+  nonMateLines.sort((a, b) => {
+    if (b.depth !== a.depth) return b.depth - a.depth;
+    if (b.score !== a.score) return b.score - a.score;
+    return (a.multipv || 1) - (b.multipv || 1);
+  });
+
+  // Get the configured number of lines from UI
+  const analysisOptions = getAnalysisOptions();
+  const maxLines = analysisOptions.multiPV;
+  const filteredMoves: AnalysisMove[] = [];
+
+  // Add all mate lines first (up to maxLines)
+  filteredMoves.push(...mateLines.slice(0, maxLines));
+
+  // If we have fewer than maxLines, add the best non-mate lines
+  if (filteredMoves.length < maxLines) {
+    const remainingSlots = maxLines - filteredMoves.length;
+    filteredMoves.push(...nonMateLines.slice(0, remainingSlots));
+  }
+
+  log("Filtering analysis results:", {
+    totalMoves: moves.length,
+    filteredMoves: filteredMoves.length,
+    mateLines: mateLines.length,
+    nonMateLines: nonMateLines.length,
+    maxLines,
+  });
+
+  // Add analysis status indicator to the results section (after controls, before results panel)
+  const resultsSection = document.querySelector(".results-section");
+  if (resultsSection) {
+    // Remove any existing status indicator
+    const existingStatus = resultsSection.querySelector(".analysis-status");
+    if (existingStatus) {
+      existingStatus.remove();
+    }
+
+    // Create new status indicator
+    const statusIndicator = document.createElement("div");
+    statusIndicator.className = "analysis-status";
+
+    // Calculate lowest depth of visible non-mating moves, or mating moves if that's all we have
+    const visibleNonMatingMoves = filteredMoves.filter(
+      (move) => Math.abs(move.score) < 10000,
+    );
+    const visibleMatingMoves = filteredMoves.filter(
+      (move) => Math.abs(move.score) >= 10000,
+    );
+
+    let lowestDepth = 0;
+    if (visibleNonMatingMoves.length > 0) {
+      lowestDepth = Math.min(
+        ...visibleNonMatingMoves.map((move) => move.depth),
+      );
+    } else if (visibleMatingMoves.length > 0) {
+      lowestDepth = Math.max(...visibleMatingMoves.map((move) => move.depth));
+    }
+
+    const statusText = isAnalyzing
+      ? `🔄 Analyzing... (min depth: ${lowestDepth})`
+      : `✅ Analysis complete (depth: ${lowestDepth})`;
+
+    statusIndicator.innerHTML = `
+      <div class="status-text">${statusText}</div>
+    `;
+
+    // Insert after the status div but before the results-panel
+    const statusDiv = resultsSection.querySelector(".status");
+    const resultsPanel = resultsSection.querySelector("#analysis-results");
+
+    if (statusDiv && resultsPanel) {
+      resultsSection.insertBefore(statusIndicator, resultsPanel);
+    }
+  }
 
   resultsPanel.innerHTML = "";
 
-  moves.forEach((move, index) => {
+  filteredMoves.forEach((move, index) => {
     // Determine move effects if not already present
     if (!move.move.effect) {
       const position = parseFEN(Board.getFEN());
@@ -548,6 +651,20 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
     resultsPanel.appendChild(moveItem);
   });
 
+  // Add arrows for each displayed analysis result
+  filteredMoves.forEach((move, index) => {
+    if (move.move.from && move.move.to && move.move.piece) {
+      Board.showMoveArrow(
+        move.move.from,
+        move.move.to,
+        move.move.piece,
+        move.score,
+        filteredMoves,
+        index,
+      );
+    }
+  });
+
   addMoveHoverListeners();
   addPVClickListeners();
 };
@@ -595,7 +712,7 @@ const makeAnalysisMove = (move: ChessMove): void => {
  * Update status message
  */
 const updateStatus = (message: string): void => {
-  const statusElement = document.getElementById("status");
+  const statusElement = document.getElementById("engine-status");
   if (statusElement) {
     statusElement.textContent = message;
   }
@@ -616,23 +733,8 @@ const initializeMoveHoverEvents = (): void => {
  * Add move hover listeners
  */
 const addMoveHoverListeners = (): void => {
-  const moveItems = document.querySelectorAll(".move-item");
-
-  moveItems.forEach((item) => {
-    item.addEventListener("mouseenter", () => {
-      const from = item.getAttribute("data-move-from");
-      const to = item.getAttribute("data-move-to");
-      const piece = item.getAttribute("data-move-piece");
-
-      if (from && to && piece) {
-        Board.showMoveArrow(from, to, piece);
-      }
-    });
-
-    item.addEventListener("mouseleave", () => {
-      Board.hideMoveArrow();
-    });
-  });
+  // No longer needed since arrows are always shown for analysis results
+  // This function is kept for potential future use with game moves
 };
 
 /**
@@ -1676,7 +1778,7 @@ const updateMoveList = (): void => {
       document.querySelector(
         'input[name="notation-format"]:checked',
       ) as HTMLInputElement
-    )?.value || "algebraic";
+    )?.value || "algebraic-short";
   const pieceFormat =
     (
       document.querySelector(
@@ -1685,7 +1787,7 @@ const updateMoveList = (): void => {
     )?.value || "symbols";
 
   // Convert format values to match moveToNotation parameters
-  const notationType = notationFormat === "algebraic" ? "short" : "long";
+  const notationType = notationFormat === "algebraic-short" ? "short" : "long";
   const pieceType = pieceFormat === "symbols" ? "unicode" : "english";
 
   movesPanel.innerHTML = "";
@@ -1901,7 +2003,6 @@ export {
 
   // Analysis
   startAnalysis,
-  pauseAnalysis,
   stopAnalysis,
 
   // Game management
