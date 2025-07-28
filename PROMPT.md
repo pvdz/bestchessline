@@ -1,10 +1,10 @@
-# Chess Moves Coach - Development Memory
+# Best Chess Liens Analysis App - Development Memory
 
 This file serves as the AI memory/description for this application. It should reflect the current project status such that an AI can take a task for this project and complete it without having to analyze every file in detail.
 
 ## Application Overview
 
-A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, and enhanced move validation with effect detection. Built with TypeScript, HTML/CSS, and WebAssembly.
+A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, and enhanced move validation with effect detection. Built with simple vanilla TypeScript and HTML/CSS. And Claude.
 
 ## Core Architecture
 

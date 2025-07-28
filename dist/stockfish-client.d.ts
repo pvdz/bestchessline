@@ -14,6 +14,8 @@ interface StockfishState {
   };
   waitingForReady: boolean;
   pendingAnalysis: (() => void) | null;
+  sharedArrayBufferSupported: boolean;
+  fallbackMode: boolean;
 }
 /**
  * Update Stockfish state
@@ -24,7 +26,11 @@ declare const updateStockfishState: (updates: Partial<StockfishState>) => void;
  */
 declare const getStockfishState: () => StockfishState;
 /**
- * Initialize Stockfish
+ * Check if running in fallback mode
+ */
+declare const isFallbackMode: () => boolean;
+/**
+ * Initialize Stockfish with fallback support
  */
 declare const initializeStockfish: () => void;
 /**
@@ -57,4 +63,5 @@ export {
   isAnalyzingPosition,
   getCurrentAnalysis,
   destroy,
+  isFallbackMode,
 };

@@ -1,4 +1,45 @@
 import { parseFEN, squareToCoords, log, logError } from "./utils.js";
+// ============================================================================
+// SHAREDARRAYBUFFER DETECTION
+// ============================================================================
+/**
+ * Check if SharedArrayBuffer is available and supported
+ */
+const isSharedArrayBufferSupported = () => {
+  try {
+    // Check if SharedArrayBuffer exists
+    if (typeof SharedArrayBuffer === "undefined") {
+      return false;
+    }
+    // Check if WebAssembly threads are supported
+    if (typeof WebAssembly === "undefined" || !WebAssembly.Memory) {
+      return false;
+    }
+    // Try to create a shared memory instance
+    const memory = new WebAssembly.Memory({
+      initial: 1,
+      maximum: 1,
+      shared: true,
+    });
+    // Check if the buffer is actually a SharedArrayBuffer
+    return memory.buffer instanceof SharedArrayBuffer;
+  } catch (error) {
+    logError("SharedArrayBuffer not supported:", error);
+    return false;
+  }
+};
+/**
+ * Get the appropriate Stockfish worker URL based on environment
+ */
+const getStockfishWorkerUrl = () => {
+  if (isSharedArrayBufferSupported()) {
+    return "dist/stockfish.js";
+  } else {
+    // For GitHub Pages, we'll need to use a different approach
+    // This will be handled by the fallback mechanism
+    return "dist/stockfish-single.js";
+  }
+};
 /**
  * Stockfish state instance
  */
@@ -14,6 +55,8 @@ let stockfishState = {
   },
   waitingForReady: false,
   pendingAnalysis: null,
+  sharedArrayBufferSupported: isSharedArrayBufferSupported(),
+  fallbackMode: false,
 };
 /**
  * Update Stockfish state
@@ -25,17 +68,35 @@ const updateStockfishState = (updates) => {
  * Get current Stockfish state
  */
 const getStockfishState = () => ({ ...stockfishState });
+/**
+ * Check if running in fallback mode
+ */
+const isFallbackMode = () => stockfishState.fallbackMode;
 // ============================================================================
 // STOCKFISH INITIALIZATION
 // ============================================================================
 /**
- * Initialize Stockfish
+ * Initialize Stockfish with fallback support
  */
 const initializeStockfish = () => {
   try {
-    log("Initializing Stockfish with Web Worker...");
+    const sharedArrayBufferSupported = isSharedArrayBufferSupported();
+    updateStockfishState({
+      sharedArrayBufferSupported,
+      fallbackMode: !sharedArrayBufferSupported,
+    });
+    if (!sharedArrayBufferSupported) {
+      log("SharedArrayBuffer not supported - using fallback mode");
+      log("Note: Analysis performance may be reduced");
+      // Show user notification about fallback mode
+      showFallbackNotification();
+    }
+    log(
+      `Initializing Stockfish with ${sharedArrayBufferSupported ? "multi-threaded" : "single-threaded"} mode...`,
+    );
     // Create Web Worker for Stockfish
-    const worker = new Worker("dist/stockfish.js");
+    const workerUrl = getStockfishWorkerUrl();
+    const worker = new Worker(workerUrl);
     // Set up message handler
     worker.onmessage = (event) => {
       const message = event.data;
@@ -45,6 +106,12 @@ const initializeStockfish = () => {
     // Set up error handler
     worker.onerror = (error) => {
       logError("Stockfish worker error:", error);
+      // If the main worker fails, try fallback
+      if (!stockfishState.fallbackMode) {
+        log("Trying fallback mode...");
+        updateStockfishState({ fallbackMode: true });
+        initializeStockfishFallback();
+      }
     };
     updateStockfishState({ worker });
     // Initialize with UCI protocol
@@ -52,7 +119,102 @@ const initializeStockfish = () => {
     uciCmd("uci");
   } catch (error) {
     logError("Failed to initialize Stockfish:", error);
+    // Try fallback if main initialization fails
+    if (!stockfishState.fallbackMode) {
+      log("Trying fallback mode...");
+      updateStockfishState({ fallbackMode: true });
+      initializeStockfishFallback();
+    }
   }
+};
+/**
+ * Initialize Stockfish in fallback mode (single-threaded)
+ */
+const initializeStockfishFallback = () => {
+  try {
+    log("Initializing Stockfish in fallback mode...");
+    // Create Web Worker for single-threaded Stockfish
+    const worker = new Worker("dist/stockfish-single.js");
+    // Set up message handler
+    worker.onmessage = (event) => {
+      const message = event.data;
+      log("Received message from Stockfish fallback:", message);
+      handleMessage(message);
+    };
+    // Set up error handler
+    worker.onerror = (error) => {
+      logError("Stockfish fallback worker error:", error);
+    };
+    updateStockfishState({
+      worker,
+      fallbackMode: true,
+    });
+    // Initialize with UCI protocol
+    log("Starting UCI protocol for fallback mode...");
+    uciCmd("uci");
+    // Notify user about fallback mode
+    showFallbackNotification();
+  } catch (error) {
+    logError("Failed to initialize Stockfish fallback:", error);
+  }
+};
+/**
+ * Show notification about fallback mode
+ */
+const showFallbackNotification = () => {
+  // Create notification element
+  const notification = document.createElement("div");
+  notification.className = "fallback-notification";
+  notification.innerHTML = `
+    <div class="notification-content">
+      <strong>Single-Threaded Analysis Mode</strong><br>
+      Note: Using fallback mode for compatibility.<br>
+      Analysis includes full engine lines but may be slower because multi-threading is not supported without special http headers.
+      <button onclick="this.parentElement.parentElement.remove()">×</button>
+    </div>
+  `;
+  // Add styles
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ff9800;
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    z-index: 1000;
+    max-width: 300px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  `;
+  const contentElement = notification.querySelector(".notification-content");
+  if (contentElement) {
+    contentElement.style.cssText = `
+      position: relative;
+    `;
+  }
+  const buttonElement = notification.querySelector("button");
+  if (buttonElement) {
+    buttonElement.style.cssText = `
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 14px;
+    `;
+  }
+  document.body.appendChild(notification);
+  // Auto-remove after 10 seconds
+  setTimeout(() => {
+    if (notification.parentElement) {
+      notification.remove();
+    }
+  }, 10000);
 };
 /**
  * Send UCI command to Stockfish
@@ -356,5 +518,6 @@ export {
   getCurrentAnalysis,
   // Utility
   destroy,
+  isFallbackMode,
 };
 //# sourceMappingURL=stockfish-client.js.map

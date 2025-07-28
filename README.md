@@ -13,6 +13,7 @@ A comprehensive web-based chess analysis application with interactive board, Sto
 - **Color-Coded Arrows**: Visual analysis arrows with quality-based coloring
 - **Analysis Status**: Real-time status indicator showing analysis progress and depth
 - **Enhanced PV Display**: Clickable principal variations (best engine lines) with move effects
+- **GitHub Pages Compatible**: Automatic fallback to single-threaded mode for environments without SharedArrayBuffer support
 
 ### 🎮 Game Management
 
@@ -69,9 +70,11 @@ npm run build
 
 ```bash
 npm run serve
+# or
+npm run serve:single
 ```
 
-5. Open your browser and navigate to `http://localhost:8000`
+5. Open your browser and navigate to `http://localhost:9876`
 
 ### Development
 
@@ -80,6 +83,31 @@ For development with auto-recompilation:
 ```bash
 npm run dev
 ```
+
+### Testing Different Modes
+
+The application supports different modes for testing:
+
+#### Full Performance Mode (Default)
+
+```bash
+npm run serve
+```
+
+- Uses SharedArrayBuffer http headers
+- Multi-threaded Stockfish analysis
+- Optimal performance
+
+#### GitHub Pages Compatibility Mode
+
+```bash
+npm run serve:single
+```
+
+- Disables SharedArrayBuffer headers
+- Single-threaded analysis
+- Simulates GitHub Pages environment
+- Tests fallback mode functionality
 
 ## Usage
 
@@ -101,7 +129,7 @@ npm run dev
 
 - **Max Depth**: Maximum search depth for Stockfish (1-50)
 - **White/Black Moves**: Number of top moves to analyze for each side (1-20)
-- **Threads**: Number of CPU threads for Stockfish (1-8)
+- **Threads**: Number of CPU threads for Stockfish (1-8, forced to 1 in single-threaded mode)
 - **Format Options**: Choose notation format (Short/Long Algebraic) and piece format (Symbols/Letters)
 
 ### Running Analysis
@@ -132,10 +160,11 @@ Each move result shows:
 ### Architecture
 
 - **Frontend**: Functional TypeScript with modular components
-- **Chess Engine**: Stockfish 16.0.0 WebAssembly multi-threaded worker
+- **Chess Engine**: Stockfish 16.0.0 WebAssembly with automatic fallback to single-threaded mode
 - **Styling**: Modern CSS with Grid and Flexbox
 - **State Management**: Global state objects with pure functions
 - **Mobile Support**: Touch events and responsive design
+- **Environment Detection**: Automatic SharedArrayBuffer support detection and graceful degradation
 
 ### Key Components
 
@@ -159,8 +188,10 @@ chessmovescoach/
 │   ├── types.ts                  # TypeScript definitions (246 lines)
 │   └── utils.ts                  # Utility functions (435 lines)
 ├── dist/
-│   ├── stockfish.js              # Stockfish WebAssembly worker
-│   └── stockfish-nnue-16.wasm   # Stockfish binary
+│   ├── stockfish.js              # Stockfish WebAssembly worker (multi-threaded)
+│   ├── stockfish-single.js       # Stockfish WebAssembly worker (single-threaded)
+│   ├── stockfish-nnue-16.wasm   # Stockfish binary (multi-threaded)
+│   └── stockfish-nnue-16-single.wasm # Stockfish binary (single-threaded)
 ├── tsconfig.json                 # TypeScript configuration
 ├── package.json                  # Dependencies and scripts
 ├── server.js                     # Node.js development server
@@ -195,10 +226,18 @@ chessmovescoach/
 
 ## Browser Support
 
-- Chrome/Chromium 67+
-- Firefox 60+
-- Safari 11.1+
-- Edge 79+
+### Full Support (Multi-threaded)
+
+- Chrome/Chromium 67+ (HTTPS)
+- Firefox 60+ (HTTPS)
+- Safari 11.1+ (HTTPS)
+- Edge 79+ (HTTPS)
+
+### Limited Support (Single-threaded)
+
+- GitHub Pages
+- HTTP sites
+- Older browsers
 
 Requires WebAssembly support for Stockfish engine.
 
@@ -213,11 +252,13 @@ Requires WebAssembly support for Stockfish engine.
 
 ### Stockfish Not Loading
 
-This requires the files to be served with a particular header to support the shared buffers. There's probably a better way but I didn't try to resolve that yet.
+The application automatically detects SharedArrayBuffer support and falls back to single-threaded mode when needed.
 
 - Check that `dist/stockfish.js` and `dist/stockfish-nnue-16.wasm` exist
+- Check that `dist/stockfish-single.js` and `dist/stockfish-nnue-16-single.wasm` exist
 - Ensure browser supports WebAssembly
 - Try refreshing the page
+- Check browser console for fallback mode notifications
 
 ### Analysis Not Starting
 
@@ -243,11 +284,12 @@ This requires the files to be served with a particular header to support the sha
 # Development
 npm run dev          # TypeScript watch mode
 npm run build        # Build and copy Stockfish files
-npm run serve        # Start development server
+npm run serve        # Start development server (full performance mode)
+npm run serve:single # Start server in GitHub Pages compatibility mode
 npm run format       # Run Prettier on the code
 
 # Stockfish files
-npm run copy-stockfish  # Copy stockfish-nnue-16.js and stockfish-nnue-16.wasm
+npm run copy-stockfish  # Copy both multi-threaded and single-threaded Stockfish files
 ```
 
 ## Author

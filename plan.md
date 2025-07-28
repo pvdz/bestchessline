@@ -1,4 +1,4 @@
-# Chess Analysis Web App Plan
+# Best Chess Line Discovery App Plan
 
 ## Overview
 

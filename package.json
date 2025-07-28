@@ -2,7 +2,7 @@
   "name": "chess-analysis",
   "version": "1.0.0",
   "author": "Peter van der Zee",
-  "description": "Chess analysis web application using Stockfish",
+  "description": "Best Chess Line Discovery App - Chess position analysis using Stockfish",
   "keywords": [
     "chess",
     "stockfish",
@@ -13,9 +13,10 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc && npm run copy-stockfish",
-    "copy-stockfish": "cp node_modules/stockfish/src/stockfish-nnue-16.js dist/stockfish.js && cp node_modules/stockfish/src/stockfish-nnue-16.wasm dist/stockfish-nnue-16.wasm && echo 'Stockfish files copied'",
+    "copy-stockfish": "cp node_modules/stockfish/src/stockfish-nnue-16.js dist/stockfish.js && cp node_modules/stockfish/src/stockfish-nnue-16.wasm dist/stockfish-nnue-16.wasm && cp node_modules/stockfish/src/stockfish-nnue-16-single.js dist/stockfish-single.js && cp node_modules/stockfish/src/stockfish-nnue-16-single.wasm dist/stockfish-nnue-16-single.wasm && echo 'Stockfish files copied'",
     "format": "prettier --no-config --no-editorconfig --log-level warn --write .",
-    "serve": "node server.js"
+    "serve": "node server.js",
+    "serve:single": "node server.js --no-shared-array-buffer"
   },
   "dependencies": {
     "stockfish": "16.0.0"

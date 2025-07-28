@@ -91,7 +91,7 @@ const getAppState = (): AppState => ({ ...appState });
  * Initialize the application
  */
 const initializeApp = (): void => {
-  log("Initializing Chess Analysis App...");
+  log("Initializing Best Chess Line Discovery App...");
 
   // Initialize board
   const boardElement = document.getElementById("chess-board");
@@ -261,6 +261,42 @@ const initializeEventListeners = (): void => {
       }
     },
   );
+
+  // Update threads input based on fallback mode
+  updateThreadsInputForFallbackMode();
+};
+
+/**
+ * Update threads input for fallback mode
+ */
+const updateThreadsInputForFallbackMode = (): void => {
+  const threadsInput = getInputElement("threads");
+  const threadsLabel = document.querySelector('label[for="threads"]');
+
+  if (Stockfish.isFallbackMode()) {
+    // In fallback mode, disable threads input and show it's forced to 1
+    if (threadsInput) {
+      threadsInput.disabled = true;
+      threadsInput.value = "1";
+      threadsInput.title = "Single-threaded mode - threads fixed at 1";
+    }
+    if (threadsLabel) {
+      threadsLabel.textContent = "Threads (Forced):";
+      (threadsLabel as HTMLElement).title =
+        "Single-threaded mode - multi-threading not available";
+    }
+  } else {
+    // In full mode, enable threads input
+    if (threadsInput) {
+      threadsInput.disabled = false;
+      threadsInput.title = "Number of CPU threads for analysis";
+    }
+    if (threadsLabel) {
+      threadsLabel.textContent = "Threads:";
+      (threadsLabel as HTMLElement).title =
+        "Number of CPU threads for analysis";
+    }
+  }
 };
 
 /**
@@ -352,7 +388,11 @@ const getAnalysisOptions = (): AnalysisOptions => {
   const maxDepth = getInputElement("max-depth")?.value || "20";
   const whiteMoves = getInputElement("white-moves")?.value || "5";
   const blackMoves = getInputElement("black-moves")?.value || "5";
-  const threads = getInputElement("threads")?.value || "1";
+
+  // Force threads to 1 in fallback mode
+  const threads = Stockfish.isFallbackMode()
+    ? "1"
+    : getInputElement("threads")?.value || "1";
 
   return {
     depth: parseInt(maxDepth),
@@ -571,12 +611,19 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
       lowestDepth = Math.max(...visibleMatingMoves.map((move) => move.depth));
     }
 
+    // Check if we're in fallback mode
+    const isFallback = Stockfish.isFallbackMode();
+
     const statusText = isAnalyzing
       ? `🔄 Analyzing... (min depth: ${lowestDepth})`
       : `✅ Analysis complete (depth: ${lowestDepth})`;
 
+    const fallbackIndicator = isFallback
+      ? ' <span class="fallback-indicator" title="Single-threaded mode">🔧</span>'
+      : "";
+
     statusIndicator.innerHTML = `
-      <div class="status-text">${statusText}</div>
+      <div class="status-text">${statusText}${fallbackIndicator}</div>
     `;
 
     // Insert after the status div but before the results-panel
