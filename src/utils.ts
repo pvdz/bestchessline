@@ -4,10 +4,19 @@ import {
   PieceType,
   Color,
   Square,
-  File,
-  Rank,
   NotationFormat,
   PieceFormat,
+  PieceTypeNotation,
+  ColorNotation,
+  PieceNotation,
+  isPieceTypeNotation,
+  isColorNotation,
+  isPieceNotation,
+  createPieceTypeNotation,
+  createColorNotation,
+  createPieceNotation,
+  getPieceTypeFromNotation,
+  getColorFromNotation,
 } from "./types.js";
 
 export function parseFEN(fen: string): ChessPosition {
@@ -107,36 +116,24 @@ export function isValidSquare(square: string): square is Square {
   return file >= "a" && file <= "h" && rank >= "1" && rank <= "8";
 }
 
-export function getPieceColor(piece: string): Color | null {
-  if (!piece) return null;
-  return piece === piece.toUpperCase() ? "w" : "b";
+export function getPieceColor(piece: PieceNotation): ColorNotation {
+  return piece === piece.toUpperCase()
+    ? createColorNotation("w")
+    : createColorNotation("b");
 }
 
 // Constants for piece types (uppercase, used for type matching)
 export const PIECE_TYPES = {
-  KING: "K",
-  QUEEN: "Q",
-  ROOK: "R",
-  BISHOP: "B",
-  KNIGHT: "N",
-  PAWN: "P",
+  KING: createPieceTypeNotation("K"),
+  QUEEN: createPieceTypeNotation("Q"),
+  ROOK: createPieceTypeNotation("R"),
+  BISHOP: createPieceTypeNotation("B"),
+  KNIGHT: createPieceTypeNotation("N"),
+  PAWN: createPieceTypeNotation("P"),
 } as const;
 
-export function getPieceType(piece: string): PieceType | null {
-  if (!piece) return null;
-  const upperPiece = piece.toUpperCase();
-  const validPieceTypes = [
-    PIECE_TYPES.PAWN,
-    PIECE_TYPES.ROOK,
-    PIECE_TYPES.KNIGHT,
-    PIECE_TYPES.BISHOP,
-    PIECE_TYPES.QUEEN,
-    PIECE_TYPES.KING,
-  ];
-  if (validPieceTypes.includes(upperPiece as PieceType)) {
-    return upperPiece as PieceType;
-  }
-  return null;
+export function getPieceType(piece: PieceNotation): PieceTypeNotation {
+  return createPieceTypeNotation(piece.toUpperCase());
 }
 
 export function formatScore(score: number): string {
@@ -217,8 +214,9 @@ export function moveToNotation(
   pieceFormat: PieceFormat = "unicode",
   fen?: string,
 ): string {
-  const piece = getPieceType(move.piece);
-  const color = getPieceColor(move.piece);
+  const pieceNotation = createPieceNotation(move.piece);
+  const piece = getPieceType(pieceNotation);
+  const color = getPieceColor(pieceNotation);
 
   if (!piece || !color) return `${move.from}-${move.to}`;
 
@@ -276,8 +274,8 @@ export function moveToNotation(
 }
 
 export function getPieceSymbol(
-  type: PieceType,
-  color: Color,
+  type: PieceTypeNotation,
+  color: ColorNotation,
   format: PieceFormat = "unicode",
 ): string {
   if (format === "english") {
@@ -304,7 +302,10 @@ export function getPieceSymbol(
     },
   };
 
-  return symbols[color][type] || type;
+  return (
+    symbols[color as "w" | "b"][type as "K" | "Q" | "R" | "B" | "N" | "P"] ||
+    type
+  );
 }
 
 export function pvToNotation(
@@ -668,12 +669,14 @@ export function parseSimpleMove(
  * Find the from square for a piece moving to a destination
  */
 export function findFromSquare(
-  piece: string,
+  piece: PieceNotation,
   toSquare: string,
   currentFEN: string,
 ): string | null {
   const position = parseFEN(currentFEN);
   const candidates: string[] = [];
+  const pieceType = getPieceTypeFromNotation(piece);
+  const color = getColorFromNotation(piece);
 
   // Find all squares with the specified piece
   for (let rank = 0; rank < 8; rank++) {
@@ -706,13 +709,15 @@ export function findFromSquare(
  * Find the from square with disambiguation
  */
 export function findFromSquareWithDisambiguation(
-  piece: string,
+  piece: PieceNotation,
   toSquare: string,
   disambiguation: string,
   currentFEN: string,
 ): string | null {
   const position = parseFEN(currentFEN);
   const candidates: string[] = [];
+  const pieceType = getPieceTypeFromNotation(piece);
+  const color = getColorFromNotation(piece);
 
   // Find all squares with the specified piece
   for (let rank = 0; rank < 8; rank++) {
@@ -747,16 +752,17 @@ export function findFromSquareWithDisambiguation(
 export function canPieceMoveTo(
   fromSquare: string,
   toSquare: string,
-  piece: string,
+  piece: PieceNotation,
   board: string[][],
 ): boolean {
-  const pieceType = piece.toUpperCase();
+  const pieceType = getPieceTypeFromNotation(piece);
+  const color = getColorFromNotation(piece);
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
 
   // Check if destination is occupied by same color piece
   const destPiece = board[toRank][toFile];
-  if (destPiece && getPieceColor(destPiece) === getPieceColor(piece)) {
+  if (destPiece && getPieceColor(createPieceNotation(destPiece)) === color) {
     return false;
   }
 
@@ -954,9 +960,12 @@ export function canKingMoveTo(
 export function selectCorrectMove(
   candidates: string[],
   toSquare: string,
-  piece: string,
+  piece: PieceNotation,
   board: string[][],
 ): string {
+  const pieceType = getPieceTypeFromNotation(piece);
+  const color = getColorFromNotation(piece);
+
   // For now, just return the first candidate
   // In a more sophisticated implementation, this would use additional context
   return candidates[0];

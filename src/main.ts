@@ -8,6 +8,8 @@ import {
   PieceFormat,
   BestLineNode,
   BestLinesAnalysis,
+  createPieceNotation,
+  getColorFromNotation,
 } from "./types.js";
 import {
   moveToNotation,
@@ -922,7 +924,9 @@ const renderProgressBoard = (boardElement: HTMLElement, fen: string): void => {
 
         html += `<div class="square ${squareClass}" data-square="${square}">`;
         if (piece) {
-          const pieceClass = piece === piece.toUpperCase() ? "white" : "black";
+          const pieceNotation = createPieceNotation(piece);
+          const color = getColorFromNotation(pieceNotation);
+          const pieceClass = color === "w" ? "white" : "black";
           html += `<div class="piece ${pieceClass}">${piece}</div>`;
         }
         html += "</div>";
@@ -2449,8 +2453,11 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
     const pieceType = pieceMatch[1];
     const disambiguation = pieceMatch[2] || "";
     const toSquare = pieceMatch[3];
+    const pieceNotation = createPieceNotation(
+      isWhiteTurn ? pieceType : pieceType.toLowerCase(),
+    );
     const fromSquare = findFromSquareWithDisambiguation(
-      pieceType,
+      pieceNotation,
       toSquare,
       disambiguation,
       currentFEN,

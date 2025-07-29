@@ -316,3 +316,158 @@ export interface BestLinesState {
     pvLinesReceived: number;
   };
 }
+
+// ============================================================================
+// OPAQUE TYPES FOR PIECE NOTATIONS
+// ============================================================================
+
+// Opaque type for piece type notations (P, R, N, B, Q, K)
+export type PieceTypeNotation = string & {
+  readonly __brand: "PieceTypeNotation";
+};
+
+// Opaque type for color notations (w, b)
+export type ColorNotation = string & { readonly __brand: "ColorNotation" };
+
+// Opaque type for piece notations (P, p, R, r, N, n, B, b, Q, q, K, k)
+export type PieceNotation = string & { readonly __brand: "PieceNotation" };
+
+// Opaque type for white piece notations (P, R, N, B, Q, K)
+export type WhitePieceNotation = string & {
+  readonly __brand: "WhitePieceNotation";
+};
+
+// Opaque type for black piece notations (p, r, n, b, q, k)
+export type BlackPieceNotation = string & {
+  readonly __brand: "BlackPieceNotation";
+};
+
+// ============================================================================
+// TYPE GUARDS FOR PIECE NOTATIONS
+// ============================================================================
+
+export function isPieceTypeNotation(value: string): value is PieceTypeNotation {
+  return /^[PNBRQK]$/.test(value);
+}
+
+export function isColorNotation(value: string): value is ColorNotation {
+  return value === "w" || value === "b";
+}
+
+export function isPieceNotation(value: string): value is PieceNotation {
+  return /^[PNBRQKpnbrqk]$/.test(value);
+}
+
+export function isWhitePieceNotation(
+  value: string,
+): value is WhitePieceNotation {
+  return /^[PNBRQK]$/.test(value);
+}
+
+export function isBlackPieceNotation(
+  value: string,
+): value is BlackPieceNotation {
+  return /^[pnbrqk]$/.test(value);
+}
+
+// ============================================================================
+// CONSTRUCTOR FUNCTIONS FOR PIECE NOTATIONS
+// ============================================================================
+
+export function createPieceTypeNotation(value: string): PieceTypeNotation {
+  if (!isPieceTypeNotation(value)) {
+    throw new Error(`Invalid piece type notation: ${value}`);
+  }
+  return value as PieceTypeNotation;
+}
+
+export function createColorNotation(value: string): ColorNotation {
+  if (!isColorNotation(value)) {
+    throw new Error(`Invalid color notation: ${value}`);
+  }
+  return value as ColorNotation;
+}
+
+export function createPieceNotation(value: string): PieceNotation {
+  if (!isPieceNotation(value)) {
+    throw new Error(`Invalid piece notation: ${value}`);
+  }
+  return value as PieceNotation;
+}
+
+export function createWhitePieceNotation(value: string): WhitePieceNotation {
+  if (!isWhitePieceNotation(value)) {
+    throw new Error(`Invalid white piece notation: ${value}`);
+  }
+  return value as WhitePieceNotation;
+}
+
+export function createBlackPieceNotation(value: string): BlackPieceNotation {
+  if (!isBlackPieceNotation(value)) {
+    throw new Error(`Invalid black piece notation: ${value}`);
+  }
+  return value as BlackPieceNotation;
+}
+
+// ============================================================================
+// CONSTANTS FOR PIECE NOTATIONS
+// ============================================================================
+
+export const PIECE_TYPE_NOTATIONS = {
+  PAWN: createPieceTypeNotation("P"),
+  ROOK: createPieceTypeNotation("R"),
+  KNIGHT: createPieceTypeNotation("N"),
+  BISHOP: createPieceTypeNotation("B"),
+  QUEEN: createPieceTypeNotation("Q"),
+  KING: createPieceTypeNotation("K"),
+} as const;
+
+export const COLOR_NOTATIONS = {
+  WHITE: createColorNotation("w"),
+  BLACK: createColorNotation("b"),
+} as const;
+
+export const WHITE_PIECE_NOTATIONS = {
+  PAWN: createWhitePieceNotation("P"),
+  ROOK: createWhitePieceNotation("R"),
+  KNIGHT: createWhitePieceNotation("N"),
+  BISHOP: createWhitePieceNotation("B"),
+  QUEEN: createWhitePieceNotation("Q"),
+  KING: createWhitePieceNotation("K"),
+} as const;
+
+export const BLACK_PIECE_NOTATIONS = {
+  PAWN: createBlackPieceNotation("p"),
+  ROOK: createBlackPieceNotation("r"),
+  KNIGHT: createBlackPieceNotation("n"),
+  BISHOP: createBlackPieceNotation("b"),
+  QUEEN: createBlackPieceNotation("q"),
+  KING: createBlackPieceNotation("k"),
+} as const;
+
+// ============================================================================
+// UTILITY FUNCTIONS FOR PIECE NOTATIONS
+// ============================================================================
+
+export function getPieceNotation(
+  type: PieceTypeNotation,
+  color: ColorNotation,
+): PieceNotation {
+  if (color === COLOR_NOTATIONS.WHITE) {
+    return createPieceNotation(type);
+  } else {
+    return createPieceNotation(type.toLowerCase());
+  }
+}
+
+export function getPieceTypeFromNotation(
+  piece: PieceNotation,
+): PieceTypeNotation {
+  return piece.toUpperCase() as PieceTypeNotation;
+}
+
+export function getColorFromNotation(piece: PieceNotation): ColorNotation {
+  return piece === piece.toUpperCase()
+    ? COLOR_NOTATIONS.WHITE
+    : COLOR_NOTATIONS.BLACK;
+}

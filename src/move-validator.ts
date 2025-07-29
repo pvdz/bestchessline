@@ -1,4 +1,18 @@
-import { ChessPosition, ChessMove, PieceType, Color, Square } from "./types.js";
+import {
+  ChessPosition,
+  ChessMove,
+  PieceType,
+  Color,
+  Square,
+  PieceTypeNotation,
+  ColorNotation,
+  PieceNotation,
+  createPieceTypeNotation,
+  createColorNotation,
+  createPieceNotation,
+  getPieceTypeFromNotation,
+  getColorFromNotation,
+} from "./types.js";
 import {
   parseFEN,
   toFEN,
@@ -10,28 +24,28 @@ import {
 
 // Constants for piece types
 export const PIECES = {
-  WHITE_KING: "K",
-  WHITE_QUEEN: "Q",
-  WHITE_ROOK: "R",
-  WHITE_BISHOP: "B",
-  WHITE_KNIGHT: "N",
-  WHITE_PAWN: "P",
-  BLACK_KING: "k",
-  BLACK_QUEEN: "q",
-  BLACK_ROOK: "r",
-  BLACK_BISHOP: "b",
-  BLACK_KNIGHT: "n",
-  BLACK_PAWN: "p",
+  WHITE_KING: createPieceNotation("K"),
+  WHITE_QUEEN: createPieceNotation("Q"),
+  WHITE_ROOK: createPieceNotation("R"),
+  WHITE_BISHOP: createPieceNotation("B"),
+  WHITE_KNIGHT: createPieceNotation("N"),
+  WHITE_PAWN: createPieceNotation("P"),
+  BLACK_KING: createPieceNotation("k"),
+  BLACK_QUEEN: createPieceNotation("q"),
+  BLACK_ROOK: createPieceNotation("r"),
+  BLACK_BISHOP: createPieceNotation("b"),
+  BLACK_KNIGHT: createPieceNotation("n"),
+  BLACK_PAWN: createPieceNotation("p"),
 } as const;
 
 // Constants for piece types (uppercase, used for type matching)
 export const PIECE_TYPES = {
-  KING: "K",
-  QUEEN: "Q",
-  ROOK: "R",
-  BISHOP: "B",
-  KNIGHT: "N",
-  PAWN: "P",
+  KING: createPieceTypeNotation("K"),
+  QUEEN: createPieceTypeNotation("Q"),
+  ROOK: createPieceTypeNotation("R"),
+  BISHOP: createPieceTypeNotation("B"),
+  KNIGHT: createPieceTypeNotation("N"),
+  PAWN: createPieceTypeNotation("P"),
 } as const;
 
 export interface MoveEffect {
@@ -79,7 +93,7 @@ export function validateMove(
   }
 
   // Check if it's the correct player's turn
-  const pieceColor = getPieceColor(sourcePiece);
+  const pieceColor = getPieceColor(createPieceNotation(sourcePiece));
   if (pieceColor !== position.turn) {
     return {
       isValid: false,
@@ -148,21 +162,19 @@ function isLegalMove(position: ChessPosition, move: ChessMove): boolean {
   const [fromRank, fromFile] = squareToCoords(move.from);
   const [toRank, toFile] = squareToCoords(move.to);
   const piece = position.board[fromRank][fromFile];
-  const pieceType = getPieceType(piece);
-  const pieceColor = getPieceColor(piece);
+  const pieceType = getPieceType(createPieceNotation(piece));
+  const pieceColor = getPieceColor(createPieceNotation(piece));
 
   if (!pieceType || !pieceColor) {
     return false;
   }
 
-  // Check if target square has own piece
+  // Check if target square is occupied by same color piece
   const targetPiece = position.board[toRank][toFile];
-  if (targetPiece && getPieceColor(targetPiece) === pieceColor) {
-    if (move.from === "g8" && move.to === "e7") {
-      // console.log(
-      //   `Move g8-e7 blocked: target piece ${targetPiece} is same color as moving piece ${pieceColor}`,
-      // );
-    }
+  if (
+    targetPiece &&
+    getPieceColor(createPieceNotation(targetPiece)) === pieceColor
+  ) {
     return false;
   }
 
@@ -205,7 +217,7 @@ function isLegalPawnMove(position: ChessPosition, move: ChessMove): boolean {
   const [fromRank, fromFile] = squareToCoords(move.from);
   const [toRank, toFile] = squareToCoords(move.to);
   const piece = position.board[fromRank][fromFile];
-  const color = getPieceColor(piece);
+  const color = getPieceColor(createPieceNotation(piece));
   const direction = color === "w" ? -1 : 1; // White moves up (decreasing rank), black moves down
 
   const rankDiff = toRank - fromRank;
@@ -242,7 +254,10 @@ function isLegalPawnMove(position: ChessPosition, move: ChessMove): boolean {
       const capturedRank = fromRank;
       const capturedFile = toFile;
       const capturedPiece = position.board[capturedRank][capturedFile];
-      return capturedPiece !== "" && getPieceColor(capturedPiece) !== color;
+      return (
+        capturedPiece !== "" &&
+        getPieceColor(createPieceNotation(capturedPiece)) !== color
+      );
     }
   }
 
@@ -384,8 +399,8 @@ function isLegalCastlingMove(
 
   if (!kingPiece || !rookPiece) return false;
 
-  const kingColor = getPieceColor(kingPiece);
-  const rookColor = getPieceColor(rookPiece);
+  const kingColor = getPieceColor(createPieceNotation(kingPiece));
+  const rookColor = getPieceColor(createPieceNotation(rookPiece));
 
   if (kingColor !== rookColor) return false;
 
@@ -467,8 +482,8 @@ function applyMove(position: ChessPosition, move: ChessMove): ChessPosition {
   }
 
   // Update en passant square for double pawn push
-  const pieceType = getPieceType(piece);
-  if (pieceType === "P") {
+  const pieceType = getPieceType(createPieceNotation(piece));
+  if (pieceType === PIECE_TYPES.PAWN) {
     const rankDiff = Math.abs(toRank - fromRank);
     if (rankDiff === 2) {
       const enPassantRank = fromRank + (toRank - fromRank) / 2;
@@ -498,10 +513,13 @@ function isKingInCheck(position: ChessPosition, color: Color): boolean {
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const piece = position.board[rank][file];
-      if (piece && getPieceColor(piece) === opponentColor) {
+      if (
+        piece &&
+        getPieceColor(createPieceNotation(piece)) === opponentColor
+      ) {
         // Add debugging to see what pieces are being found
 
-        const pieceType = getPieceType(piece);
+        const pieceType = getPieceType(createPieceNotation(piece));
         if (pieceType) {
           const move: ChessMove = {
             from: coordsToSquare(rank, file),
@@ -513,9 +531,10 @@ function isKingInCheck(position: ChessPosition, color: Color): boolean {
 
           // For check detection, we need to allow moves to the king's square
           // Create a temporary move validation that bypasses king capture prevention
+          const pieceNotation = createPieceNotation(piece);
           const canAttackKing = canPieceAttackSquare(
             position,
-            piece,
+            pieceNotation,
             coordsToSquare(rank, file),
             kingSquare,
           );
@@ -537,16 +556,16 @@ function isKingInCheck(position: ChessPosition, color: Color): boolean {
  */
 function canPieceAttackSquare(
   position: ChessPosition,
-  piece: string,
+  piece: PieceNotation,
   fromSquare: string,
   toSquare: string,
 ): boolean {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  const pieceType = getPieceType(piece);
-  const pieceColor = getPieceColor(piece);
+  const pieceType = getPieceTypeFromNotation(piece);
+  const color = getColorFromNotation(piece);
 
-  if (!pieceType || !pieceColor) {
+  if (!pieceType || !color) {
     return false;
   }
 
@@ -554,7 +573,7 @@ function canPieceAttackSquare(
   const targetPiece = position.board[toRank][toFile];
   if (
     targetPiece &&
-    getPieceColor(targetPiece) === pieceColor &&
+    getPieceColor(createPieceNotation(targetPiece)) === color &&
     targetPiece !== PIECES.BLACK_KING &&
     targetPiece !== PIECES.WHITE_KING
   ) {
@@ -691,13 +710,13 @@ function canQueenAttackSquare(
  */
 function canPawnAttackSquare(
   position: ChessPosition,
-  piece: string,
+  piece: PieceNotation,
   fromSquare: string,
   toSquare: string,
 ): boolean {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
-  const color = getPieceColor(piece);
+  const color = getColorFromNotation(piece);
   const direction = color === "w" ? -1 : 1; // White moves up (decreasing rank), black moves down
 
   const rankDiff = toRank - fromRank;
@@ -762,7 +781,7 @@ function determineMoveEffect(
   if (
     move.special === "en-passant" ||
     (originalPosition.enPassant === move.to &&
-      getPieceType(move.piece) === PIECE_TYPES.PAWN)
+      getPieceType(createPieceNotation(move.piece)) === PIECE_TYPES.PAWN)
   ) {
     effect.isEnPassant = true;
     effect.isCapture = true;
@@ -811,7 +830,10 @@ function isCheckMate(position: ChessPosition, color: Color): boolean {
         const targetPiece = position.board[newRank][newFile];
 
         // Check if the target square is safe (no opponent piece or own piece)
-        if (!targetPiece || getPieceColor(targetPiece) !== color) {
+        if (
+          !targetPiece ||
+          getPieceColor(createPieceNotation(targetPiece)) !== color
+        ) {
           // Create a king move to test
           const kingMove: ChessMove = {
             from: kingSquare,
@@ -861,14 +883,14 @@ function isCheckMate(position: ChessPosition, color: Color): boolean {
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const piece = position.board[rank][file];
-      if (piece && getPieceColor(piece) === color) {
+      if (piece && getPieceColor(createPieceNotation(piece)) === color) {
         const fromSquare = coordsToSquare(rank, file);
 
         // Check all possible target squares
         for (let toRank = 0; toRank < 8; toRank++) {
           for (let toFile = 0; toFile < 8; toFile++) {
             const toSquare = coordsToSquare(toRank, toFile);
-            const pieceType = getPieceType(piece);
+            const pieceType = getPieceType(createPieceNotation(piece));
             if (pieceType) {
               const move: ChessMove = {
                 from: fromSquare,
@@ -924,7 +946,10 @@ export function getLegalMoves(position: ChessPosition): ChessMove[] {
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const piece = position.board[rank][file];
-      if (piece && getPieceColor(piece) === position.turn) {
+      if (
+        piece &&
+        getPieceColor(createPieceNotation(piece)) === position.turn
+      ) {
         const fromSquare = coordsToSquare(rank, file);
 
         // Check all possible target squares

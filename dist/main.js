@@ -1,3 +1,4 @@
+import { createPieceNotation, getColorFromNotation, } from "./types.js";
 import { moveToNotation, parseFEN, toFEN, coordsToSquare, log, logError, getInputElement, getTextAreaElement, getButtonElement, getCheckedRadio, getCheckedRadioByName, querySelectorHTMLElementBySelector, getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, applyMoveToFEN, findFromSquare, findFromSquareWithDisambiguation, getDepthScaler, getBlackMovesCount, getThreadCount, } from "./utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
@@ -704,7 +705,9 @@ const renderProgressBoard = (boardElement, fen) => {
                 const squareClass = isLight ? "light" : "dark";
                 html += `<div class="square ${squareClass}" data-square="${square}">`;
                 if (piece) {
-                    const pieceClass = piece === piece.toUpperCase() ? "white" : "black";
+                    const pieceNotation = createPieceNotation(piece);
+                    const color = getColorFromNotation(pieceNotation);
+                    const pieceClass = color === "w" ? "white" : "black";
                     html += `<div class="piece ${pieceClass}">${piece}</div>`;
                 }
                 html += "</div>";
@@ -1932,7 +1935,8 @@ const parseMove = (moveText, currentFEN) => {
         const pieceType = pieceMatch[1];
         const disambiguation = pieceMatch[2] || "";
         const toSquare = pieceMatch[3];
-        const fromSquare = findFromSquareWithDisambiguation(pieceType, toSquare, disambiguation, currentFEN);
+        const pieceNotation = createPieceNotation(isWhiteTurn ? pieceType : pieceType.toLowerCase());
+        const fromSquare = findFromSquareWithDisambiguation(pieceNotation, toSquare, disambiguation, currentFEN);
         if (fromSquare) {
             const piece = isWhiteTurn ? pieceType : pieceType.toLowerCase();
             return { from: fromSquare, to: toSquare, piece };

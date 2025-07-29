@@ -1,5 +1,6 @@
+import { getPieceTypeFromNotation, getColorFromNotation, createPieceNotation, } from "./types.js";
 import { parseFEN, toFEN, squareToCoords, coordsToSquare, getPieceSymbol, } from "./utils.js";
-import { PIECES, PIECE_TYPES } from "./move-validator.js";
+import { PIECE_TYPES } from "./move-validator.js";
 /**
  * Board state instance
  */
@@ -116,10 +117,10 @@ const renderBoard = (element) => {
 const createPieceElement = (piece, square) => {
     const pieceElement = document.createElement("div");
     pieceElement.className = "piece";
-    pieceElement.dataset.piece = piece;
     pieceElement.dataset.square = square;
-    const color = piece === piece.toUpperCase() ? "w" : "b";
-    const type = piece.toUpperCase();
+    const pieceNotation = createPieceNotation(piece);
+    const type = getPieceTypeFromNotation(pieceNotation);
+    const color = getColorFromNotation(pieceNotation);
     pieceElement.classList.add(color, type.toLowerCase());
     pieceElement.innerHTML = getPieceSymbol(type, color);
     return pieceElement;
@@ -328,11 +329,12 @@ const makeMove = (from, to, piece) => {
  * Apply move to position
  */
 const applyMoveToPosition = (position, from, to, piece) => {
+    const pieceNotation = createPieceNotation(piece);
     // Create a move object for proper FEN application
     const move = {
         from,
         to,
-        piece,
+        piece: pieceNotation,
     };
     // Apply the move using the same logic as applyMoveToFEN
     const [fromRank, fromFile] = squareToCoords(from);
@@ -353,8 +355,8 @@ const applyMoveToPosition = (position, from, to, piece) => {
     // Update castling rights
     let newCastling = position.castling;
     // Remove castling rights when king moves
-    if (piece.toUpperCase() === PIECE_TYPES.KING) {
-        if (piece === PIECES.WHITE_KING) {
+    if (getPieceTypeFromNotation(pieceNotation) === PIECE_TYPES.KING) {
+        if (getColorFromNotation(pieceNotation) === "w") {
             // White king moved
             newCastling = newCastling.replace(/[KQ]/g, "");
         }
@@ -364,7 +366,7 @@ const applyMoveToPosition = (position, from, to, piece) => {
         }
     }
     // Remove castling rights when rooks move
-    if (piece.toUpperCase() === PIECE_TYPES.ROOK) {
+    if (getPieceTypeFromNotation(pieceNotation) === PIECE_TYPES.ROOK) {
         if (from === "a1")
             newCastling = newCastling.replace("Q", "");
         if (from === "h1")
@@ -376,7 +378,7 @@ const applyMoveToPosition = (position, from, to, piece) => {
     }
     // Update en passant
     let newEnPassant = null;
-    if (piece.toUpperCase() === PIECE_TYPES.PAWN) {
+    if (getPieceTypeFromNotation(pieceNotation) === PIECE_TYPES.PAWN) {
         // Check if it's a double pawn move
         if (Math.abs(fromRank - toRank) === 2) {
             const enPassantRank = fromRank + (toRank > fromRank ? 1 : -1);
@@ -449,8 +451,9 @@ const setOnMoveMade = (callback) => {
  * Show move arrow
  */
 const showMoveArrow = (from, to, piece, score, allMoves, index, customArrowId) => {
+    const pieceNotation = createPieceNotation(piece);
     // Use custom arrow ID if provided, otherwise create a unique identifier for this arrow based on the move
-    const arrowId = customArrowId || `${piece}-${from}-${to}`;
+    const arrowId = customArrowId || `${getPieceTypeFromNotation(pieceNotation)}-${from}-${to}`;
     // Remove existing arrow for this ID if it exists
     hideMoveArrow(arrowId);
     const arrow = document.createElement("div");

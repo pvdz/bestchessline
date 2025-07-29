@@ -1,19 +1,19 @@
-import { ChessPosition, ChessMove, PieceType, Color, Square, NotationFormat, PieceFormat } from "./types.js";
+import { ChessPosition, ChessMove, Square, NotationFormat, PieceFormat, PieceTypeNotation, ColorNotation, PieceNotation } from "./types.js";
 export declare function parseFEN(fen: string): ChessPosition;
 export declare function toFEN(position: ChessPosition): string;
 export declare function squareToCoords(square: Square): [number, number];
 export declare function coordsToSquare(rank: number, file: number): Square;
 export declare function isValidSquare(square: string): square is Square;
-export declare function getPieceColor(piece: string): Color | null;
+export declare function getPieceColor(piece: PieceNotation): ColorNotation;
 export declare const PIECE_TYPES: {
-    readonly KING: "K";
-    readonly QUEEN: "Q";
-    readonly ROOK: "R";
-    readonly BISHOP: "B";
-    readonly KNIGHT: "N";
-    readonly PAWN: "P";
+    readonly KING: PieceTypeNotation;
+    readonly QUEEN: PieceTypeNotation;
+    readonly ROOK: PieceTypeNotation;
+    readonly BISHOP: PieceTypeNotation;
+    readonly KNIGHT: PieceTypeNotation;
+    readonly PAWN: PieceTypeNotation;
 };
-export declare function getPieceType(piece: string): PieceType | null;
+export declare function getPieceType(piece: PieceNotation): PieceTypeNotation;
 export declare function formatScore(score: number): string;
 export declare function formatTime(ms: number): string;
 /**
@@ -30,7 +30,7 @@ export declare function getGlobalCurrentMoveIndex(): number;
 export declare function getFENWithCorrectMoveCounter(boardFEN: string, currentMoveIndex: number, castling?: string, enPassant?: string | null): string;
 export declare function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void;
 export declare function moveToNotation(move: ChessMove, format?: NotationFormat, pieceFormat?: PieceFormat, fen?: string): string;
-export declare function getPieceSymbol(type: PieceType, color: Color, format?: PieceFormat): string;
+export declare function getPieceSymbol(type: PieceTypeNotation, color: ColorNotation, format?: PieceFormat): string;
 export declare function pvToNotation(pv: ChessMove[], format?: NotationFormat, pieceFormat?: PieceFormat, fen?: string): string;
 /**
  * Enable or disable logging
@@ -133,15 +133,15 @@ export declare function parseSimpleMove(moveText: string, fen: string): ChessMov
 /**
  * Find the from square for a piece moving to a destination
  */
-export declare function findFromSquare(piece: string, toSquare: string, currentFEN: string): string | null;
+export declare function findFromSquare(piece: PieceNotation, toSquare: string, currentFEN: string): string | null;
 /**
  * Find the from square with disambiguation
  */
-export declare function findFromSquareWithDisambiguation(piece: string, toSquare: string, disambiguation: string, currentFEN: string): string | null;
+export declare function findFromSquareWithDisambiguation(piece: PieceNotation, toSquare: string, disambiguation: string, currentFEN: string): string | null;
 /**
  * Check if a piece can move from one square to another
  */
-export declare function canPieceMoveTo(fromSquare: string, toSquare: string, piece: string, board: string[][]): boolean;
+export declare function canPieceMoveTo(fromSquare: string, toSquare: string, piece: PieceNotation, board: string[][]): boolean;
 /**
  * Check if a pawn can move from one square to another
  */
@@ -169,7 +169,7 @@ export declare function canKingMoveTo(fromSquare: string, toSquare: string, boar
 /**
  * Select the correct move from multiple candidates
  */
-export declare function selectCorrectMove(candidates: string[], toSquare: string, piece: string, board: string[][]): string;
+export declare function selectCorrectMove(candidates: string[], toSquare: string, piece: PieceNotation, board: string[][]): string;
 /**
  * Get depth scaler from UI (1-15)
  */
