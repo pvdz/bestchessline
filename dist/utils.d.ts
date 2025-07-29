@@ -24,6 +24,23 @@ export declare const PIECE_TYPES: {
 export declare function getPieceType(piece: string): PieceType | null;
 export declare function formatScore(score: number): string;
 export declare function formatTime(ms: number): string;
+/**
+ * Set the global current move index
+ */
+export declare function setGlobalCurrentMoveIndex(moveIndex: number): void;
+/**
+ * Get the global current move index
+ */
+export declare function getGlobalCurrentMoveIndex(): number;
+/**
+ * Get FEN with correct move counter based on current move index
+ */
+export declare function getFENWithCorrectMoveCounter(
+  boardFEN: string,
+  currentMoveIndex: number,
+  castling?: string,
+  enPassant?: string | null,
+): string;
 export declare function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,

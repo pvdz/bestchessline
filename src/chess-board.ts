@@ -1,5 +1,6 @@
 import { ChessPosition, ChessMove, AnalysisMove } from "./types.js";
 import { parseFEN, toFEN, squareToCoords, coordsToSquare } from "./utils.js";
+import { PIECES, PIECE_TYPES } from "./move-validator.js";
 
 // ============================================================================
 // BOARD STATE MANAGEMENT
@@ -453,17 +454,73 @@ const applyMoveToPosition = (
   to: string,
   piece: string,
 ): ChessPosition => {
+  // Create a move object for proper FEN application
+  const move: ChessMove = {
+    from,
+    to,
+    piece,
+  };
+
+  // Apply the move using the same logic as applyMoveToFEN
   const [fromRank, fromFile] = squareToCoords(from);
   const [toRank, toFile] = squareToCoords(to);
 
+  // Create new board
   const newBoard = position.board.map((row) => [...row]);
   newBoard[toRank][toFile] = newBoard[fromRank][fromFile];
   newBoard[fromRank][fromFile] = "";
+
+  // Handle special moves
+  if (move.special === "castling") {
+    if (move.rookFrom && move.rookTo) {
+      const [rookFromRank, rookFromFile] = squareToCoords(move.rookFrom);
+      const [rookToRank, rookToFile] = squareToCoords(move.rookTo);
+      newBoard[rookToRank][rookToFile] = newBoard[rookFromRank][rookFromFile];
+      newBoard[rookFromRank][rookFromFile] = "";
+    }
+  }
+
+  // Update castling rights
+  let newCastling = position.castling;
+
+  // Remove castling rights when king moves
+  if (piece.toUpperCase() === PIECE_TYPES.KING) {
+    if (piece === PIECES.WHITE_KING) {
+      // White king moved
+      newCastling = newCastling.replace(/[KQ]/g, "");
+    } else {
+      // Black king moved
+      newCastling = newCastling.replace(/[kq]/g, "");
+    }
+  }
+
+  // Remove castling rights when rooks move
+  if (piece.toUpperCase() === PIECE_TYPES.ROOK) {
+    if (from === "a1") newCastling = newCastling.replace("Q", "");
+    if (from === "h1") newCastling = newCastling.replace("K", "");
+    if (from === "a8") newCastling = newCastling.replace("q", "");
+    if (from === "h8") newCastling = newCastling.replace("k", "");
+  }
+
+  // Update en passant
+  let newEnPassant = null;
+  if (piece.toUpperCase() === PIECE_TYPES.PAWN) {
+    // Check if it's a double pawn move
+    if (Math.abs(fromRank - toRank) === 2) {
+      const enPassantRank = fromRank + (toRank > fromRank ? 1 : -1);
+      newEnPassant = coordsToSquare(enPassantRank, fromFile);
+    }
+  } else {
+    // Clear en passant for non-pawn moves
+    newEnPassant = null;
+  }
 
   return {
     ...position,
     board: newBoard,
     turn: position.turn === "w" ? "b" : "w",
+    castling: newCastling || "-",
+    enPassant: newEnPassant,
   };
 };
 

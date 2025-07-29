@@ -1,10 +1,10 @@
-# Best Chess Liens Analysis App - Development Memory
+# Best Chess Lines Analysis App - Development Memory
 
 This file serves as the AI memory/description for this application. It should reflect the current project status such that an AI can take a task for this project and complete it without having to analyze every file in detail.
 
 ## Application Overview
 
-A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, and enhanced move validation with effect detection. Built with simple vanilla TypeScript and HTML/CSS. And Claude.
+A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, enhanced move validation with effect detection, and a tree digger for deep position analysis. Built with simple vanilla TypeScript and HTML/CSS.
 
 ## Core Architecture
 
@@ -40,6 +40,18 @@ interface BoardState {
   onMoveMade?: (move: ChessMove) => void;
 }
 
+// Tree digger analysis state
+interface BestLinesState {
+  isAnalyzing: boolean;
+  currentAnalysis: BestLinesAnalysis | null;
+  progress: {
+    totalPositions: number;
+    analyzedPositions: number;
+    currentPosition: string;
+    pvLinesReceived: number;
+  };
+}
+
 // Drag state for piece movement
 interface DragState {
   element: HTMLElement | null;
@@ -60,6 +72,7 @@ interface DragState {
 - **Game Logic**: Manages move validation, game import, and navigation
 - **Analysis Control**: Manages Stockfish analysis and result display
 - **Branching System**: Temporary move branches for exploring variations
+- **Tree Digger Management**: Controls deep position analysis
 - **UI State Management**: Button states, analysis status, format controls
 
 #### 2. Chess Board (`src/chess-board.ts`)
@@ -77,6 +90,14 @@ interface DragState {
 - **UCI Protocol**: Handles Stockfish commands and responses
 - **Analysis Management**: MultiPV, depth control, result parsing
 - **Real-time Updates**: Live analysis results with formatting
+
+#### 4. Tree Digger (`src/best-lines.ts`)
+
+- **Deep Analysis**: Recursive tree building for position analysis
+- **Dynamic White Moves**: User-defined first two white moves with Stockfish fallback
+- **Transposition Detection**: Efficient reuse of previously analyzed positions
+- **Progress Tracking**: Real-time analysis progress and statistics
+- **Tree Visualization**: Hierarchical display of analysis results
 
 ## Key Features & Implementation
 
@@ -146,7 +167,7 @@ interface DragState {
 - **Z-index**: Matches arrow layering
 - **Cleanup**: Proper removal with arrows
 
-### 3. Analysis Results & Status
+### 3. Engine Moves & Status
 
 #### Analysis Status Indicator
 
@@ -195,7 +216,7 @@ interface DragState {
 │                 │ ├─ Start/Stop Buttons               │
 │                 │ └─ Format Options                   │
 │                 ├─────────────────────────────────────┤
-│                 │ Analysis Results                    │
+│                 │ Engine Moves                       │
 │                 │ ├─ Stockfish Status                 │
 │                 │ ├─ Analysis Status                  │
 │                 │ └─ Results Panel                    │
@@ -360,6 +381,298 @@ interface DragState {
 - **Dynamic Numbering**: PV moves numbered relative to current game position
 - **Visual Feedback**: Hover effects and move arrows for PV moves
 
+### 8. Tree Digger Analysis
+
+#### Deep Position Analysis with Shadow DOM System
+
+The tree digger performs comprehensive analysis of chess positions by building a recursive tree of moves and responses. It starts from the current board position and explores multiple lines to a specified depth. The UI uses a clean shadow DOM system for predictable, efficient updates.
+
+```typescript
+// Tree digger analysis structure:
+interface BestLinesAnalysis {
+  rootFen: string; // Starting position (current board FEN)
+  maxDepth: number; // Maximum analysis depth
+  nodes: BestLineNode[]; // Root nodes of the analysis tree
+  analyzedPositions: Set<string>; // Positions already analyzed
+  analysisQueue: string[]; // Positions waiting to be analyzed
+  isComplete: boolean; // Analysis completion status
+}
+
+interface BestLineNode {
+  fen: string; // Position before the move
+  move: ChessMove; // Move made from this position
+  score: number; // Evaluation score
+  depth: number; // Analysis depth
+  isWhiteMove: boolean; // Whether this is a white move
+  moveNumber: number; // Move number in the game
+  children: BestLineNode[]; // Child nodes (responses)
+  parent?: BestLineNode; // Parent node
+  analysisResult?: AnalysisResult; // Stockfish analysis result
+}
+```
+
+#### Dynamic White Move Inputs
+
+The tree digger allows users to specify the first two white moves, with automatic fallback to Stockfish analysis:
+
+```typescript
+// White move input handling:
+const getWhiteMoves = (): string[] => {
+  const whiteMove1Input = document.getElementById(
+    "tree-digger-white-move-1",
+  ) as HTMLInputElement;
+  const whiteMove2Input = document.getElementById(
+    "tree-digger-white-move-2",
+  ) as HTMLInputElement;
+
+  const move1 = whiteMove1Input?.value.trim() || "";
+  const move2 = whiteMove2Input?.value.trim() || "";
+
+  const moves: string[] = [];
+  if (move1) moves.push(move1);
+  if (move2) moves.push(move2);
+
+  return moves;
+};
+```
+
+**Features:**
+
+- **Default Values**: "Nf3" for first white move, "g3" for second
+- **Input Clearing**: Automatically cleared when board position changes
+- **Stockfish Fallback**: If inputs are empty, uses Stockfish analysis
+- **Move Validation**: Parses and validates user-provided moves
+
+#### Transposition Detection
+
+The tree digger efficiently handles transpositions by tracking previously analyzed positions:
+
+```typescript
+// Transposition detection:
+if (analysis.analyzedPositions.has(fen)) {
+  log(`Transposition detected at depth ${depth}, skipping: ${fen}`);
+  return;
+}
+
+// Add to analyzed positions AFTER processing to prevent self-detection
+analysis.analyzedPositions.add(fen);
+```
+
+**Benefits:**
+
+- **Efficiency**: Avoids re-analyzing the same position multiple times
+- **Accuracy**: Prevents infinite loops in analysis
+- **Performance**: Significantly reduces analysis time for complex positions
+
+#### Progress Tracking & Statistics
+
+The tree digger provides comprehensive progress tracking and statistics:
+
+```typescript
+// Progress tracking:
+interface BestLinesProgress {
+  totalPositions: number;    // Total positions to analyze
+  analyzedPositions: number; // Positions completed
+  currentPosition: string;   // Currently analyzing position
+  pvLinesReceived: number;   // PV lines received from Stockfish
+}
+
+// Statistics displayed:
+- Total Positions: Number of positions to analyze
+- Analyzed: Number of positions completed
+- Total Leafs: Number of leaf nodes in the tree
+- Unique Positions: Number of distinct positions analyzed
+```
+
+#### Tree Visualization with Shadow DOM System
+
+The analysis results are displayed using a clean, predictable shadow DOM system that ensures accurate tree representation:
+
+```typescript
+// Shadow tree structure for UI management:
+interface UITreeNode {
+  id: string; // Unique node identifier
+  element: HTMLElement; // DOM element for this node
+  children: UITreeNode[]; // Child nodes
+  parent: UITreeNode | null; // Parent node reference
+}
+
+// Shadow tree to track what should be in the UI:
+let shadowTree: UITreeNode | null = null;
+```
+
+**Tree Building Process:**
+
+1. **Shadow Tree Construction**: Build complete shadow tree from data structure
+2. **DOM Synchronization**: Compare shadow tree with existing DOM
+3. **Incremental Updates**: Add new nodes, remove old ones, update existing ones
+4. **Predictable IDs**: Each node has unique ID based on position and move
+
+```typescript
+// Node ID generation for predictable identification:
+const generateNodeId = (node: BestLineNode): string => {
+  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+  const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
+  return `node-${cleanFen}-${node.move.from}-${node.move.to}`;
+};
+
+// Shadow tree building:
+const buildShadowTree = (
+  nodes: BestLineNode[],
+  analysis: BestLinesAnalysis,
+): UITreeNode[] => {
+  const uiNodes: UITreeNode[] = [];
+
+  for (const node of nodes) {
+    const nodeId = generateNodeId(node);
+    const element = createTreeNodeElement(node, depth, analysis);
+
+    const uiNode: UITreeNode = {
+      id: nodeId,
+      element,
+      children: [],
+      parent,
+    };
+
+    // Recursively build children
+    if (node.children.length > 0) {
+      uiNode.children = buildShadowTree(
+        node.children,
+        analysis,
+        uiNode,
+        depth + 1,
+      );
+    }
+
+    uiNodes.push(uiNode);
+  }
+
+  return uiNodes;
+};
+```
+
+**DOM Synchronization:**
+
+```typescript
+// Sync DOM with shadow tree:
+const syncDOMWithShadowTree = (
+  container: HTMLElement,
+  shadowNodes: UITreeNode[],
+  analysis: BestLinesAnalysis,
+): void => {
+  // Get existing DOM nodes
+  const existingNodes = Array.from(container.children) as HTMLElement[];
+  const existingNodeMap = new Map<string, HTMLElement>();
+
+  for (const element of existingNodes) {
+    const nodeId = element.getAttribute("data-node-id");
+    if (nodeId) {
+      existingNodeMap.set(nodeId, element);
+    }
+  }
+
+  // Process shadow nodes in order
+  for (let i = 0; i < shadowNodes.length; i++) {
+    const shadowNode = shadowNodes[i];
+    const existingElement = existingNodeMap.get(shadowNode.id);
+
+    if (existingElement) {
+      // Update existing element
+      updateTreeNodeElement(existingElement, originalNode, analysis);
+
+      // Move to correct position if needed
+      if (container.children[i] !== existingElement) {
+        container.insertBefore(existingElement, container.children[i] || null);
+      }
+    } else {
+      // Create new element
+      const newElement = shadowNode.element;
+
+      // Insert at correct position
+      if (i < container.children.length) {
+        container.insertBefore(newElement, container.children[i]);
+      } else {
+        container.appendChild(newElement);
+      }
+    }
+  }
+
+  // Remove extra DOM nodes that shouldn't be there
+  for (const element of existingNodes) {
+    const nodeId = element.getAttribute("data-node-id");
+    if (nodeId && !shadowNodes.find((n) => n.id === nodeId)) {
+      element.remove();
+    }
+  }
+};
+```
+
+**Visual Features:**
+
+- **Color Coding**: White moves in green, black moves in red
+- **Depth Indentation**: Visual hierarchy showing analysis depth
+- **Transposition Indicators**: 🔄 symbol for transposed positions
+- **Score Display**: Evaluation scores for each position
+- **Move Information**: Player, notation, depth, and children count
+- **Predictable Updates**: Shadow tree ensures DOM always matches data structure
+
+#### Analysis Controls
+
+The tree digger provides comprehensive analysis controls:
+
+```typescript
+// Analysis parameters:
+- Max Depth: Maximum analysis depth (1-20)
+- Black Moves: Number of black responses to analyze (1-10)
+- Threads: Number of CPU threads for analysis (1-10)
+- Font Size: Tree display font size (8-16)
+```
+
+**Control Features:**
+
+- **Real-time Updates**: Parameters update analysis immediately
+- **Progress Monitoring**: Live progress updates during analysis
+- **Start/Stop Control**: Start, stop, and clear analysis
+- **Copy Functionality**: Copy analysis tree to clipboard
+
+#### Analysis Process
+
+The tree digger follows a recursive analysis process:
+
+1. **Root Position**: Starts from current board FEN
+2. **White Moves**: Applies user-defined moves or Stockfish analysis
+3. **Black Responses**: Analyzes multiple black responses per position
+4. **Recursive Building**: Continues to specified depth
+5. **Transposition Handling**: Skips already analyzed positions
+6. **Progress Updates**: Real-time progress and statistics
+
+**Analysis Flow:**
+
+```typescript
+const buildAnalysisTree = async (
+  fen: string,
+  analysis: BestLinesAnalysis,
+  parentNode: BestLineNode | null,
+  depth: number,
+): Promise<void> => {
+  // Check depth limit
+  if (depth >= analysis.maxDepth) return;
+
+  // Check for transposition
+  if (analysis.analyzedPositions.has(fen)) return;
+
+  // Process position based on turn
+  if (isWhiteTurn) {
+    await processWhiteMoveInTree(fen, analysis, parentNode, depth);
+  } else {
+    await processBlackMovesInTree(fen, analysis, parentNode, depth);
+  }
+
+  // Mark as analyzed
+  analysis.analyzedPositions.add(fen);
+};
+```
+
 ## Critical Implementation Details
 
 ### 1. Arrow & Label Management
@@ -423,7 +736,7 @@ interface DragState {
 #### Listener Management
 
 - **Board Re-rendering**: Re-attach listeners after position changes
-- **Dynamic Elements**: Handle newly created analysis results
+- **Dynamic Elements**: Handle newly created engine moves
 - **Memory Management**: Clean up listeners when needed
 
 ### 4. Analysis Status Management
@@ -485,10 +798,9 @@ interface DragState {
 
 - Add event listeners to format radio buttons
 - Call `updateResultsPanel()` when formats change
-- Update both move list and analysis results
-- Real-time format conversion
+- Ensure format values match expected parameters
 
-### 5. Z-index Ordering
+### 5. Z-index Issues
 
 **Problem**: Lower-ranked moves appear on top
 **Solution**:
@@ -497,43 +809,146 @@ interface DragState {
 - Check z-index calculation: `100 + index`
 - Verify both arrow and label have same z-index
 
+### 6. Transposition Detection
+
+**Problem**: Initial branch detected as transposition of itself
+**Solution**:
+
+- Add positions to `analyzedPositions` AFTER processing, not before
+- Check for transpositions before processing, not after
+- Ensure root position is never considered a transposition
+
+### 7. Tree DOM Update Issues
+
+**Problem**: Complex incremental DOM updates causing nodes to appear in wrong parents or missing nodes
+**Solution**:
+
+- Implemented shadow DOM system with predictable tree structure
+- Build complete shadow tree from data, then sync with DOM
+- Use unique node IDs based on position and move for reliable identification
+- Simple add/remove/update logic instead of complex reconciliation
+
 ## Performance Considerations
 
 ### 1. Stockfish Integration
 
 - **Multi-threading**: Uses WebAssembly worker for performance
-- **Memory Management**: Proper worker cleanup
-- **Analysis Limits**: Configurable depth and move counts
+- **Memory Management**: Proper worker cleanup prevents memory leaks
+- **Analysis Limits**: Configurable depth and move counts prevent infinite analysis
 
 ### 2. Board Rendering
 
-- **Efficient Updates**: Only re-render when necessary
-- **Event Optimization**: Proper listener management
-- **Visual Performance**: Smooth animations and transitions
-- **Arrow Cleanup**: Proper removal to prevent memory leaks
+- **Efficient Updates**: Only re-render when position actually changes
+- **Event Optimization**: Use event delegation and re-attach listeners after DOM updates
+- **Arrow Cleanup**: Remove arrows before board re-rendering to prevent memory leaks
 
-### 3. Arrow System
+### 3. Tree Digger Analysis
 
-- **Z-index Management**: Efficient layering without flickering
-- **Color Calculation**: Cached color values for performance
-- **Label Positioning**: Optimized calculations for smooth updates
-- **Memory Management**: Proper cleanup of DOM elements
+- **Transposition Detection**: Skip already analyzed positions to avoid redundant work
+- **Depth Limits**: Respect maxDepth to prevent runaway analysis
+- **Progress Tracking**: Update progress incrementally to maintain responsiveness
+- **Shadow DOM System**: Predictable tree updates using shadow tree structure for efficient DOM manipulation
+
+### 4. Memory Management
+
+- **Event Listeners**: Clean up listeners when components are destroyed
+- **DOM Elements**: Remove arrows and labels from DOM when no longer needed
+- **State Objects**: Avoid circular references in state management
 
 ## Development Workflow
 
 ### Build Process
 
+Generally the human will do most of the build stuff. When you need to check build errors you'll be prompted to build. The AI should never install or serve.
+
 ```bash
-npm run dev          # TypeScript watch mode
-npm run build        # Build and copy Stockfish files
-npm run serve        # Start development server
+npm install          # Install dependencies
+npm run build        # TypeScript compilation
+npm run serve        # Start development server (human runs this)
 ```
+
+**Important**: The AI should never run `npm run watch` or `npm run dev` - the human will handle the watch process and notify if there are TypeScript errors.
+
+### Development Guidelines
+
+#### Adding Features
+
+1. **Type Safety**: All functions must have explicit types for arguments and return values
+2. **No `any` Types**: Use `unknown` only for `console.log` arguments
+3. **Error Handling**: Add appropriate error handling for new features
+4. **State Management**: Use existing state patterns when adding new state
+5. **Use Constants**: Try to use descriptive constants rather than magic strings and magic numbers. Things that are easy to grep for and which may even be declared as an opaque type to improve type safety.
+
+- Always use `PIECES` and `PIECE_TYPES` constants instead of magic strings for piece-related logic
+- Use `PIECES.WHITE_KING`, `PIECES.BLACK_PAWN`, etc. for actual piece characters
+- Use `PIECE_TYPES.KING`, `PIECE_TYPES.PAWN`, etc. for piece type comparisons and algebraic notation parsing
+- Only use hardcoded strings for FEN-specific notation (castling rights: "K", "Q", "k", "q") and color notation ("w", "b")
+- Make sure to parse algebraic notation properly (where a lower-case "b" does not mean "Bishop")
+
+#### Debugging & Logging
+
+**Console Logging Strategy**:
+
+- Add `console.log()` statements for debugging (not `log`, the human will do that)
+- Remove logs when they're no longer necessary before adding new ones
+- If logging becomes excessive, propose a temporary quick stop to gather targeted logs
+- Use descriptive log messages that include relevant data
+
+**Example Logging Pattern**:
+
+```typescript
+// Good: Descriptive with context
+log(
+  `Processing white move at depth ${depth}, position: ${fen.substring(0, 30)}...`,
+);
+
+// Good: Include relevant data
+log(`Applied white move from UI: ${moveText} -> ${newFen}`);
+
+// Avoid: Generic or excessive logging
+console.log("here"); // Too generic
+console.log("processing..."); // Not helpful
+```
+
+#### Testing Approach
+
+The application relies heavily on TypeScript compilation for error detection:
+
+- **TypeScript Errors**: The human will run the watch process and notify of compilation errors
+- **Runtime Testing**: Changes are tested by running the application and interacting with features
+- **Manual Testing**: Verify UI behavior, analysis results, and edge cases manually
+
+#### File Modification Guidelines
+
+**Safe to Modify**:
+
+- `src/main.ts`: Main application logic
+- `src/chess-board.ts`: Board interactions and rendering
+- `src/best-lines.ts`: Tree digger analysis
+- `src/move-validator.ts`: Move validation logic
+- `src/utils.ts`: Utility functions
+- `styles.css`: Visual styling
+
+**Be Cautious With**:
+
+- `src/types.ts`: Changes affect multiple files
+- `src/stockfish-client.ts`: Core engine integration
+- `index.html`: Main UI structure
+
+**Avoid Modifying**:
+
+- Build configuration files
+- Anything in `node_modules`
+- Anything in `dist`
+- Stockfish WASM files
+- Test files unless specifically working on tests
 
 ### Key Files
 
-- **`src/main.ts`** (2021 lines): Main application logic with enhanced navigation, branching system, and analysis management
+- **`src/main.ts`** (2897 lines): Main application logic with enhanced navigation, branching system, analysis management, and tree digger controls
 - **`src/chess-board.ts`** (855 lines): Interactive board component with arrow system and color coding
 - **`src/stockfish-client.ts`**: Engine integration
+- **`src/best-lines.ts`** (946 lines): Tree digger analysis with recursive tree building, transposition detection, and progress tracking
 - **`src/move-validator.ts`** (435 lines): Move validation and effect detection
 - **`src/types.ts`** (246 lines): TypeScript interfaces with effect support
 - **`src/utils.ts`** (435 lines): Utility functions with enhanced notation
@@ -545,70 +960,14 @@ npm run serve        # Start development server
 - **`test/stockfish/test-stockfish.html`**: Stockfish integration testing
 - **`index.html`**: Main application with test page links
 
-## Common Issues & Solutions
-
-### 1. Arrows Not Appearing
-
-- Check if `showMoveArrow()` is called with correct parameters
-- Verify z-index calculation and layering
-- Ensure board element exists and is properly positioned
-
-### 2. Labels Not Matching Arrow Colors
-
-- Verify color calculation logic matches display rounding
-- Check CSS custom property `--arrow-color` is set correctly
-- Ensure text shadow uses the correct color variable
-
-### 3. Analysis Status Not Updating
-
-- Check `isAnalyzing` state is properly managed
-- Verify `updateButtonStates()` is called on analysis updates
-- Ensure status calculation uses visible moves only
-
-### 4. Format Controls Not Working
-
-- Verify event listeners are attached to radio buttons
-- Check `updateResultsPanel()` is called on format changes
-- Ensure format values match expected parameters
-
-### 5. Z-index Issues
-
-- Confirm index parameter is passed to `showMoveArrow()`
-- Check z-index calculation: `100 + index`
-- Verify both arrow and label have same z-index
-
-## Future Enhancements
-
-### Planned Features
-
-- **PGN Export**: Save games in standard format with move effects
-- **Opening Book**: Integrate opening database with move validation
-- **Position Evaluation**: Historical evaluation tracking with effect analysis
-- **Advanced Analysis**: More engine options and configurations
-- **Game Annotation**: Add comments and variations with effect highlighting
-- **Move History**: Enhanced move history with effect visualization
-- **Position Database**: Store and retrieve positions with move effects
-
-### Technical Improvements
-
-- **Performance**: Optimize large game handling and move validation
-- **Memory**: Better state management for large games with effects
-- **UI**: Enhanced visual feedback and animations for move effects
-- **Accessibility**: Screen reader and keyboard support for move navigation
-- **Validation**: More comprehensive move validation (castling rights, etc.)
-- **Analysis**: Enhanced analysis with move effect predictions
-
 ## Key Insights
 
-1. **State Management**: Global state objects work well for this scale
-2. **Event Handling**: Delegation and re-attachment are critical
-3. **Move Validation**: Board-aware validation with effect detection enhances user experience
-4. **UI Synchronization**: Bidirectional updates prevent inconsistencies
-5. **Performance**: WebAssembly provides excellent chess engine performance
-6. **Interactive Navigation**: Clickable moves provide intuitive game exploration
-7. **Effect Detection**: Real-time capture, check, and mate detection improves analysis quality
-8. **Color Coding**: Visual feedback based on move quality enhances analysis understanding
-9. **Arrow System**: Proper layering and cleanup is essential for performance
-10. **Status Management**: Real-time analysis status improves user experience
+1. **Event Delegation**: Use `target.closest('.piece')` for reliable piece selection and handle board re-rendering
+2. **State Synchronization**: Bidirectional updates between FEN, board, and controls prevent inconsistencies
+3. **Arrow System**: Proper z-index management and cleanup are essential for performance
+4. **Transposition Detection**: Add positions to analyzed set AFTER processing to prevent self-detection
+5. **Tree Digger**: Recursive analysis with user-defined white moves provides deep position understanding
+6. **TypeScript Compilation**: The human handles watch mode and notifies of compilation errors
+7. **Memory Management**: Clean up event listeners, DOM elements, and avoid circular references
 
-The application provides a comprehensive chess analysis platform with advanced move validation, interactive navigation, enhanced notation display, color-coded analysis arrows, and real-time status updates. The modular architecture allows for easy extension and enhancement of features.
+The application provides a comprehensive chess analysis platform with advanced move validation, interactive navigation, enhanced notation display, color-coded analysis arrows, real-time status updates, and deep position analysis through the tree digger. The modular architecture allows for easy extension and enhancement of features.

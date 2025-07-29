@@ -38,6 +38,94 @@
       </div>
 
       <div class="main-content">
+        <!-- Tree Digger -->
+        <div class="tree-digger-section">
+          <h2>Tree Digger</h2>
+          <div class="tree-digger-controls">
+            <div class="tree-digger-buttons">
+              <button id="start-tree-digger">Dig Tree</button>
+              <button id="stop-tree-digger">Stop</button>
+              <button id="clear-tree-digger">Clear</button>
+              <button id="copy-tree-digger-tree">Copy</button>
+            </div>
+            <div class="tree-digger-white-moves">
+              <div class="white-moves-controls">
+                <label for="tree-digger-white-move-1">1st White Move:</label>
+                <input
+                  type="text"
+                  id="tree-digger-white-move-1"
+                  placeholder="e.g., Nf3"
+                  value="Nf3"
+                  style="width: 80px; margin-left: 8px"
+                />
+              </div>
+              <div class="white-moves-controls">
+                <label for="tree-digger-white-move-2">2nd White Move:</label>
+                <input
+                  type="text"
+                  id="tree-digger-white-move-2"
+                  placeholder="e.g., g3"
+                  value="g3"
+                  style="width: 80px; margin-left: 8px"
+                />
+              </div>
+            </div>
+            <div class="tree-digger-sliders">
+              <div class="tree-controls">
+                <label for="tree-font-size">Font Size:</label>
+                <input
+                  type="range"
+                  id="tree-font-size"
+                  min="8"
+                  max="480"
+                  value="16"
+                />
+              </div>
+              <div class="depth-controls">
+                <label for="tree-digger-depth-scaler">Depth Scaler:</label>
+                <input
+                  type="range"
+                  id="tree-digger-depth-scaler"
+                  min="1"
+                  max="15"
+                  value="2"
+                />
+                <span id="tree-digger-depth-scaler-value">2</span>
+              </div>
+              <div class="black-moves-controls">
+                <label for="tree-digger-black-moves">Black Moves:</label>
+                <input
+                  type="range"
+                  id="tree-digger-black-moves"
+                  min="1"
+                  max="30"
+                  value="3"
+                />
+                <span id="tree-digger-black-moves-value">3</span>
+              </div>
+              <div
+                class="thread-controls"
+                title="Note: capped to 16 because the wasm throws when trying a value higher than 16 :') In single threaded mode this is forced to 1 (which makes it very slow!)"
+              >
+                <label for="tree-digger-threads">Threads:</label>
+                <input
+                  type="range"
+                  id="tree-digger-threads"
+                  min="1"
+                  max="16"
+                  value="16"
+                />
+                <span id="tree-digger-threads-value">16</span>
+              </div>
+            </div>
+          </div>
+          <div class="tree-digger-status">
+            <div class="status-title">Analysis Status</div>
+            <p id="tree-digger-status">Ready</p>
+          </div>
+          <div id="tree-digger-results" class="tree-digger-panel"></div>
+        </div>
+
         <!-- Chess Board -->
         <div class="board-section">
           <h2>Chess Board</h2>
@@ -213,9 +301,9 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
           </div>
         </div>
 
-        <!-- Analysis Results -->
+        <!-- Engine Moves -->
         <div class="results-section">
-          <h2>Analysis Results</h2>
+          <h2>Engine Moves</h2>
           <div class="status">
             <div class="status-title">Stockfish</div>
             <p id="engine-status">Ready</p>

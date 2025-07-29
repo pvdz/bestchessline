@@ -213,3 +213,42 @@ export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
 export type NotationFormat = "short" | "long";
 export type PieceFormat = "unicode" | "english";
 export type AnalysisStatus = "analyzing" | "complete" | "error";
+export interface BestLineNode {
+  fen: string;
+  move: ChessMove;
+  score: number;
+  depth: number;
+  children: BestLineNode[];
+  isWhiteMove: boolean;
+  moveNumber: number;
+  parent?: BestLineNode;
+  analysisResult?: AnalysisResult;
+}
+export interface BestLinesAnalysis {
+  rootFen: string;
+  nodes: BestLineNode[];
+  maxDepth: number;
+  blackResponses: number;
+  isComplete: boolean;
+  currentPosition: string;
+  analysisQueue: string[];
+  analyzedPositions: Set<string>;
+  totalPositions: number;
+  config: {
+    depthScaler: number;
+    blackMovesCount: number;
+    threads: number;
+    whiteMoves: string[];
+  };
+}
+export interface BestLinesState {
+  isAnalyzing: boolean;
+  currentAnalysis: BestLinesAnalysis | null;
+  progress: {
+    totalPositions: number;
+    analyzedPositions: number;
+    currentPosition: string;
+    initialPosition: string;
+    pvLinesReceived: number;
+  };
+}

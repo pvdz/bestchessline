@@ -6,6 +6,24 @@ import {
   querySelectorHTMLElement,
   querySelectorButton,
 } from "./utils.js";
+/**
+ * Show error toast notification
+ */
+const showErrorToast = (message) => {
+  const toast = document.createElement("div");
+  toast.textContent = message;
+  toast.style.position = "fixed";
+  toast.style.bottom = "24px";
+  toast.style.left = "50%";
+  toast.style.transform = "translateX(-50%)";
+  toast.style.background = "#f44336";
+  toast.style.color = "#fff";
+  toast.style.padding = "8px 16px";
+  toast.style.borderRadius = "6px";
+  toast.style.zIndex = "9999";
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+};
 // ============================================================================
 // SHAREDARRAYBUFFER DETECTION
 // ============================================================================
@@ -87,6 +105,12 @@ const isFallbackMode = () => stockfishState.fallbackMode;
  */
 const initializeStockfish = () => {
   try {
+    // Dispatch loading event
+    window.dispatchEvent(
+      new CustomEvent("stockfish-loading", {
+        detail: { message: "Initializing Stockfish engine..." },
+      }),
+    );
     const sharedArrayBufferSupported = isSharedArrayBufferSupported();
     updateStockfishState({
       sharedArrayBufferSupported,
@@ -113,19 +137,40 @@ const initializeStockfish = () => {
     // Set up error handler
     worker.onerror = (error) => {
       logError("Stockfish worker error:", error);
-      // If the main worker fails, try fallback
-      if (!stockfishState.fallbackMode) {
-        log("Trying fallback mode...");
+      // Only switch to fallback mode if we're not already in fallback mode
+      // and this is an initialization error (not a runtime analysis error)
+      if (!stockfishState.fallbackMode && !stockfishState.isReady) {
+        log("Initialization error - trying fallback mode...");
+        showErrorToast(
+          "Stockfish engine initialization failed. Trying fallback mode...",
+        );
         updateStockfishState({ fallbackMode: true });
         initializeStockfishFallback();
+      } else if (stockfishState.isReady) {
+        // If engine is ready but we get a runtime error, log it but don't switch modes
+        logError("Runtime error during analysis:", error);
+        showErrorToast(
+          "Stockfish engine encountered an error during analysis: " +
+            (error?.message ?? error),
+        );
+        // Optionally restart the current analysis or handle gracefully
+        if (stockfishState.isAnalyzing) {
+          log("Analysis error occurred - continuing with current results");
+        }
       }
     };
     updateStockfishState({ worker });
     // Initialize with UCI protocol
     log("Starting UCI protocol...");
+    window.dispatchEvent(
+      new CustomEvent("stockfish-loading", {
+        detail: { message: "Starting UCI protocol..." },
+      }),
+    );
     uciCmd("uci");
   } catch (error) {
     logError("Failed to initialize Stockfish:", error);
+    showErrorToast("Failed to initialize Stockfish engine: " + error?.message);
     // Try fallback if main initialization fails
     if (!stockfishState.fallbackMode) {
       log("Trying fallback mode...");
@@ -151,6 +196,16 @@ const initializeStockfishFallback = () => {
     // Set up error handler
     worker.onerror = (error) => {
       logError("Stockfish fallback worker error:", error);
+      // For fallback mode, just log the error but don't try to switch modes again
+      if (stockfishState.isAnalyzing) {
+        log(
+          "Fallback analysis error occurred - continuing with current results",
+        );
+      }
+      showErrorToast(
+        "Stockfish fallback engine encountered an error: " +
+          (error?.message ?? error),
+      );
     };
     updateStockfishState({
       worker,
@@ -163,6 +218,9 @@ const initializeStockfishFallback = () => {
     showFallbackNotification();
   } catch (error) {
     logError("Failed to initialize Stockfish fallback:", error);
+    showErrorToast(
+      "Failed to initialize Stockfish fallback engine: " + error?.message,
+    );
   }
 };
 /**
@@ -244,12 +302,18 @@ const uciCmd = (cmd) => {
 const handleMessage = (message) => {
   if (message === "uciok") {
     log("UCI protocol ready, engine loaded");
+    window.dispatchEvent(
+      new CustomEvent("stockfish-loading", {
+        detail: { message: "UCI protocol ready, configuring engine..." },
+      }),
+    );
     updateStockfishState({
       engineStatus: { ...stockfishState.engineStatus, engineLoaded: true },
     });
     uciCmd("isready");
   } else if (message === "readyok") {
     log("Stockfish is ready!");
+    window.dispatchEvent(new CustomEvent("stockfish-ready"));
     updateStockfishState({
       engineStatus: { ...stockfishState.engineStatus, engineReady: true },
       isReady: true,
@@ -264,6 +328,8 @@ const handleMessage = (message) => {
     parseInfoMessage(message);
   } else if (message.startsWith("Stockfish")) {
     log("Received Stockfish version info");
+  } else if (message.includes("Threads")) {
+    log(`Thread setting response: ${message}`);
   }
 };
 /**
@@ -312,6 +378,19 @@ const parseInfoMessage = (message) => {
   log(
     `Info: depth=${depth}, multipv=${multipv}, score=${score}, nodes=${nodes}, time=${time}, pv=${pv.join(" ")}`,
   );
+  // Dispatch PV line update event for best lines tracking
+  if (pv.length > 0) {
+    window.dispatchEvent(
+      new CustomEvent("stockfish-pv-line", {
+        detail: {
+          depth,
+          multipv,
+          score,
+          pvMoves: pv.length,
+        },
+      }),
+    );
+  }
   // Convert PV moves to ChessMove objects
   const pvMoves = [];
   for (const moveStr of pv) {
@@ -471,9 +550,14 @@ const analyzePosition = async (fen, options = {}, onUpdate) => {
     });
     // Configure Stockfish
     uciCmd("position fen " + fen);
+    // Ensure Stockfish is ready before setting options
+    uciCmd("isready");
     // Set options
     if (options.threads) {
+      log(`Setting Stockfish threads to ${options.threads}`);
       uciCmd(`setoption name Threads value ${options.threads}`);
+      // Query current thread setting
+      uciCmd("setoption name Threads");
     }
     if (options.hash) {
       uciCmd(`setoption name Hash value ${options.hash}`);

@@ -269,3 +269,50 @@ export type NotationFormat = "short" | "long";
 export type PieceFormat = "unicode" | "english";
 
 export type AnalysisStatus = "analyzing" | "complete" | "error";
+
+// ============================================================================
+// BEST LINES ANALYSIS TYPES
+// ============================================================================
+
+export interface BestLineNode {
+  fen: string;
+  move: ChessMove;
+  score: number;
+  depth: number;
+  children: BestLineNode[];
+  isWhiteMove: boolean;
+  moveNumber: number;
+  parent?: BestLineNode;
+  analysisResult?: AnalysisResult;
+}
+
+export interface BestLinesAnalysis {
+  rootFen: string;
+  nodes: BestLineNode[];
+  maxDepth: number;
+  blackResponses: number; // 5 responses
+  isComplete: boolean;
+  currentPosition: string;
+  analysisQueue: string[]; // FEN positions to analyze
+  analyzedPositions: Set<string>; // For deduplication
+  totalPositions: number; // Total positions to analyze
+  // Configuration captured at startup
+  config: {
+    depthScaler: number;
+    blackMovesCount: number;
+    threads: number;
+    whiteMoves: string[];
+  };
+}
+
+export interface BestLinesState {
+  isAnalyzing: boolean;
+  currentAnalysis: BestLinesAnalysis | null;
+  progress: {
+    totalPositions: number;
+    analyzedPositions: number;
+    currentPosition: string;
+    initialPosition: string;
+    pvLinesReceived: number;
+  };
+}

@@ -6,6 +6,8 @@ import {
   AnalysisMove,
   NotationFormat,
   PieceFormat,
+  BestLineNode,
+  BestLinesAnalysis,
 } from "./types.js";
 import {
   moveToNotation,
@@ -25,10 +27,13 @@ import {
   querySelector,
   isHTMLElement,
   querySelectorHTMLElementBySelector,
+  getFENWithCorrectMoveCounter,
+  setGlobalCurrentMoveIndex,
 } from "./utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
-import { validateMove } from "./move-validator.js";
+import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
+import * as BestLines from "./best-lines.js";
 
 // ============================================================================
 // LOGGING CONFIGURATION
@@ -79,6 +84,11 @@ let appState: AppState = {
  */
 const updateAppState = (updates: Partial<AppState>): void => {
   appState = { ...appState, ...updates };
+
+  // Update global move index when it changes
+  if (updates.currentMoveIndex !== undefined) {
+    setGlobalCurrentMoveIndex(updates.currentMoveIndex);
+  }
 };
 
 /**
@@ -122,6 +132,9 @@ const initializeApp = (): void => {
   // Initialize event listeners
   initializeEventListeners();
   initializeMoveHoverEvents();
+
+  // Initialize global move index
+  setGlobalCurrentMoveIndex(appState.currentMoveIndex);
 
   // Initialize controls from current board state
   updateControlsFromPosition();
@@ -223,6 +236,155 @@ const initializeEventListeners = (): void => {
     stopBtn.addEventListener("click", () => stopAnalysis());
   }
 
+  // Best lines analysis controls
+  const startTreeDiggerBtn = document.getElementById("start-tree-digger");
+  const stopTreeDiggerBtn = document.getElementById("stop-tree-digger");
+  const clearTreeDiggerBtn = document.getElementById("clear-tree-digger");
+
+  if (startTreeDiggerBtn) {
+    startTreeDiggerBtn.addEventListener("click", () =>
+      startBestLinesAnalysis(),
+    );
+  }
+
+  if (stopTreeDiggerBtn) {
+    stopTreeDiggerBtn.addEventListener("click", () => {
+      console.log("USER PRESSED STOP BUTTON - Analysis manually stopped");
+      stopBestLinesAnalysis();
+    });
+  }
+
+  if (clearTreeDiggerBtn) {
+    clearTreeDiggerBtn.addEventListener("click", () =>
+      clearBestLinesAnalysis(),
+    );
+  }
+
+  // Tree font size control
+  const treeFontSizeInput = document.getElementById(
+    "tree-font-size",
+  ) as HTMLInputElement;
+  if (treeFontSizeInput) {
+    // Initialize with default value
+    updateTreeFontSize(16);
+
+    treeFontSizeInput.addEventListener("input", () => {
+      const fontSize = treeFontSizeInput.value;
+      updateTreeFontSize(parseInt(fontSize));
+    });
+  }
+
+  // Thread control for tree digger analysis
+  const treeDiggerThreadsInput = document.getElementById(
+    "tree-digger-threads",
+  ) as HTMLInputElement;
+  const treeDiggerThreadsValue = document.getElementById(
+    "tree-digger-threads-value",
+  );
+
+  if (treeDiggerThreadsInput && treeDiggerThreadsValue) {
+    treeDiggerThreadsInput.addEventListener("input", () => {
+      const threads = treeDiggerThreadsInput.value;
+      treeDiggerThreadsValue.textContent = threads;
+    });
+  }
+
+  // Update tree digger threads input for fallback mode
+  updateTreeDiggerThreadsForFallbackMode();
+
+  // Depth scaler control for tree digger analysis
+  const treeDiggerDepthScalerInput = document.getElementById(
+    "tree-digger-depth-scaler",
+  ) as HTMLInputElement;
+  const treeDiggerDepthScalerValue = document.getElementById(
+    "tree-digger-depth-scaler-value",
+  );
+
+  if (treeDiggerDepthScalerInput && treeDiggerDepthScalerValue) {
+    treeDiggerDepthScalerInput.addEventListener("input", () => {
+      const depthScaler = treeDiggerDepthScalerInput.value;
+      treeDiggerDepthScalerValue.textContent = depthScaler;
+    });
+  }
+
+  // Stockfish loading event listeners
+  window.addEventListener("stockfish-loading", ((event: Event) => {
+    const customEvent = event as CustomEvent;
+    const message = customEvent.detail?.message || "Loading Stockfish...";
+    updateBestLinesStatus(message);
+    updateAnalysisStatus(message);
+  }) as EventListener);
+
+  window.addEventListener("stockfish-ready", (() => {
+    updateBestLinesStatus("Stockfish ready");
+    updateAnalysisStatus("Stockfish ready");
+  }) as EventListener);
+
+  window.addEventListener("stockfish-analyzing", ((event: Event) => {
+    const customEvent = event as CustomEvent;
+    const message = customEvent.detail?.message || "Analyzing...";
+    const position = customEvent.detail?.position || "";
+    updateBestLinesStatus(`${message} ${position}`);
+    updateAnalysisStatus(`${message} ${position}`);
+  }) as EventListener);
+
+  window.addEventListener("stockfish-analysis-complete", ((event: Event) => {
+    const customEvent = event as CustomEvent;
+    const message = customEvent.detail?.message || "Analysis complete";
+    const movesFound = customEvent.detail?.movesFound || 0;
+    updateBestLinesStatus(`${message} (${movesFound} moves)`);
+    updateAnalysisStatus(`${message} (${movesFound} moves)`);
+  }) as EventListener);
+
+  window.addEventListener("stockfish-pv-update", ((event: Event) => {
+    const customEvent = event as CustomEvent;
+    const pvLines = customEvent.detail?.pvLines || 0;
+    console.log(`PV lines received: ${pvLines}`);
+
+    // Update the status immediately with PV count
+    const statusElement = document.getElementById("tree-digger-status");
+    if (statusElement && BestLines.isAnalyzing()) {
+      const progress = BestLines.getProgress();
+      const progressPercent =
+        progress.totalPositions > 0
+          ? Math.round(
+              (progress.analyzedPositions / progress.totalPositions) * 100,
+            )
+          : 0;
+      const currentPos = progress.currentPosition.substring(0, 30) + "...";
+      statusElement.textContent = `Analyzing... ${progress.analyzedPositions}/${progress.totalPositions} (${progressPercent}%) - ${currentPos}`;
+    }
+  }) as EventListener);
+
+  window.addEventListener("stockfish-pv-line", ((event: Event) => {
+    // const customEvent = event as CustomEvent;
+    // const depth = customEvent.detail?.depth || 0;
+    // const multipv = customEvent.detail?.multipv || 0;
+    // const score = customEvent.detail?.score || 0;
+    // const pvMoves = customEvent.detail?.pvMoves || 0;
+
+    // log(`Stockfish PV line: depth=${depth}, multipv=${multipv}, score=${score}, moves=${pvMoves}`);
+
+    // Increment the PV lines counter in best lines state
+    if (BestLines.isAnalyzing()) {
+      const progress = BestLines.getProgress();
+      progress.pvLinesReceived++;
+
+      // Update the status immediately
+      const statusElement = document.getElementById("tree-digger-status");
+      if (statusElement) {
+        const progressPercent =
+          progress.totalPositions > 0
+            ? Math.round(
+                (progress.analyzedPositions / progress.totalPositions) * 100,
+              )
+            : 0;
+        const currentPos = progress.currentPosition.substring(0, 30) + "...";
+        statusElement.textContent = `Analyzing... ${progress.analyzedPositions}/${progress.totalPositions} (${progressPercent}%) - ${currentPos}`;
+      }
+    }
+  }) as EventListener);
+
   // Position controls
   initializePositionControls();
 
@@ -267,6 +429,29 @@ const initializeEventListeners = (): void => {
 
   // Update threads input based on fallback mode
   updateThreadsInputForFallbackMode();
+
+  // Start periodic updates for best lines analysis
+  setInterval(() => {
+    if (BestLines.isAnalyzing()) {
+      updateBestLinesStatus();
+      updateBestLinesResults();
+    }
+    // Always update button states to ensure they're responsive
+    updateBestLinesButtonStates();
+  }, 200); // More frequent updates for better responsiveness // Update every half second for more responsive UI
+
+  // Black moves control for best lines
+  const treeDiggerBlackMovesInput = document.getElementById(
+    "tree-digger-black-moves",
+  ) as HTMLInputElement;
+  const blackMovesValue = document.getElementById(
+    "tree-digger-black-moves-value",
+  );
+  if (treeDiggerBlackMovesInput && blackMovesValue) {
+    treeDiggerBlackMovesInput.addEventListener("input", () => {
+      blackMovesValue.textContent = treeDiggerBlackMovesInput.value;
+    });
+  }
 };
 
 /**
@@ -299,6 +484,51 @@ const updateThreadsInputForFallbackMode = (): void => {
     if (threadsLabel) {
       threadsLabel.textContent = "Threads:";
       threadsLabel.title = "Number of CPU threads for analysis";
+    }
+  }
+};
+
+/**
+ * Update tree digger threads input for fallback mode
+ */
+const updateTreeDiggerThreadsForFallbackMode = (): void => {
+  const treeDiggerThreadsInput = document.getElementById(
+    "tree-digger-threads",
+  ) as HTMLInputElement;
+  const treeDiggerThreadsValue = document.getElementById(
+    "tree-digger-threads-value",
+  );
+  const treeDiggerThreadsLabel = querySelectorHTMLElementBySelector(
+    'label[for="tree-digger-threads"]',
+  );
+
+  if (Stockfish.isFallbackMode()) {
+    // In fallback mode, disable tree digger threads input and show it's forced to 1
+    if (treeDiggerThreadsInput) {
+      treeDiggerThreadsInput.disabled = true;
+      treeDiggerThreadsInput.value = "1";
+      treeDiggerThreadsInput.title =
+        "Single-threaded mode - threads fixed at 1";
+    }
+    if (treeDiggerThreadsValue) {
+      treeDiggerThreadsValue.textContent = "1 (forced)";
+    }
+    if (treeDiggerThreadsLabel) {
+      treeDiggerThreadsLabel.textContent = "Threads:";
+      treeDiggerThreadsLabel.title =
+        "Single-threaded mode - multi-threading not available";
+    }
+  } else {
+    // In full mode, enable tree digger threads input
+    if (treeDiggerThreadsInput) {
+      treeDiggerThreadsInput.disabled = false;
+      treeDiggerThreadsInput.title =
+        "Number of CPU threads for tree digger analysis";
+    }
+    if (treeDiggerThreadsLabel) {
+      treeDiggerThreadsLabel.textContent = "Threads:";
+      treeDiggerThreadsLabel.title =
+        "Number of CPU threads for tree digger analysis";
     }
   }
 };
@@ -414,6 +644,919 @@ const updateButtonStates = (): void => {
 
   if (startBtn) startBtn.disabled = appState.isAnalyzing;
   if (stopBtn) stopBtn.disabled = !appState.isAnalyzing;
+};
+
+// ============================================================================
+// BEST LINES ANALYSIS FUNCTIONS
+// ============================================================================
+
+/**
+ * Start best lines analysis
+ */
+const startBestLinesAnalysis = async (): Promise<void> => {
+  try {
+    // Clear any previous analysis results first
+    BestLines.clearBestLinesAnalysis();
+
+    await BestLines.startBestLinesAnalysis();
+    updateBestLinesButtonStates();
+    updateBestLinesStatus();
+    updateBestLinesResults();
+  } catch (error) {
+    logError("Failed to start best lines analysis:", error);
+    updateBestLinesStatus("Error starting analysis");
+  }
+};
+
+/**
+ * Stop best lines analysis
+ */
+const stopBestLinesAnalysis = (): void => {
+  console.log("Stop button clicked - calling stopBestLinesAnalysis");
+  try {
+    BestLines.stopBestLinesAnalysis();
+    console.log("BestLines.stopBestLinesAnalysis() completed");
+    clearTreeNodeDOMMap(); // Clear tracked DOM elements
+    updateBestLinesButtonStates();
+    updateBestLinesStatus("Analysis stopped");
+    console.log("Stop analysis completed successfully");
+  } catch (error) {
+    console.error("Failed to stop best lines analysis:", error);
+    logError("Failed to stop best lines analysis:", error);
+  }
+};
+
+/**
+ * Clear best lines analysis
+ */
+const clearBestLinesAnalysis = (): void => {
+  try {
+    BestLines.clearBestLinesAnalysis();
+    clearTreeNodeDOMMap(); // Clear tracked DOM elements
+    updateBestLinesButtonStates();
+    updateBestLinesStatus("Ready");
+    updateBestLinesResults();
+  } catch (error) {
+    logError("Failed to clear best lines analysis:", error);
+  }
+};
+
+/**
+ * Update best lines button states
+ */
+const updateBestLinesButtonStates = (): void => {
+  const startBtn = getButtonElement("start-tree-digger");
+  const stopBtn = getButtonElement("stop-tree-digger");
+  const clearBtn = getButtonElement("clear-tree-digger");
+
+  const isAnalyzing = BestLines.isAnalyzing();
+
+  if (startBtn) {
+    startBtn.disabled = isAnalyzing;
+  } else {
+    console.error("Start button not found!");
+  }
+  if (stopBtn) {
+    stopBtn.disabled = !isAnalyzing;
+  } else {
+    console.error("Stop button not found!");
+  }
+  if (clearBtn) {
+    clearBtn.disabled = isAnalyzing;
+  } else {
+    console.error("Clear button not found!");
+  }
+};
+
+/**
+ * Update best lines status
+ */
+const updateBestLinesStatus = (message?: string): void => {
+  const statusElement = document.getElementById("tree-digger-status");
+  if (!statusElement) return;
+
+  if (message) {
+    statusElement.textContent = message;
+    return;
+  }
+
+  const isAnalyzing = BestLines.isAnalyzing();
+  const progress = BestLines.getProgress();
+  const analysis = BestLines.getCurrentAnalysis();
+
+  if (isAnalyzing) {
+    const progressPercent =
+      progress.totalPositions > 0
+        ? Math.round(
+            (progress.analyzedPositions / progress.totalPositions) * 100,
+          )
+        : 0;
+    const currentPos = progress.currentPosition.substring(0, 30) + "...";
+    statusElement.textContent = `Analyzing... ${progress.analyzedPositions}/${progress.totalPositions} (${progressPercent}%) - ${currentPos}`;
+  } else if (analysis?.isComplete) {
+    statusElement.textContent = "Analysis complete";
+  } else {
+    statusElement.textContent = "Ready";
+  }
+};
+
+const updateAnalysisStatus = (message?: string): void => {
+  const statusElement = document.getElementById("analysis-status");
+  if (!statusElement) return;
+
+  if (message) {
+    statusElement.textContent = message;
+    return;
+  }
+
+  const appState = getAppState();
+  if (appState.isAnalyzing) {
+    statusElement.textContent = "Analyzing...";
+  } else {
+    statusElement.textContent = "Ready";
+  }
+};
+
+const getDepthScaler = (): number => {
+  const depthScalerInput = document.getElementById(
+    "tree-digger-depth-scaler",
+  ) as HTMLInputElement;
+  return depthScalerInput ? parseInt(depthScalerInput.value) : 3;
+};
+
+const getBlackMovesCount = (): number => {
+  const blackMovesInput = document.getElementById(
+    "tree-digger-black-moves",
+  ) as HTMLInputElement;
+  return blackMovesInput ? parseInt(blackMovesInput.value) : 6;
+};
+
+const getBestLinesThreadCount = (): number => {
+  const threadsInput = document.getElementById(
+    "tree-digger-threads",
+  ) as HTMLInputElement;
+  return threadsInput ? (parseInt(threadsInput.value) ?? 4) : 10;
+};
+
+/**
+ * Update best lines results display
+ */
+const updateBestLinesResults = (): void => {
+  const resultsElement = document.getElementById("tree-digger-results");
+  if (!resultsElement) return;
+
+  const analysis = BestLines.getCurrentAnalysis();
+  if (!analysis) {
+    resultsElement.innerHTML = "<p>No analysis results available.</p>";
+    return;
+  }
+
+  // Update progress section
+  updateBestLinesProgress(resultsElement, analysis);
+
+  // Update tree section incrementally
+  updateBestLinesTreeIncrementally(resultsElement, analysis);
+};
+
+/**
+ * Update progress section
+ */
+const updateBestLinesProgress = (
+  resultsElement: HTMLElement,
+  analysis: BestLinesAnalysis,
+): void => {
+  let progressSection = resultsElement.querySelector(
+    ".tree-digger-progress-section",
+  );
+  if (!progressSection) {
+    progressSection = document.createElement("div");
+    progressSection.className = "tree-digger-progress-section";
+    resultsElement.appendChild(progressSection);
+  }
+
+  const isAnalyzing = BestLines.isAnalyzing();
+  const progress = BestLines.getProgress();
+  const totalLeafs = BestLines.calculateTotalLeafs(analysis.nodes);
+  const uniquePositions = BestLines.calculateUniquePositions(
+    analysis.nodes,
+    analysis,
+  );
+
+  const html = `
+    <div class="best-line-progress-container">
+      <div class="best-line-progress-left">
+        <div class="best-line-stats">
+          <div class="stat">
+            <div class="stat-label">Total Positions</div>
+            <div class="stat-value">${progress.totalPositions}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Analyzed</div>
+            <div class="stat-value">${progress.analyzedPositions}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Total Leafs</div>
+            <div class="stat-value">${totalLeafs}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Unique Positions</div>
+            <div class="stat-value">${uniquePositions}</div>
+          </div>
+        </div>
+        <div class="best-line-settings">
+          <div class="setting">
+            <div class="setting-label">Depth Scaler</div>
+            <div class="setting-value">${getDepthScaler()}</div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">Black Moves</div>
+            <div class="setting-value">${getBlackMovesCount()}</div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">Threads</div>
+            <div class="setting-value">${getBestLinesThreadCount()}</div>
+          </div>
+        </div>
+        <div class="best-line-progress">
+          <div class="best-line-progress-bar" style="width: ${progress.totalPositions > 0 ? (progress.analyzedPositions / progress.totalPositions) * 100 : 0}%"></div>
+        </div>
+        <div class="best-line-explanation">
+          <h3>Analysis Progress</h3>
+          <ul>
+            <li><strong>Initial position</strong>: ${progress.initialPosition}</li>
+            <li><strong>Total positions</strong>: ${progress.totalPositions} positions to analyze</li>
+            <li><strong>Analyzed</strong>: ${progress.analyzedPositions} positions completed</li>
+            <li><strong>Total leafs</strong>: ${totalLeafs} leaf nodes in the tree</li>
+            <li><strong>Unique Positions</strong>: ${uniquePositions} distinct positions analyzed</li>
+            <li><strong>Current activity</strong>: ${isAnalyzing ? "🔄 Analyzing position" : "Ready"} ${progress.currentPosition.substring(0, 30)}...</li>
+          </ul>
+        </div>
+      </div>
+      <div class="best-line-progress-board">
+        <div class="best-line-progress-board-title">Root Board</div>
+        <div class="offset-board" id="progress-board"></div>
+      </div>
+    </div>
+  `;
+
+  progressSection.innerHTML = html;
+
+  // Render the board for the initial position (root position)
+  const boardElement = progressSection.querySelector(
+    "#progress-board",
+  ) as HTMLElement;
+  if (boardElement) {
+    renderProgressBoard(boardElement, progress.initialPosition);
+  }
+};
+
+/**
+ * Render a small board for the progress panel
+ */
+const renderProgressBoard = (boardElement: HTMLElement, fen: string): void => {
+  try {
+    const position = parseFEN(fen);
+    let html = "";
+
+    // Render board from black's perspective (top to bottom)
+    for (let rank = 7; rank >= 0; rank--) {
+      for (let file = 0; file < 8; file++) {
+        const square = coordsToSquare(rank, file);
+        const piece = position.board[rank][file];
+        const isLight = (rank + file) % 2 === 0;
+        const squareClass = isLight ? "light" : "dark";
+
+        html += `<div class="square ${squareClass}" data-square="${square}">`;
+        if (piece) {
+          const pieceClass = piece === piece.toUpperCase() ? "white" : "black";
+          html += `<div class="piece ${pieceClass}">${piece}</div>`;
+        }
+        html += "</div>";
+      }
+    }
+
+    boardElement.innerHTML = html;
+  } catch (error) {
+    console.error("Error rendering progress board:", error);
+    boardElement.innerHTML =
+      '<div style="padding: 20px; text-align: center; color: #666;">Invalid position</div>';
+  }
+};
+
+/**
+ * Simple tree node structure for UI management
+ */
+interface UITreeNode {
+  id: string;
+  element: HTMLElement;
+  children: UITreeNode[];
+  parent: UITreeNode | null;
+}
+
+/**
+ * Shadow tree to track what should be in the UI
+ */
+let shadowTree: UITreeNode | null = null;
+
+/**
+ * Generate a unique ID for a tree node
+ */
+const generateNodeId = (node: BestLineNode): string => {
+  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+  const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
+  return `node-${cleanFen}-${node.move.from}-${node.move.to}`;
+};
+
+/**
+ * Create a DOM element for a tree node
+ */
+const createTreeNodeElement = (
+  node: BestLineNode,
+  depth: number,
+  analysis: BestLinesAnalysis,
+): HTMLElement => {
+  const moveText = moveToNotation(node.move);
+  const scoreText =
+    node.score !== 0
+      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      : "";
+  const moveClass = node.isWhiteMove ? "white-move" : "black-move";
+
+  const moveNumber = node.moveNumber;
+  let moveNumberText = "";
+  if (node.isWhiteMove) {
+    moveNumberText = `${moveNumber}.`;
+  } else {
+    moveNumberText = `${moveNumber}...`;
+  }
+  const depthClass = `tree-depth-${depth}`;
+
+  const nodeId = generateNodeId(node);
+
+  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+  const isTransposition =
+    node.children.length === 0 &&
+    analysis.analyzedPositions.has(positionAfterMove);
+  const transpositionClass = isTransposition ? "transposition" : "";
+
+  const element = document.createElement("div");
+  element.className = `tree-node ${moveClass} ${depthClass} ${transpositionClass}`;
+  element.setAttribute("data-node-id", nodeId);
+
+  const moveInfo = document.createElement("div");
+  moveInfo.className = "move-info";
+
+  const moveNumberSpan = document.createElement("span");
+  moveNumberSpan.className = "move-number";
+  moveNumberSpan.textContent = moveNumberText;
+
+  const moveTextSpan = document.createElement("span");
+  moveTextSpan.className = "move-text";
+  moveTextSpan.textContent = moveText;
+
+  moveInfo.appendChild(moveNumberSpan);
+  moveInfo.appendChild(moveTextSpan);
+
+  if (scoreText) {
+    const scoreSpan = document.createElement("span");
+    scoreSpan.className = "move-score";
+    scoreSpan.textContent = scoreText;
+    moveInfo.appendChild(scoreSpan);
+  }
+
+  if (node.children.length > 0) {
+    const childrenSpan = document.createElement("span");
+    childrenSpan.className = "move-children";
+    childrenSpan.textContent = `(${node.children.length})`;
+    moveInfo.appendChild(childrenSpan);
+  }
+
+  if (isTransposition) {
+    const transpositionSpan = document.createElement("span");
+    transpositionSpan.className = "transposition-indicator";
+    transpositionSpan.textContent = "🔄";
+    moveInfo.appendChild(transpositionSpan);
+  }
+
+  element.appendChild(moveInfo);
+
+  if (node.children.length === 0) {
+    const lineCompletion = document.createElement("div");
+    lineCompletion.className = "line-completion";
+    lineCompletion.innerHTML = getLineCompletion(node, analysis);
+    element.appendChild(lineCompletion);
+  }
+
+  return element;
+};
+
+/**
+ * Update an existing DOM element for a tree node
+ */
+const updateTreeNodeElement = (
+  element: HTMLElement,
+  node: BestLineNode,
+  analysis: BestLinesAnalysis,
+): void => {
+  const moveText = moveToNotation(node.move);
+  const scoreText =
+    node.score !== 0
+      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      : "";
+
+  // Update move text
+  const moveTextSpan = element.querySelector(".move-text");
+  if (moveTextSpan) {
+    moveTextSpan.textContent = moveText;
+  }
+
+  // Update score
+  let scoreSpan = element.querySelector(".move-score");
+  if (scoreText) {
+    if (!scoreSpan) {
+      scoreSpan = document.createElement("span");
+      scoreSpan.className = "move-score";
+      const moveInfo = element.querySelector(".move-info");
+      if (moveInfo) {
+        moveInfo.appendChild(scoreSpan);
+      }
+    }
+    scoreSpan.textContent = scoreText;
+  } else if (scoreSpan) {
+    scoreSpan.remove();
+  }
+
+  // Update children count
+  let childrenSpan = element.querySelector(".move-children");
+  if (node.children.length > 0) {
+    if (!childrenSpan) {
+      childrenSpan = document.createElement("span");
+      childrenSpan.className = "move-children";
+      const moveInfo = element.querySelector(".move-info");
+      if (moveInfo) {
+        moveInfo.appendChild(childrenSpan);
+      }
+    }
+    childrenSpan.textContent = `(${node.children.length})`;
+  } else if (childrenSpan) {
+    childrenSpan.remove();
+  }
+
+  // Update transposition indicator
+  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+  const isTransposition =
+    node.children.length === 0 &&
+    analysis.analyzedPositions.has(positionAfterMove);
+
+  let transpositionSpan = element.querySelector(".transposition-indicator");
+  if (isTransposition) {
+    if (!transpositionSpan) {
+      transpositionSpan = document.createElement("span");
+      transpositionSpan.className = "transposition-indicator";
+      transpositionSpan.textContent = "🔄";
+      const moveInfo = element.querySelector(".move-info");
+      if (moveInfo) {
+        moveInfo.appendChild(transpositionSpan);
+      }
+    }
+  } else if (transpositionSpan) {
+    transpositionSpan.remove();
+  }
+
+  // Update line completion
+  let lineCompletion = element.querySelector(".line-completion");
+  if (node.children.length === 0) {
+    if (!lineCompletion) {
+      lineCompletion = document.createElement("div");
+      lineCompletion.className = "line-completion";
+      element.appendChild(lineCompletion);
+    }
+    lineCompletion.innerHTML = getLineCompletion(node, analysis);
+  } else if (lineCompletion) {
+    lineCompletion.remove();
+  }
+
+  // Update classes
+  element.className = element.className.replace(
+    /tree-depth-\d+/,
+    `tree-depth-${node.depth || 0}`,
+  );
+  if (isTransposition) {
+    element.classList.add("transposition");
+  } else {
+    element.classList.remove("transposition");
+  }
+};
+
+/**
+ * Build the shadow tree from the data tree
+ */
+const buildShadowTree = (
+  nodes: BestLineNode[],
+  analysis: BestLinesAnalysis,
+  parent: UITreeNode | null = null,
+  depth: number = 0,
+): UITreeNode[] => {
+  const uiNodes: UITreeNode[] = [];
+
+  for (const node of nodes) {
+    const nodeId = generateNodeId(node);
+    const element = createTreeNodeElement(node, depth, analysis);
+
+    const uiNode: UITreeNode = {
+      id: nodeId,
+      element,
+      children: [],
+      parent,
+    };
+
+    // Recursively build children
+    if (node.children.length > 0) {
+      uiNode.children = buildShadowTree(
+        node.children,
+        analysis,
+        uiNode,
+        depth + 1,
+      );
+    }
+
+    uiNodes.push(uiNode);
+  }
+
+  return uiNodes;
+};
+
+/**
+ * Find a node by ID in the data tree
+ */
+const findNodeById = (
+  nodeId: string,
+  nodes: BestLineNode[],
+): BestLineNode | null => {
+  for (const node of nodes) {
+    if (generateNodeId(node) === nodeId) {
+      return node;
+    }
+    if (node.children.length > 0) {
+      const found = findNodeById(nodeId, node.children);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+/**
+ * Sync the DOM with the shadow tree
+ */
+const syncDOMWithShadowTree = (
+  container: HTMLElement,
+  shadowNodes: UITreeNode[],
+  analysis: BestLinesAnalysis,
+): void => {
+  // Get existing DOM nodes
+  const existingNodes = Array.from(container.children) as HTMLElement[];
+  const existingNodeMap = new Map<string, HTMLElement>();
+
+  for (const element of existingNodes) {
+    const nodeId = element.getAttribute("data-node-id");
+    if (nodeId) {
+      existingNodeMap.set(nodeId, element);
+    }
+  }
+
+  // Process shadow nodes in order
+  for (let i = 0; i < shadowNodes.length; i++) {
+    const shadowNode = shadowNodes[i];
+    const existingElement = existingNodeMap.get(shadowNode.id);
+
+    if (existingElement) {
+      // Update existing element - we need to find the original node data
+      const originalNode = findNodeById(shadowNode.id, analysis.nodes);
+      if (originalNode) {
+        updateTreeNodeElement(existingElement, originalNode, analysis);
+      }
+
+      // Move to correct position if needed
+      if (container.children[i] !== existingElement) {
+        container.insertBefore(existingElement, container.children[i] || null);
+      }
+
+      // Process children
+      let childrenContainer = existingElement.querySelector(
+        ".tree-children",
+      ) as HTMLElement;
+      if (shadowNode.children.length > 0) {
+        if (!childrenContainer) {
+          childrenContainer = document.createElement("div");
+          childrenContainer.className = "tree-children";
+          existingElement.appendChild(childrenContainer);
+        }
+        syncDOMWithShadowTree(childrenContainer, shadowNode.children, analysis);
+      } else if (childrenContainer) {
+        childrenContainer.remove();
+      }
+    } else {
+      // Create new element
+      const newElement = shadowNode.element;
+
+      // Insert at correct position
+      if (i < container.children.length) {
+        container.insertBefore(newElement, container.children[i]);
+      } else {
+        container.appendChild(newElement);
+      }
+
+      // Process children
+      if (shadowNode.children.length > 0) {
+        const childrenContainer = document.createElement("div");
+        childrenContainer.className = "tree-children";
+        newElement.appendChild(childrenContainer);
+        syncDOMWithShadowTree(childrenContainer, shadowNode.children, analysis);
+      }
+    }
+  }
+
+  // Remove extra DOM nodes that shouldn't be there
+  for (const element of existingNodes) {
+    const nodeId = element.getAttribute("data-node-id");
+    if (nodeId && !shadowNodes.find((n) => n.id === nodeId)) {
+      element.remove();
+    }
+  }
+};
+
+/**
+ * Update the tree UI incrementally
+ */
+const updateBestLinesTreeIncrementally = (
+  resultsElement: HTMLElement,
+  analysis: BestLinesAnalysis,
+): void => {
+  let treeSection = resultsElement.querySelector(
+    ".tree-digger-tree",
+  ) as HTMLElement;
+  if (!treeSection) {
+    treeSection = document.createElement("div");
+    treeSection.className = "tree-digger-tree";
+    resultsElement.appendChild(treeSection);
+  }
+
+  // Only update if we have nodes
+  if (analysis.nodes.length === 0) {
+    treeSection.innerHTML =
+      "<p>No analysis results yet. Starting analysis...</p>";
+    shadowTree = null;
+    return;
+  }
+
+  // Build the new shadow tree
+  const newShadowNodes = buildShadowTree(analysis.nodes, analysis);
+
+  // Sync the DOM with the shadow tree
+  syncDOMWithShadowTree(treeSection, newShadowNodes, analysis);
+
+  // Apply current font size to the updated tree
+  const treeFontSizeInput = document.getElementById(
+    "tree-font-size",
+  ) as HTMLInputElement;
+  if (treeFontSizeInput) {
+    const currentFontSize = parseInt(treeFontSizeInput.value);
+    updateTreeFontSize(currentFontSize);
+  }
+};
+
+/**
+ * Count nodes recursively for comparison
+ */
+const countNodesRecursive = (nodes: BestLineNode[]): number => {
+  let count = 0;
+  for (const node of nodes) {
+    count += 1 + countNodesRecursive(node.children);
+  }
+  return count;
+};
+
+/**
+ * Render a tree node recursively
+ */
+const renderTreeNode = (
+  node: BestLineNode,
+  depth: number,
+  analysis: BestLinesAnalysis,
+): string => {
+  const moveText = moveToNotation(node.move);
+  const scoreText =
+    node.score !== 0
+      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      : "";
+  const moveClass = node.isWhiteMove ? "white-move" : "black-move";
+
+  // Use the move number from the node itself (calculated based on game position)
+  const moveNumber = node.moveNumber;
+  let moveNumberText = "";
+  if (node.isWhiteMove) {
+    moveNumberText = `${moveNumber}.`;
+  } else {
+    moveNumberText = `${moveNumber}...`;
+  }
+  const depthClass = `tree-depth-${depth}`;
+
+  // Generate a unique node ID for debugging
+  const nodeId = `node-${node.fen.replace(/[^a-zA-Z0-9]/g, "")}-${node.move.from}-${node.move.to}`;
+
+  // Check if this position is a transposition (has been analyzed before)
+  // We show transposition when this node has no children because the position was already analyzed
+  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+  const isTransposition =
+    node.children.length === 0 &&
+    analysis.analyzedPositions.has(positionAfterMove);
+  const transpositionClass = isTransposition ? "transposition" : "";
+
+  let html = `
+    <div class="tree-node ${moveClass} ${depthClass} ${transpositionClass}" data-node-id="${nodeId}">
+      <div class="move-info">
+        <span class="move-number">${moveNumberText}</span>
+        <span class="move-text">${moveText}</span>
+        ${scoreText ? `<span class="move-score">${scoreText}</span>` : ""}
+        ${node.children.length > 0 ? `<span class="move-children">(${node.children.length})</span>` : ""}
+        ${isTransposition ? `<span class="transposition-indicator">🔄</span>` : ""}
+      </div>
+      ${node.children.length === 0 ? `<div class="line-completion">${getLineCompletion(node, analysis)}</div>` : ""}
+  `;
+
+  if (node.children.length > 0) {
+    html += `<div class="tree-children">`;
+    for (const child of node.children) {
+      html += renderTreeNode(child, depth + 1, analysis);
+    }
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+};
+
+/**
+ * Get the completion text for a leaf node
+ */
+const getLineCompletion = (
+  node: BestLineNode,
+  analysis: BestLinesAnalysis,
+): string => {
+  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+  const isTransposition = analysis.analyzedPositions.has(positionAfterMove);
+
+  if (isTransposition) {
+    // Show both the current line and the line it transposes into
+    const currentLine = getCompleteLine(node);
+    const existingLine = findExistingLine(positionAfterMove, analysis);
+    if (existingLine) {
+      return `<span class="transposition-line">→ ${currentLine} → transposes into: ${existingLine}</span>`;
+    }
+    return `<span class="transposition-line">→ ${currentLine} → position already analyzed</span>`;
+  } else {
+    // Show the complete line from root to this leaf
+    const completeLine = getCompleteLine(node);
+    return `<span class="complete-line">→ Complete line: ${completeLine}</span>`;
+  }
+};
+
+/**
+ * Find an existing line that leads to the given position
+ */
+const findExistingLine = (
+  targetFen: string,
+  analysis: BestLinesAnalysis,
+): string | null => {
+  const searchNode = (
+    nodes: BestLineNode[],
+    path: BestLineNode[],
+  ): string | null => {
+    for (const node of nodes) {
+      const newPath = [...path, node];
+      const nodeFen = applyMoveToFEN(node.fen, node.move);
+
+      if (nodeFen === targetFen) {
+        return formatLineWithMoveNumbers(newPath);
+      }
+
+      const result = searchNode(node.children, newPath);
+      if (result) return result;
+    }
+    return null;
+  };
+
+  return searchNode(analysis.nodes, []);
+};
+
+/**
+ * Format a list of moves with proper chess notation
+ */
+const formatLineWithMoveNumbers = (moves: BestLineNode[]): string => {
+  let formattedLine = "";
+
+  for (let i = 0; i < moves.length; i++) {
+    const moveNode = moves[i];
+    const moveText = moveToNotation(moveNode.move);
+
+    if (moveNode.isWhiteMove) {
+      // White move - start new move number
+      if (i > 0) formattedLine += " ";
+      formattedLine += `${moveNode.moveNumber}. ${moveText}`;
+    } else {
+      // Black move - add to current move number
+      formattedLine += ` ${moveText}`;
+    }
+  }
+
+  return formattedLine;
+};
+
+/**
+ * Get the complete line from root to the given node
+ */
+const getCompleteLine = (node: BestLineNode): string => {
+  const moves: BestLineNode[] = [];
+  let current: BestLineNode | undefined = node;
+
+  // Walk up the tree to collect moves
+  while (current) {
+    moves.unshift(current);
+    current = current.parent;
+  }
+
+  // Format the line with proper chess notation
+  let formattedLine = "";
+
+  for (let i = 0; i < moves.length; i++) {
+    const moveNode = moves[i];
+    const moveText = moveToNotation(moveNode.move);
+
+    if (moveNode.isWhiteMove) {
+      // White move - start new move number
+      if (i > 0) formattedLine += " ";
+      formattedLine += `${moveNode.moveNumber}. ${moveText}`;
+    } else {
+      // Black move - add to current move number
+      formattedLine += ` ${moveText}`;
+    }
+  }
+
+  return formattedLine;
+};
+
+/**
+ * Update tree font size
+ */
+const updateTreeFontSize = (fontSize: number): void => {
+  const treeSection = document.querySelector(".tree-digger-tree");
+  if (treeSection) {
+    (treeSection as HTMLElement).style.fontSize = `${fontSize}px`;
+  }
+
+  // Also update the initial font size when the control is first loaded
+  const treeFontSizeInput = document.getElementById(
+    "tree-font-size",
+  ) as HTMLInputElement;
+  if (treeFontSizeInput) {
+    treeFontSizeInput.value = fontSize.toString();
+  }
+};
+
+/**
+ * Render a best line node
+ */
+const renderBestLineNode = (node: BestLineNode): string => {
+  const moveText = moveToNotation(node.move);
+  const scoreText =
+    node.score !== 0
+      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      : "";
+  const depthText = node.depth > 0 ? ` [depth: ${node.depth}]` : "";
+  const moveClass = node.isWhiteMove ? "white-move" : "black-move";
+  const playerText = node.isWhiteMove ? "White" : "Black";
+
+  let html = `
+    <div class="best-line-node ${moveClass}">
+      <div class="move-info">
+        <span class="move-player">${playerText}</span>
+        <span class="move-text">${moveText}</span>
+        ${scoreText ? `<span class="move-score">${scoreText}</span>` : ""}
+        ${depthText ? `<span class="move-depth">${depthText}</span>` : ""}
+      </div>
+      <div class="move-fen">${node.fen}</div>
+  `;
+
+  if (node.children.length > 0) {
+    html += "<div class='children'>";
+    for (const child of node.children) {
+      html += renderBestLineNode(child);
+    }
+    html += "</div>";
+  }
+
+  html += "</div>";
+  return html;
 };
 
 // ============================================================================
@@ -849,7 +1992,6 @@ const createBranch = (
  */
 const clearBranch = (): void => {
   console.log("clearBranch called - clearing branch state");
-  console.trace("clearBranch stack trace");
   updateAppState({
     branchMoves: [],
     branchStartIndex: -1,
@@ -1025,8 +2167,17 @@ const handlePVClick = (e: Event): void => {
 const updateFENInput = (): void => {
   const fenInput = getInputElement("fen-input");
   if (fenInput) {
-    fenInput.value = Board.getFEN();
+    const boardFEN = Board.getFEN();
+    const appState = getAppState();
+    const position = Board.getPosition();
+    fenInput.value = getFENWithCorrectMoveCounter(
+      boardFEN,
+      appState.currentMoveIndex,
+      position.castling,
+      position.enPassant,
+    );
   }
+  clearWhiteMoveInputs();
 };
 
 /**
@@ -1132,6 +2283,11 @@ const addMove = (move: ChessMove): void => {
   updateMoveList();
   updateNavigationButtons();
   highlightLastMove(move);
+
+  // Update FEN input and controls to reflect the board's current position
+  // (not the move list, since the board has already been updated)
+  updateFENInput();
+  updateControlsFromPosition();
 };
 
 /**
@@ -1231,7 +2387,7 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
       return {
         from: "e1",
         to: "g1",
-        piece: "K",
+        piece: PIECES.WHITE_KING,
         special: "castling",
         rookFrom: "h1",
         rookTo: "f1",
@@ -1240,7 +2396,7 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
       return {
         from: "e8",
         to: "g8",
-        piece: "k",
+        piece: PIECES.BLACK_KING,
         special: "castling",
         rookFrom: "h8",
         rookTo: "f8",
@@ -1252,7 +2408,7 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
       return {
         from: "e1",
         to: "c1",
-        piece: "K",
+        piece: PIECES.WHITE_KING,
         special: "castling",
         rookFrom: "a1",
         rookTo: "d1",
@@ -1261,7 +2417,7 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
       return {
         from: "e8",
         to: "c8",
-        piece: "k",
+        piece: PIECES.BLACK_KING,
         special: "castling",
         rookFrom: "a8",
         rookTo: "d8",
@@ -1273,9 +2429,9 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
   if (moveText.match(/^[a-h][2-7]$/)) {
     // Simple pawn move
     const toSquare = moveText;
-    const fromSquare = findFromSquare("P", toSquare, currentFEN);
+    const piece = isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN;
+    const fromSquare = findFromSquare(piece, toSquare, currentFEN);
     if (fromSquare) {
-      const piece = isWhiteTurn ? "P" : "p";
       return { from: fromSquare, to: toSquare, piece };
     }
   }
@@ -1284,9 +2440,9 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
   if (moveText.match(/^[a-h]x[a-h][2-7]$/)) {
     const fromFile = moveText[0];
     const toSquare = moveText.substring(2);
-    const fromSquare = findFromSquare("P", toSquare, currentFEN);
+    const piece = isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN;
+    const fromSquare = findFromSquare(piece, toSquare, currentFEN);
     if (fromSquare) {
-      const piece = isWhiteTurn ? "P" : "p";
       return { from: fromSquare, to: toSquare, piece };
     }
   }
@@ -1324,7 +2480,6 @@ const findFromSquare = (
   currentFEN: string,
 ): string | null => {
   const position = parseFEN(currentFEN);
-  const [toRank, toFile] = squareToCoords(toSquare);
 
   // Find all pieces of the given type
   const candidates: string[] = [];
@@ -1434,17 +2589,17 @@ const canPieceMoveTo = (
   const pieceType = piece.toUpperCase();
 
   switch (pieceType) {
-    case "P":
+    case PIECE_TYPES.PAWN:
       return canPawnMoveTo(fromSquare, toSquare, board);
-    case "R":
+    case PIECE_TYPES.ROOK:
       return canRookMoveTo(fromSquare, toSquare, board);
-    case "N":
+    case PIECE_TYPES.KNIGHT:
       return canKnightMoveTo(fromSquare, toSquare, board);
-    case "B":
+    case PIECE_TYPES.BISHOP:
       return canBishopMoveTo(fromSquare, toSquare, board);
-    case "Q":
+    case PIECE_TYPES.QUEEN:
       return canQueenMoveTo(fromSquare, toSquare, board);
-    case "K":
+    case PIECE_TYPES.KING:
       return canKingMoveTo(fromSquare, toSquare, board);
     default:
       return false;
@@ -1649,8 +2804,8 @@ const applyMoveToFEN = (fen: string, move: ChessMove): string => {
   let newCastling = position.castling;
 
   // Remove castling rights when king moves
-  if (move.piece.toUpperCase() === "K") {
-    if (move.piece === "K") {
+  if (move.piece.toUpperCase() === PIECE_TYPES.KING) {
+    if (move.piece === PIECES.WHITE_KING) {
       // White king moved
       newCastling = newCastling.replace(/[KQ]/g, "");
     } else {
@@ -1660,7 +2815,7 @@ const applyMoveToFEN = (fen: string, move: ChessMove): string => {
   }
 
   // Remove castling rights when rooks move
-  if (move.piece.toUpperCase() === "R") {
+  if (move.piece.toUpperCase() === PIECE_TYPES.ROOK) {
     if (move.from === "a1") newCastling = newCastling.replace("Q", "");
     if (move.from === "h1") newCastling = newCastling.replace("K", "");
     if (move.from === "a8") newCastling = newCastling.replace("q", "");
@@ -1669,7 +2824,7 @@ const applyMoveToFEN = (fen: string, move: ChessMove): string => {
 
   // Update en passant
   let newEnPassant = null;
-  if (move.piece.toUpperCase() === "P") {
+  if (move.piece.toUpperCase() === PIECE_TYPES.PAWN) {
     const [fromRank, fromFile] = squareToCoords(move.from);
     const [toRank, toFile] = squareToCoords(move.to);
 
@@ -1678,6 +2833,9 @@ const applyMoveToFEN = (fen: string, move: ChessMove): string => {
       const enPassantRank = fromRank + (toRank > fromRank ? 1 : -1);
       newEnPassant = coordsToSquare(enPassantRank, fromFile);
     }
+  } else {
+    // Clear en passant for non-pawn moves
+    newEnPassant = null;
   }
 
   // Update position
@@ -1866,7 +3024,7 @@ const updateMoveList = (): void => {
     const isAtWhiteMove = appState.branchStartIndex % 2 === 0;
     const isAtBlackMove = appState.branchStartIndex % 2 === 1;
 
-    console.log("Branch display check:", {
+    log("Branch display check:", {
       i,
       branchStartIndex: appState.branchStartIndex,
       isInBranch: appState.isInBranch,
@@ -2044,3 +3202,241 @@ export {
   highlightLastMove,
   clearLastMoveHighlight,
 };
+
+// ============================================================================
+// TREE DIGGER DOM MANAGEMENT
+// ============================================================================
+
+/**
+ * Interface for tracking DOM elements associated with tree nodes
+ */
+interface TreeNodeDOM {
+  element: HTMLElement;
+  childrenContainer?: HTMLElement;
+  nodeId: string;
+}
+
+/**
+ * Map to track DOM elements for tree nodes
+ */
+const treeNodeDOMMap = new Map<string, TreeNodeDOM>();
+
+/**
+ * Clear all tracked DOM elements
+ */
+const clearTreeNodeDOMMap = (): void => {
+  treeNodeDOMMap.clear();
+};
+
+/**
+ * Debug function to log tree structure
+ */
+const logTreeStructure = (nodes: BestLineNode[], depth: number = 0): void => {
+  for (const node of nodes) {
+    const indent = "  ".repeat(depth);
+    const moveText = moveToNotation(node.move);
+    const parentText = node.parent
+      ? ` (parent: ${moveToNotation(node.parent.move)})`
+      : " (root)";
+    console.log(
+      `${indent}${moveText}${parentText} [${node.children.length} children]`,
+    );
+
+    if (node.children.length > 0) {
+      logTreeStructure(node.children, depth + 1);
+    }
+  }
+};
+
+/**
+ * Debug function to verify DOM structure matches data structure
+ */
+const verifyDOMStructure = (
+  container: HTMLElement,
+  nodes: BestLineNode[],
+  depth: number = 0,
+): void => {
+  const domNodes = Array.from(container.children) as HTMLElement[];
+
+  if (domNodes.length !== nodes.length) {
+    console.log(
+      `Depth ${depth}: DOM has ${domNodes.length} nodes, data has ${nodes.length} nodes`,
+    );
+  }
+
+  // Check all nodes at this level
+  for (let i = 0; i < Math.max(domNodes.length, nodes.length); i++) {
+    if (i < domNodes.length && i < nodes.length) {
+      const domNode = domNodes[i];
+      const dataNode = nodes[i];
+      const nodeId = generateNodeId(dataNode);
+      const domNodeId = domNode.getAttribute("data-node-id");
+
+      if (domNodeId !== nodeId) {
+        console.log(
+          `  Node ${i}: DOM ID: ${domNodeId}, Data ID: ${nodeId}, Match: false`,
+        );
+      }
+
+      // Check children
+      const childrenContainer = domNode.querySelector(".tree-children");
+      if (childrenContainer && dataNode.children.length > 0) {
+        verifyDOMStructure(
+          childrenContainer as HTMLElement,
+          dataNode.children,
+          depth + 1,
+        );
+      }
+    } else if (i < nodes.length) {
+      console.log(
+        `  Node ${i}: Missing in DOM, Data ID: ${generateNodeId(nodes[i])}`,
+      );
+    } else {
+      console.log(
+        `  Node ${i}: Extra in DOM, DOM ID: ${domNodes[i].getAttribute("data-node-id")}`,
+      );
+    }
+  }
+};
+
+/**
+ * Count total nodes in the tree recursively
+ */
+const countTotalNodes = (nodes: BestLineNode[]): number => {
+  let count = 0;
+  const countRecursive = (nodeList: BestLineNode[]): void => {
+    for (const node of nodeList) {
+      count++;
+      if (node.children.length > 0) {
+        countRecursive(node.children);
+      }
+    }
+  };
+  countRecursive(nodes);
+  return count;
+};
+
+// 1. Add a button to the Best Lines panel in the DOM
+// Find the tree-digger-controls section and add a copy button
+const treeDiggerControls = document.querySelector(".tree-digger-controls");
+if (treeDiggerControls && !document.getElementById("copy-tree-digger-tree")) {
+  const copyBtn = document.createElement("button");
+  copyBtn.id = "copy-tree-digger-tree";
+  copyBtn.textContent = "Copy Tree as Text";
+  copyBtn.style.marginLeft = "8px";
+  copyBtn.style.padding = "4px 8px";
+  copyBtn.style.fontSize = "0.8em";
+  copyBtn.style.backgroundColor = "#6c757d";
+  copyBtn.style.color = "white";
+  copyBtn.style.border = "none";
+  copyBtn.style.borderRadius = "3px";
+  copyBtn.style.cursor = "pointer";
+
+  copyBtn.addEventListener("click", () => {
+    const analysis = BestLines.getCurrentAnalysis();
+    if (analysis && analysis.nodes.length > 0) {
+      const treeText = generateAllLines(analysis.nodes);
+      navigator.clipboard
+        .writeText(treeText)
+        .then(() => {
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy Tree as Text";
+          }, 2000);
+        })
+        .catch((err) => {
+          console.error("Failed to copy: ", err);
+          copyBtn.textContent = "Copy Failed";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy Tree as Text";
+          }, 2000);
+        });
+    }
+  });
+
+  treeDiggerControls.appendChild(copyBtn);
+}
+
+// 2. Function to generate all complete lines from the tree
+function generateAllLines(nodes: BestLineNode[]): string {
+  let result = "";
+  let lineNumber = 1;
+
+  const traverseNode = (
+    node: BestLineNode,
+    currentLine: BestLineNode[] = [],
+  ): void => {
+    // Add current node to the line
+    const newLine = [...currentLine, node];
+
+    if (node.children.length === 0) {
+      // This is a leaf node - output the complete line
+      const lineText = formatLineWithMoveNumbers(newLine);
+      result += `${lineNumber}. ${lineText}\n`;
+      lineNumber++;
+    } else {
+      // Continue traversing children
+      for (const child of node.children) {
+        traverseNode(child, newLine);
+      }
+    }
+  };
+
+  // Traverse all root nodes
+  for (const rootNode of nodes) {
+    traverseNode(rootNode);
+  }
+
+  return result;
+}
+
+// 3. Copy handler
+const copyBtn = document.getElementById("copy-tree-digger-tree");
+if (copyBtn) {
+  copyBtn.onclick = () => {
+    // Access the current analysis through the existing state
+    const state = BestLines.getBestLinesState();
+    const analysis = state.currentAnalysis;
+    if (!analysis || !analysis.nodes) {
+      alert("No tree to copy!");
+      return;
+    }
+
+    const text = generateAllLines(analysis.nodes);
+    navigator.clipboard.writeText(text).then(() => {
+      // Show a short confirmation
+      const toast = document.createElement("div");
+      toast.textContent = "Lines copied to clipboard!";
+      toast.style.position = "fixed";
+      toast.style.bottom = "24px";
+      toast.style.left = "50%";
+      toast.style.transform = "translateX(-50%)";
+      toast.style.background = "#222";
+      toast.style.color = "#fff";
+      toast.style.padding = "8px 16px";
+      toast.style.borderRadius = "6px";
+      toast.style.zIndex = "9999";
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 1200);
+    });
+  };
+}
+
+/**
+ * Clear white move inputs when board changes
+ */
+const clearWhiteMoveInputs = (): void => {
+  const whiteMove1Input = document.getElementById(
+    "tree-digger-white-move-1",
+  ) as HTMLInputElement;
+  const whiteMove2Input = document.getElementById(
+    "tree-digger-white-move-2",
+  ) as HTMLInputElement;
+
+  if (whiteMove1Input) whiteMove1Input.value = "";
+  if (whiteMove2Input) whiteMove2Input.value = "";
+};
+
+/**
+ * Update FEN input with current board position
+ */
