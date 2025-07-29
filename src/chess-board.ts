@@ -1,5 +1,17 @@
-import { ChessPosition, ChessMove, AnalysisMove } from "./types.js";
-import { parseFEN, toFEN, squareToCoords, coordsToSquare } from "./utils.js";
+import {
+  ChessPosition,
+  ChessMove,
+  AnalysisMove,
+  PieceType,
+  Color,
+} from "./types.js";
+import {
+  parseFEN,
+  toFEN,
+  squareToCoords,
+  coordsToSquare,
+  getPieceSymbol,
+} from "./utils.js";
 import { PIECES, PIECE_TYPES } from "./move-validator.js";
 
 // ============================================================================
@@ -178,32 +190,9 @@ const createPieceElement = (piece: string, square: string): HTMLElement => {
   const type = piece.toUpperCase();
 
   pieceElement.classList.add(color, type.toLowerCase());
-  pieceElement.innerHTML = getPieceSymbol(type, color);
+  pieceElement.innerHTML = getPieceSymbol(type as PieceType, color as Color);
 
   return pieceElement;
-};
-
-/**
- * Get piece symbol for display
- */
-const getPieceSymbol = (type: string, color: string): string => {
-  const symbols: Record<string, string> = {
-    K: "♔",
-    Q: "♕",
-    R: "♖",
-    B: "♗",
-    N: "♘",
-    P: "♙",
-    k: "♚",
-    q: "♛",
-    r: "♜",
-    b: "♝",
-    n: "♞",
-    p: "♟",
-  };
-
-  const key = color === "w" ? type : type.toLowerCase();
-  return symbols[key] || "";
 };
 
 // ============================================================================

@@ -17,6 +17,12 @@ import {
   coordsToSquare,
   getFENWithCorrectMoveCounter,
   getGlobalCurrentMoveIndex,
+  applyMoveToFEN,
+  parseSimpleMove,
+  getDepthScaler,
+  getBlackMovesCount,
+  getThreadCount,
+  getWhiteMoves,
 } from "./utils.js";
 import * as Stockfish from "./stockfish-client.js";
 import * as Board from "./chess-board.js";
@@ -56,88 +62,6 @@ const getBestLinesState = (): BestLinesState => ({ ...bestLinesState });
 // ============================================================================
 // ANALYSIS CONFIGURATION
 // ============================================================================
-
-/**
- * Get depth scaler from UI (1-15)
- */
-const getDepthScaler = (): number => {
-  const depthScalerInput = document.getElementById(
-    "tree-digger-depth-scaler",
-  ) as HTMLInputElement;
-  const depthScalerValue = document.getElementById(
-    "tree-digger-depth-scaler-value",
-  );
-
-  // Try to get the value from the display span first, then fall back to input value
-  if (depthScalerValue && depthScalerValue.textContent) {
-    const spanValue = parseInt(depthScalerValue.textContent);
-    if (!isNaN(spanValue)) {
-      return spanValue;
-    }
-  }
-
-  // Fall back to input value
-  return depthScalerInput ? parseInt(depthScalerInput.value) : 3;
-};
-
-const getBlackMovesCount = (): number => {
-  const blackMovesInput = document.getElementById(
-    "tree-digger-black-moves",
-  ) as HTMLInputElement;
-  const blackMovesValue = document.getElementById(
-    "tree-digger-black-moves-value",
-  );
-
-  // Try to get the value from the display span first, then fall back to input value
-  if (blackMovesValue && blackMovesValue.textContent) {
-    const spanValue = parseInt(blackMovesValue.textContent);
-    if (!isNaN(spanValue)) {
-      return spanValue;
-    }
-  }
-
-  // Fall back to input value
-  return blackMovesInput ? parseInt(blackMovesInput.value) : 6;
-};
-
-const getThreadCount = (): number => {
-  const threadsInput = document.getElementById(
-    "tree-digger-threads",
-  ) as HTMLInputElement;
-  const threadsValue = document.getElementById("tree-digger-threads-value");
-
-  // Try to get the value from the display span first, then fall back to input value
-  if (threadsValue && threadsValue.textContent) {
-    const spanValue = parseInt(threadsValue.textContent);
-    if (!isNaN(spanValue)) {
-      return spanValue;
-    }
-  }
-
-  // Fall back to input value
-  return threadsInput ? parseInt(threadsInput.value) : 10;
-};
-
-/**
- * Get white moves from UI inputs
- */
-const getWhiteMoves = (): string[] => {
-  const whiteMove1Input = document.getElementById(
-    "tree-digger-white-move-1",
-  ) as HTMLInputElement;
-  const whiteMove2Input = document.getElementById(
-    "tree-digger-white-move-2",
-  ) as HTMLInputElement;
-
-  const move1 = whiteMove1Input?.value.trim() || "";
-  const move2 = whiteMove2Input?.value.trim() || "";
-
-  const moves: string[] = [];
-  if (move1) moves.push(move1);
-  if (move2) moves.push(move2);
-
-  return moves;
-};
 
 /**
  * Get analysis options from stored configuration
@@ -231,99 +155,6 @@ const initializeBestLinesAnalysis = (): BestLinesAnalysis => {
 /**
  * Apply move to FEN
  */
-const applyMoveToFEN = (fen: string, move: ChessMove): string => {
-  const position = parseFEN(fen);
-  const [fromRank, fromFile] = squareToCoords(move.from);
-  const [toRank, toFile] = squareToCoords(move.to);
-
-  // Create new board
-  const newBoard = position.board.map((row) => [...row]);
-  newBoard[toRank][toFile] = newBoard[fromRank][fromFile];
-  newBoard[fromRank][fromFile] = "";
-
-  // Handle special moves
-  if (move.special === "castling") {
-    if (move.rookFrom && move.rookTo) {
-      const [rookFromRank, rookFromFile] = squareToCoords(move.rookFrom);
-      const [rookToRank, rookToFile] = squareToCoords(move.rookTo);
-      newBoard[rookToRank][rookToFile] = newBoard[rookFromRank][rookFromFile];
-      newBoard[rookFromRank][rookFromFile] = "";
-    }
-  }
-
-  // Update castling rights
-  let newCastling = position.castling;
-
-  // Remove castling rights when king moves
-  if (move.piece.toUpperCase() === PIECE_TYPES.KING) {
-    if (move.piece === PIECES.WHITE_KING) {
-      // White king moved
-      newCastling = newCastling.replace(/[KQ]/g, "");
-    } else {
-      // Black king moved
-      newCastling = newCastling.replace(/[kq]/g, "");
-    }
-  }
-
-  // Remove castling rights when rooks move
-  if (move.piece.toUpperCase() === PIECE_TYPES.ROOK) {
-    if (move.from === "a1") newCastling = newCastling.replace("Q", "");
-    if (move.from === "h1") newCastling = newCastling.replace("K", "");
-    if (move.from === "a8") newCastling = newCastling.replace("q", "");
-    if (move.from === "h8") newCastling = newCastling.replace("k", "");
-  }
-
-  // Update en passant
-  let newEnPassant = null;
-  if (move.piece.toUpperCase() === PIECE_TYPES.PAWN) {
-    const [fromRank, fromFile] = squareToCoords(move.from);
-    const [toRank, toFile] = squareToCoords(move.to);
-
-    // Check if it's a double pawn move
-    if (Math.abs(fromRank - toRank) === 2) {
-      const enPassantRank = fromRank + (toRank > fromRank ? 1 : -1);
-      newEnPassant = coordsToSquare(enPassantRank, fromFile);
-    }
-  }
-
-  // Update position
-  const newPosition: ChessPosition = {
-    ...position,
-    board: newBoard,
-    turn: position.turn === "w" ? "b" : "w",
-    castling: newCastling || "-",
-    enPassant: newEnPassant,
-  };
-
-  return toFEN(newPosition);
-};
-
-/**
- * Simple move parser for hardcoded moves
- */
-const parseSimpleMove = (moveText: string, fen: string): ChessMove | null => {
-  const position = parseFEN(fen);
-  const isWhiteTurn = position.turn === "w";
-
-  // Handle the specific moves we need
-  switch (moveText) {
-    case "Nf3":
-      return {
-        from: "g1",
-        to: "f3",
-        piece: isWhiteTurn ? PIECES.WHITE_KNIGHT : PIECES.BLACK_KNIGHT,
-      };
-    case "g3":
-      return {
-        from: "g2",
-        to: "g3",
-        piece: isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN,
-      };
-    default:
-      logError(`Unknown move: ${moveText}`);
-      return null;
-  }
-};
 
 /**
  * Parse a move string and apply it to a position

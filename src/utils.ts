@@ -560,3 +560,492 @@ export function querySelectorHTMLElementBySelector(
   const element = document.querySelector(selector);
   return element instanceof HTMLElement ? element : null;
 }
+
+/**
+ * Apply a chess move to a FEN string and return the new FEN
+ */
+export function applyMoveToFEN(fen: string, move: ChessMove): string {
+  const position = parseFEN(fen);
+  const [fromRank, fromFile] = squareToCoords(move.from);
+  const [toRank, toFile] = squareToCoords(move.to);
+
+  // Create new board
+  const newBoard = position.board.map((row) => [...row]);
+  newBoard[toRank][toFile] = newBoard[fromRank][fromFile];
+  newBoard[fromRank][fromFile] = "";
+
+  // Handle special moves
+  if (move.special === "castling") {
+    if (move.rookFrom && move.rookTo) {
+      const [rookFromRank, rookFromFile] = squareToCoords(move.rookFrom);
+      const [rookToRank, rookToFile] = squareToCoords(move.rookTo);
+      newBoard[rookToRank][rookToFile] = newBoard[rookFromRank][rookFromFile];
+      newBoard[rookFromRank][rookFromFile] = "";
+    }
+  }
+
+  // Update castling rights
+  let newCastling = position.castling;
+
+  // Remove castling rights when king moves
+  if (move.piece.toUpperCase() === PIECE_TYPES.KING) {
+    if (move.piece === "K") {
+      // White king moved
+      newCastling = newCastling.replace(/[KQ]/g, "");
+    } else {
+      // Black king moved
+      newCastling = newCastling.replace(/[kq]/g, "");
+    }
+  }
+
+  // Remove castling rights when rooks move
+  if (move.piece.toUpperCase() === PIECE_TYPES.ROOK) {
+    if (move.from === "a1") newCastling = newCastling.replace("Q", "");
+    if (move.from === "h1") newCastling = newCastling.replace("K", "");
+    if (move.from === "a8") newCastling = newCastling.replace("q", "");
+    if (move.from === "h8") newCastling = newCastling.replace("k", "");
+  }
+
+  // Update en passant
+  let newEnPassant = null;
+  if (move.piece.toUpperCase() === PIECE_TYPES.PAWN) {
+    const [fromRank, fromFile] = squareToCoords(move.from);
+    const [toRank, toFile] = squareToCoords(move.to);
+
+    // Check if it's a double pawn move
+    if (Math.abs(fromRank - toRank) === 2) {
+      const enPassantRank = fromRank + (toRank > fromRank ? 1 : -1);
+      newEnPassant = coordsToSquare(enPassantRank, fromFile);
+    }
+  } else {
+    // Clear en passant for non-pawn moves
+    newEnPassant = null;
+  }
+
+  // Update position
+  const newPosition: ChessPosition = {
+    ...position,
+    board: newBoard,
+    turn: position.turn === "w" ? "b" : "w",
+    castling: newCastling || "-",
+    enPassant: newEnPassant,
+  };
+
+  return toFEN(newPosition);
+}
+
+/**
+ * Parse a simple move string and return a ChessMove object
+ */
+export function parseSimpleMove(
+  moveText: string,
+  fen: string,
+): ChessMove | null {
+  const position = parseFEN(fen);
+  const isWhiteTurn = position.turn === "w";
+
+  // Handle the specific moves we need
+  switch (moveText) {
+    case "Nf3":
+      return {
+        from: "g1",
+        to: "f3",
+        piece: isWhiteTurn ? "N" : "n",
+      };
+    case "g3":
+      return {
+        from: "g2",
+        to: "g3",
+        piece: isWhiteTurn ? "P" : "p",
+      };
+    default:
+      logError(`Unknown move: ${moveText}`);
+      return null;
+  }
+}
+
+/**
+ * Find the from square for a piece moving to a destination
+ */
+export function findFromSquare(
+  piece: string,
+  toSquare: string,
+  currentFEN: string,
+): string | null {
+  const position = parseFEN(currentFEN);
+  const candidates: string[] = [];
+
+  // Find all squares with the specified piece
+  for (let rank = 0; rank < 8; rank++) {
+    for (let file = 0; file < 8; file++) {
+      const square = coordsToSquare(rank, file);
+      if (position.board[rank][file] === piece) {
+        candidates.push(square);
+      }
+    }
+  }
+
+  // Filter candidates that can actually move to the destination
+  const validCandidates = candidates.filter((fromSquare) =>
+    canPieceMoveTo(fromSquare, toSquare, piece, position.board),
+  );
+
+  if (validCandidates.length === 1) {
+    return validCandidates[0];
+  }
+
+  if (validCandidates.length > 1) {
+    // Multiple candidates - need disambiguation
+    return null;
+  }
+
+  return null;
+}
+
+/**
+ * Find the from square with disambiguation
+ */
+export function findFromSquareWithDisambiguation(
+  piece: string,
+  toSquare: string,
+  disambiguation: string,
+  currentFEN: string,
+): string | null {
+  const position = parseFEN(currentFEN);
+  const candidates: string[] = [];
+
+  // Find all squares with the specified piece
+  for (let rank = 0; rank < 8; rank++) {
+    for (let file = 0; file < 8; file++) {
+      const square = coordsToSquare(rank, file);
+      if (position.board[rank][file] === piece) {
+        candidates.push(square);
+      }
+    }
+  }
+
+  // Filter candidates that can actually move to the destination
+  const validCandidates = candidates.filter((fromSquare) =>
+    canPieceMoveTo(fromSquare, toSquare, piece, position.board),
+  );
+
+  if (validCandidates.length === 1) {
+    return validCandidates[0];
+  }
+
+  if (validCandidates.length > 1) {
+    // Use disambiguation to select the correct move
+    return selectCorrectMove(validCandidates, toSquare, piece, position.board);
+  }
+
+  return null;
+}
+
+/**
+ * Check if a piece can move from one square to another
+ */
+export function canPieceMoveTo(
+  fromSquare: string,
+  toSquare: string,
+  piece: string,
+  board: string[][],
+): boolean {
+  const pieceType = piece.toUpperCase();
+  const [fromRank, fromFile] = squareToCoords(fromSquare);
+  const [toRank, toFile] = squareToCoords(toSquare);
+
+  // Check if destination is occupied by same color piece
+  const destPiece = board[toRank][toFile];
+  if (destPiece && getPieceColor(destPiece) === getPieceColor(piece)) {
+    return false;
+  }
+
+  switch (pieceType) {
+    case PIECE_TYPES.PAWN:
+      return canPawnMoveTo(fromSquare, toSquare, board);
+    case PIECE_TYPES.ROOK:
+      return canRookMoveTo(fromSquare, toSquare, board);
+    case PIECE_TYPES.KNIGHT:
+      return canKnightMoveTo(fromSquare, toSquare, board);
+    case PIECE_TYPES.BISHOP:
+      return canBishopMoveTo(fromSquare, toSquare, board);
+    case PIECE_TYPES.QUEEN:
+      return canQueenMoveTo(fromSquare, toSquare, board);
+    case PIECE_TYPES.KING:
+      return canKingMoveTo(fromSquare, toSquare, board);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Check if a pawn can move from one square to another
+ */
+export function canPawnMoveTo(
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean {
+  const [fromRank, fromFile] = squareToCoords(fromSquare);
+  const [toRank, toFile] = squareToCoords(toSquare);
+  const piece = board[fromRank][fromFile];
+  const isWhite = piece === "P";
+  const direction = isWhite ? -1 : 1;
+
+  // Check if it's a capture
+  const isCapture = fromFile !== toFile;
+  const destPiece = board[toRank][toFile];
+
+  if (isCapture) {
+    // Must be diagonal move and destination must be occupied
+    if (Math.abs(fromFile - toFile) !== 1 || !destPiece) {
+      return false;
+    }
+  } else {
+    // Forward move - destination must be empty
+    if (destPiece) {
+      return false;
+    }
+  }
+
+  // Check move distance
+  const rankDiff = toRank - fromRank;
+  if (isWhite) {
+    if (rankDiff > 0) return false; // White pawns move up (decreasing rank)
+    if (rankDiff < -2) return false; // Can't move more than 2 squares
+    if (rankDiff === -2 && fromRank !== 6) return false; // Double move only from starting position
+  } else {
+    if (rankDiff < 0) return false; // Black pawns move down (increasing rank)
+    if (rankDiff > 2) return false; // Can't move more than 2 squares
+    if (rankDiff === 2 && fromRank !== 1) return false; // Double move only from starting position
+  }
+
+  return true;
+}
+
+/**
+ * Check if a rook can move from one square to another
+ */
+export function canRookMoveTo(
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean {
+  const [fromRank, fromFile] = squareToCoords(fromSquare);
+  const [toRank, toFile] = squareToCoords(toSquare);
+
+  // Rooks move in straight lines
+  if (fromRank !== toRank && fromFile !== toFile) {
+    return false;
+  }
+
+  // Check if path is clear
+  if (fromRank === toRank) {
+    // Horizontal move
+    const start = Math.min(fromFile, toFile);
+    const end = Math.max(fromFile, toFile);
+    for (let file = start + 1; file < end; file++) {
+      if (board[fromRank][file] !== "") {
+        return false;
+      }
+    }
+  } else {
+    // Vertical move
+    const start = Math.min(fromRank, toRank);
+    const end = Math.max(fromRank, toRank);
+    for (let rank = start + 1; rank < end; rank++) {
+      if (board[rank][fromFile] !== "") {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Check if a knight can move from one square to another
+ */
+export function canKnightMoveTo(
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean {
+  const [fromRank, fromFile] = squareToCoords(fromSquare);
+  const [toRank, toFile] = squareToCoords(toSquare);
+
+  const rankDiff = Math.abs(fromRank - toRank);
+  const fileDiff = Math.abs(fromFile - toFile);
+
+  return (
+    (rankDiff === 2 && fileDiff === 1) || (rankDiff === 1 && fileDiff === 2)
+  );
+}
+
+/**
+ * Check if a bishop can move from one square to another
+ */
+export function canBishopMoveTo(
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean {
+  const [fromRank, fromFile] = squareToCoords(fromSquare);
+  const [toRank, toFile] = squareToCoords(toSquare);
+
+  // Bishops move diagonally
+  if (Math.abs(fromRank - toRank) !== Math.abs(fromFile - toFile)) {
+    return false;
+  }
+
+  // Check if path is clear
+  const rankStep = fromRank < toRank ? 1 : -1;
+  const fileStep = fromFile < toFile ? 1 : -1;
+  let rank = fromRank + rankStep;
+  let file = fromFile + fileStep;
+
+  while (rank !== toRank && file !== toFile) {
+    if (board[rank][file] !== "") {
+      return false;
+    }
+    rank += rankStep;
+    file += fileStep;
+  }
+
+  return true;
+}
+
+/**
+ * Check if a queen can move from one square to another
+ */
+export function canQueenMoveTo(
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean {
+  // Queen combines rook and bishop moves
+  return (
+    canRookMoveTo(fromSquare, toSquare, board) ||
+    canBishopMoveTo(fromSquare, toSquare, board)
+  );
+}
+
+/**
+ * Check if a king can move from one square to another
+ */
+export function canKingMoveTo(
+  fromSquare: string,
+  toSquare: string,
+  board: string[][],
+): boolean {
+  const [fromRank, fromFile] = squareToCoords(fromSquare);
+  const [toRank, toFile] = squareToCoords(toSquare);
+
+  const rankDiff = Math.abs(fromRank - toRank);
+  const fileDiff = Math.abs(fromFile - toFile);
+
+  // King moves one square in any direction
+  return rankDiff <= 1 && fileDiff <= 1;
+}
+
+/**
+ * Select the correct move from multiple candidates
+ */
+export function selectCorrectMove(
+  candidates: string[],
+  toSquare: string,
+  piece: string,
+  board: string[][],
+): string {
+  // For now, just return the first candidate
+  // In a more sophisticated implementation, this would use additional context
+  return candidates[0];
+}
+
+/**
+ * Get depth scaler from UI (1-15)
+ */
+export function getDepthScaler(): number {
+  const depthScalerInput = document.getElementById(
+    "tree-digger-depth-scaler",
+  ) as HTMLInputElement;
+  const depthScalerValue = document.getElementById(
+    "tree-digger-depth-scaler-value",
+  );
+
+  // Try to get the value from the display span first, then fall back to input value
+  if (depthScalerValue && depthScalerValue.textContent) {
+    const spanValue = parseInt(depthScalerValue.textContent);
+    if (!isNaN(spanValue)) {
+      return spanValue;
+    }
+  }
+
+  // Fall back to input value
+  return depthScalerInput ? parseInt(depthScalerInput.value) : 3;
+}
+
+/**
+ * Get black moves count from UI
+ */
+export function getBlackMovesCount(): number {
+  const blackMovesInput = document.getElementById(
+    "tree-digger-black-moves",
+  ) as HTMLInputElement;
+  const blackMovesValue = document.getElementById(
+    "tree-digger-black-moves-value",
+  );
+
+  // Try to get the value from the display span first, then fall back to input value
+  if (blackMovesValue && blackMovesValue.textContent) {
+    const spanValue = parseInt(blackMovesValue.textContent);
+    if (!isNaN(spanValue)) {
+      return spanValue;
+    }
+  }
+
+  // Fall back to input value
+  return blackMovesInput ? parseInt(blackMovesInput.value) : 6;
+}
+
+/**
+ * Get thread count from UI
+ */
+export function getThreadCount(): number {
+  const threadsInput = document.getElementById(
+    "tree-digger-threads",
+  ) as HTMLInputElement;
+  const threadsValue = document.getElementById("tree-digger-threads-value");
+
+  // Try to get the value from the display span first, then fall back to input value
+  if (threadsValue && threadsValue.textContent) {
+    const spanValue = parseInt(threadsValue.textContent);
+    if (!isNaN(spanValue)) {
+      return spanValue;
+    }
+  }
+
+  // Fall back to input value
+  return threadsInput ? parseInt(threadsInput.value) : 10;
+}
+
+/**
+ * Get white moves from UI inputs
+ */
+export function getWhiteMoves(): string[] {
+  const whiteMove1Input = document.getElementById(
+    "tree-digger-white-move-1",
+  ) as HTMLInputElement;
+  const whiteMove2Input = document.getElementById(
+    "tree-digger-white-move-2",
+  ) as HTMLInputElement;
+
+  const move1 = whiteMove1Input?.value.trim() || "";
+  const move2 = whiteMove2Input?.value.trim() || "";
+
+  const moves: string[] = [];
+  if (move1) moves.push(move1);
+  if (move2) moves.push(move2);
+
+  return moves;
+}
