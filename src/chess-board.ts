@@ -475,15 +475,30 @@ const applyMoveToPosition = (
  * Set board position
  */
 const setPosition = (fen: string): void => {
-  // Clear any existing arrows and labels before re-rendering
-  hideMoveArrow();
+  const newPosition = parseFEN(fen);
+  const currentPosition = boardState.position;
 
-  updateBoardState({ position: parseFEN(fen) });
-  const boardElement = document.querySelector("#chess-board") as HTMLElement;
-  if (boardElement) {
-    renderBoard(boardElement);
-    // Re-setup event listeners after re-rendering
-    setupEventListeners(boardElement);
+  // Only clear arrows and re-render if the position has actually changed
+  const positionChanged =
+    newPosition.board !== currentPosition.board ||
+    newPosition.turn !== currentPosition.turn ||
+    newPosition.castling !== currentPosition.castling ||
+    newPosition.enPassant !== currentPosition.enPassant;
+
+  if (positionChanged) {
+    // Clear any existing arrows and labels before re-rendering
+    hideMoveArrow();
+
+    updateBoardState({ position: newPosition });
+    const boardElement = document.querySelector("#chess-board") as HTMLElement;
+    if (boardElement) {
+      renderBoard(boardElement);
+      // Re-setup event listeners after re-rendering
+      setupEventListeners(boardElement);
+    }
+  } else {
+    // Just update the state without re-rendering
+    updateBoardState({ position: newPosition });
   }
 };
 
@@ -523,11 +538,12 @@ const showMoveArrow = (
   score?: number,
   allMoves?: AnalysisMove[],
   index?: number,
+  customArrowId?: string,
 ): void => {
-  // Create a unique identifier for this arrow based on the move
-  const arrowId = `${piece}-${from}-${to}`;
+  // Use custom arrow ID if provided, otherwise create a unique identifier for this arrow based on the move
+  const arrowId = customArrowId || `${piece}-${from}-${to}`;
 
-  // Remove existing arrow for this piece if it exists
+  // Remove existing arrow for this ID if it exists
   hideMoveArrow(arrowId);
 
   const arrow = document.createElement("div");
@@ -566,12 +582,15 @@ const showMoveArrow = (
         roundedDeltaInPawns = Math.round(Math.abs(delta) / 100);
       }
 
-      if (roundedDeltaInPawns <= 0.2) {
-        // Small deviation (0.1-0.2) is light green
-        arrowColor = "#98FB98"; // light green
+      if (roundedDeltaInPawns <= 0.0) {
+        // Best move (delta = 0) - darker green
+        arrowColor = "#228B22"; // forest green for best move
+      } else if (roundedDeltaInPawns <= 0.25) {
+        // Good moves (0.1-0.25 pawns) - light green
+        arrowColor = "#98FB98"; // light green for good moves
       } else if (roundedDeltaInPawns <= 1.0) {
-        // Linear scale from pastel yellow to tomato red (0.3-1.0)
-        const normalizedDelta = (roundedDeltaInPawns - 0.2) / 0.8; // 0 to 1 scale
+        // Linear scale from pastel yellow to tomato red (0.25-1.0)
+        const normalizedDelta = (roundedDeltaInPawns - 0.25) / 0.75; // 0 to 1 scale
         const yellow = [255, 255, 224]; // pastel yellow
         const tomato = [255, 99, 71]; // tomato red
 
@@ -652,9 +671,11 @@ const showMoveArrow = (
 
   positionArrow(arrow, from, to);
 
-  const boardElement = document.querySelector("#chess-board") as HTMLElement;
-  if (boardElement) {
-    boardElement.appendChild(arrow);
+  const boardContainer = document.querySelector(
+    ".board-container",
+  ) as HTMLElement;
+  if (boardContainer) {
+    boardContainer.appendChild(arrow);
   }
 
   // Add score label if score is provided
@@ -678,18 +699,16 @@ const showMoveArrow = (
     if (fromElement && toElement) {
       const fromRect = fromElement.getBoundingClientRect();
       const toRect = toElement.getBoundingClientRect();
-
-      const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+      const boardContainerRect = boardContainer.getBoundingClientRect();
 
       const fromCenter = {
-        x: fromRect.left + fromRect.width / 2 + scrollX,
-        y: fromRect.top + fromRect.height / 2 + scrollY,
+        x: fromRect.left + fromRect.width / 2 - boardContainerRect.left,
+        y: fromRect.top + fromRect.height / 2 - boardContainerRect.top,
       };
 
       const toCenter = {
-        x: toRect.left + toRect.width / 2 + scrollX,
-        y: toRect.top + toRect.height / 2 + scrollY,
+        x: toRect.left + toRect.width / 2 - boardContainerRect.left,
+        y: toRect.top + toRect.height / 2 - boardContainerRect.top,
       };
 
       // Calculate angle for positioning
@@ -714,7 +733,7 @@ const showMoveArrow = (
       // Set z-index for the label to match the arrow
       scoreLabel.style.zIndex = zIndex.toString();
 
-      document.body.appendChild(scoreLabel);
+      boardContainer.appendChild(scoreLabel);
       arrowElements.set(`${arrowId}-score`, scoreLabel);
     }
   }
@@ -773,24 +792,26 @@ const clearLastMoveHighlight = (): void => {
 const positionArrow = (arrow: HTMLElement, from: string, to: string): void => {
   const fromElement = document.querySelector(`[data-square="${from}"]`);
   const toElement = document.querySelector(`[data-square="${to}"]`);
+  const boardContainer = document.querySelector(
+    ".board-container",
+  ) as HTMLElement;
 
-  if (!fromElement || !toElement) return;
+  if (!fromElement || !toElement || !boardContainer) {
+    return;
+  }
 
   const fromRect = fromElement.getBoundingClientRect();
   const toRect = toElement.getBoundingClientRect();
-
-  // Account for page scroll
-  const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-  const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+  const boardContainerRect = boardContainer.getBoundingClientRect();
 
   const fromCenter = {
-    x: fromRect.left + fromRect.width / 2 + scrollX,
-    y: fromRect.top + fromRect.height / 2 + scrollY,
+    x: fromRect.left + fromRect.width / 2 - boardContainerRect.left,
+    y: fromRect.top + fromRect.height / 2 - boardContainerRect.top,
   };
 
   const toCenter = {
-    x: toRect.left + toRect.width / 2 + scrollX,
-    y: toRect.top + toRect.height / 2 + scrollY,
+    x: toRect.left + toRect.width / 2 - boardContainerRect.left,
+    y: toRect.top + toRect.height / 2 - boardContainerRect.top,
   };
 
   const angle = Math.atan2(

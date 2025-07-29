@@ -1,202 +1,202 @@
 export interface ChessPosition {
-  board: string[][];
-  turn: "w" | "b";
-  castling: string;
-  enPassant: string | null;
-  halfMoveClock: number;
-  fullMoveNumber: number;
+    board: string[][];
+    turn: "w" | "b";
+    castling: string;
+    enPassant: string | null;
+    halfMoveClock: number;
+    fullMoveNumber: number;
 }
 export interface ChessMove {
-  from: string;
-  to: string;
-  piece: string;
-  promotion?: string;
-  san?: string;
-  special?: "castling" | "en-passant";
-  rookFrom?: string;
-  rookTo?: string;
-  capturedSquare?: string;
-  effect?: {
-    isCapture: boolean;
-    isCheck: boolean;
-    isMate: boolean;
-    isEnPassant: boolean;
-    capturedPiece?: string;
+    from: string;
+    to: string;
+    piece: string;
+    promotion?: string;
+    san?: string;
+    special?: "castling" | "en-passant";
+    rookFrom?: string;
+    rookTo?: string;
     capturedSquare?: string;
-  };
+    effect?: {
+        isCapture: boolean;
+        isCheck: boolean;
+        isMate: boolean;
+        isEnPassant: boolean;
+        capturedPiece?: string;
+        capturedSquare?: string;
+    };
 }
 export interface AnalysisMove {
-  move: ChessMove;
-  score: number;
-  depth: number;
-  pv: ChessMove[];
-  nodes: number;
-  time: number;
-  multipv?: number;
+    move: ChessMove;
+    score: number;
+    depth: number;
+    pv: ChessMove[];
+    nodes: number;
+    time: number;
+    multipv?: number;
 }
 export interface AnalysisResult {
-  moves: AnalysisMove[];
-  position: string;
-  depth: number;
-  completed: boolean;
+    moves: AnalysisMove[];
+    position: string;
+    depth: number;
+    completed: boolean;
 }
 export interface StockfishOptions {
-  depth?: number;
-  movetime?: number;
-  nodes?: number;
-  threads?: number;
-  hash?: number;
-  multiPV?: number;
+    depth?: number;
+    movetime?: number;
+    nodes?: number;
+    threads?: number;
+    hash?: number;
+    multiPV?: number;
 }
 export interface AnalysisConfig {
-  maxDepth: number;
-  whiteMoves: number;
-  blackMoves: number;
-  stockfishOptions: StockfishOptions;
+    maxDepth: number;
+    whiteMoves: number;
+    blackMoves: number;
+    stockfishOptions: StockfishOptions;
 }
 export interface BoardState {
-  position: ChessPosition;
-  selectedSquare: string | null;
-  draggedPiece: string | null;
-  legalMoves: string[];
+    position: ChessPosition;
+    selectedSquare: string | null;
+    draggedPiece: string | null;
+    legalMoves: string[];
 }
 export type PieceType = "P" | "R" | "N" | "B" | "Q" | "K";
 export type Color = "w" | "b";
 export interface Piece {
-  type: PieceType;
-  color: Color;
-  square: string;
+    type: PieceType;
+    color: Color;
+    square: string;
 }
 export interface AnalysisOptions {
-  depth: number;
-  threads: number;
-  multiPV: number;
+    depth: number;
+    threads: number;
+    multiPV: number;
 }
 export type LogArguments = unknown[];
 export type LogFunction = (...args: LogArguments) => void;
 export interface DebounceFunction<T extends (...args: unknown[]) => unknown> {
-  (...args: Parameters<T>): void;
+    (...args: Parameters<T>): void;
 }
 export interface MoveItem {
-  move: ChessMove;
-  score: number;
-  depth: number;
-  pv: ChessMove[];
-  nodes: number;
-  time: number;
+    move: ChessMove;
+    score: number;
+    depth: number;
+    pv: ChessMove[];
+    nodes: number;
+    time: number;
 }
 export interface ProcessedMoveItem {
-  move: ChessMove;
-  notation: string;
-  score: number;
-  depth: number;
-  pv: string;
-  nodes: number;
-  time: number;
+    move: ChessMove;
+    notation: string;
+    score: number;
+    depth: number;
+    pv: string;
+    nodes: number;
+    time: number;
 }
 export interface FormatSettings {
-  notationFormat: "algebraic" | "descriptive";
-  pieceFormat: "symbols" | "english";
+    notationFormat: "algebraic" | "descriptive";
+    pieceFormat: "symbols" | "english";
 }
 export interface MoveItemElement extends HTMLElement {
-  dataset: {
-    moveFrom: string;
-    moveTo: string;
-    movePiece: string;
-  };
+    dataset: {
+        moveFrom: string;
+        moveTo: string;
+        movePiece: string;
+    };
 }
 export interface AnalysisResultsElement extends HTMLElement {
-  innerHTML: string;
+    innerHTML: string;
 }
 export interface GameMovesElement extends HTMLElement {
-  innerHTML: string;
+    innerHTML: string;
 }
 export interface StatusElement extends HTMLElement {
-  textContent: string | null;
+    textContent: string | null;
 }
 export interface FENInputElement extends HTMLInputElement {
-  value: string;
+    value: string;
 }
 export interface GameNotationElement extends HTMLTextAreaElement {
-  value: string;
+    value: string;
 }
 export interface RadioButtonElement extends HTMLInputElement {
-  checked: boolean;
-  value: string;
+    checked: boolean;
+    value: string;
 }
 export interface CheckboxElement extends HTMLInputElement {
-  checked: boolean;
+    checked: boolean;
 }
 export interface ButtonElement extends HTMLButtonElement {
-  disabled: boolean;
+    disabled: boolean;
 }
 export interface SelectElement extends HTMLSelectElement {
-  value: string;
+    value: string;
 }
 export interface NumberInputElement extends HTMLInputElement {
-  value: string;
+    value: string;
 }
 export interface AppState {
-  moves: ChessMove[];
-  initialFEN: string;
-  currentMoveIndex: number;
-  isAnalyzing: boolean;
-  currentResults: AnalysisResult | null;
+    moves: ChessMove[];
+    initialFEN: string;
+    currentMoveIndex: number;
+    isAnalyzing: boolean;
+    currentResults: AnalysisResult | null;
 }
 export interface DragState {
-  element: HTMLElement | null;
-  offset: {
-    x: number;
-    y: number;
-  };
-  isDragging: boolean;
-  currentDropTarget: string | null;
-  originalPiece: HTMLElement | null;
-  originalSquare: string | null;
+    element: HTMLElement | null;
+    offset: {
+        x: number;
+        y: number;
+    };
+    isDragging: boolean;
+    currentDropTarget: string | null;
+    originalPiece: HTMLElement | null;
+    originalSquare: string | null;
 }
 export interface BoardCallbacks {
-  onPositionChange: ((position: ChessPosition) => void) | null;
-  onMoveMade: ((move: ChessMove) => void) | null;
+    onPositionChange: ((position: ChessPosition) => void) | null;
+    onMoveMade: ((move: ChessMove) => void) | null;
 }
 export interface StockfishState {
-  instance: StockfishInstance | null;
-  isReady: boolean;
-  isAnalyzing: boolean;
-  currentAnalysis: {
-    position: string;
-    options: StockfishOptions;
-    callback: ((result: AnalysisResult) => void) | null;
-  } | null;
+    instance: StockfishInstance | null;
+    isReady: boolean;
+    isAnalyzing: boolean;
+    currentAnalysis: {
+        position: string;
+        options: StockfishOptions;
+        callback: ((result: AnalysisResult) => void) | null;
+    } | null;
 }
 export interface StockfishCallbacks {
-  onReady: (() => void) | null;
-  onAnalysisResult: ((result: AnalysisResult) => void) | null;
-  onError: ((error: string) => void) | null;
+    onReady: (() => void) | null;
+    onAnalysisResult: ((result: AnalysisResult) => void) | null;
+    onError: ((error: string) => void) | null;
 }
 export interface StockfishConfig {
-  locateFile?: (filename: string) => string | null;
-  ready?: Promise<void>;
+    locateFile?: (filename: string) => string | null;
+    ready?: Promise<void>;
 }
 export interface StockfishInstance {
-  postMessage(message: string): void;
-  postCustomMessage?(message: string): void;
-  addMessageListener(listener: (message: string) => void): void;
-  removeMessageListener(listener: (message: string) => void): void;
-  onCustomMessage?: (message: string) => void;
-  terminate(): void;
-  print(message: string): void;
-  printErr(message: string): void;
-  __IS_SINGLE_THREADED__?: boolean;
-  _origOnCustomMessage?: (message: string) => void;
-  pauseQueue(): void;
-  unpauseQueue(): void;
-  ready: Promise<void>;
+    postMessage(message: string): void;
+    postCustomMessage?(message: string): void;
+    addMessageListener(listener: (message: string) => void): void;
+    removeMessageListener(listener: (message: string) => void): void;
+    onCustomMessage?: (message: string) => void;
+    terminate(): void;
+    print(message: string): void;
+    printErr(message: string): void;
+    __IS_SINGLE_THREADED__?: boolean;
+    _origOnCustomMessage?: (message: string) => void;
+    pauseQueue(): void;
+    unpauseQueue(): void;
+    ready: Promise<void>;
 }
 export interface StockfishConstructor {
-  (config?: StockfishConfig): Promise<StockfishInstance>;
+    (config?: StockfishConfig): Promise<StockfishInstance>;
 }
 declare global {
-  interface Window {
-    Stockfish: StockfishConstructor;
-  }
+    interface Window {
+        Stockfish: StockfishConstructor;
+    }
 }

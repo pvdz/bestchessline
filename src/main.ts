@@ -521,14 +521,33 @@ const formatPVWithEffects = (
   }
 };
 
+// Debounce mechanism for analysis updates
+let analysisUpdateTimeout: number | null = null;
+let queuedMoves: AnalysisMove[] = [];
+
 /**
  * Update results panel
  */
 const updateResultsPanel = (moves: AnalysisMove[]): void => {
+  queuedMoves = moves;
+  if (analysisUpdateTimeout) {
+    return;
+  }
+
+  // Debounce the update to prevent rapid changes
+  analysisUpdateTimeout = setTimeout(
+    () => actuallyUpdateResultsPanel(queuedMoves),
+    100,
+  ); // 100ms debounce delay
+};
+
+const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
+  analysisUpdateTimeout = null;
+
   const resultsPanel = document.getElementById("analysis-results");
   if (!resultsPanel) return;
 
-  // Clear all arrows when updating results
+  // Clear existing arrows
   Board.hideMoveArrow();
 
   // Get current format settings
@@ -572,14 +591,6 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
     const remainingSlots = maxLines - filteredMoves.length;
     filteredMoves.push(...nonMateLines.slice(0, remainingSlots));
   }
-
-  log("Filtering analysis results:", {
-    totalMoves: moves.length,
-    filteredMoves: filteredMoves.length,
-    mateLines: mateLines.length,
-    nonMateLines: nonMateLines.length,
-    maxLines,
-  });
 
   // Add analysis status indicator to the results section (after controls, before results panel)
   const resultsSection = document.querySelector(".results-section");
@@ -669,14 +680,10 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
       pieceType,
     );
 
-    // Add multipv indicator if this is not the first variation
-    const multipvIndicator =
-      move.multipv && move.multipv > 1 ? ` (${move.multipv})` : "";
-
     moveItem.innerHTML = `
       <div class="move-header">
         <span class="move-rank" title="Move rank">${rank}</span>
-        <span class="move-notation" title="Move notation">${notation}${multipvIndicator}</span>
+        <span class="move-notation" title="Move notation">${notation}</span>
         <div class="move-info" title="Analysis information">
           <span class="depth-info" title="Analysis depth">d${move.depth}</span>
           <span class="nodes-info" title="Nodes searched">${move.nodes.toLocaleString()}</span>
@@ -701,6 +708,9 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
   // Add arrows for each displayed analysis result
   filteredMoves.forEach((move, index) => {
     if (move.move.from && move.move.to && move.move.piece) {
+      // Create a unique arrow ID for this specific analysis result
+      const arrowId = `analysis-${index}-${move.move.from}-${move.move.to}`;
+
       Board.showMoveArrow(
         move.move.from,
         move.move.to,
@@ -708,6 +718,7 @@ const updateResultsPanel = (moves: AnalysisMove[]): void => {
         move.score,
         filteredMoves,
         index,
+        arrowId, // Pass the unique arrow ID
       );
     }
   });

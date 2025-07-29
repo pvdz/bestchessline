@@ -398,12 +398,13 @@ const parseInfoMessage = (message: string): void => {
   if (stockfishState.currentAnalysis && pvMoves.length > 0) {
     const firstMove = pvMoves[0];
 
-    // Find existing move by multipv index (1-based) and move coordinates
+    // Find existing move by move coordinates (from and to squares)
+    // This is more reliable than multipv in single-threaded mode
     const existingMoveIndex = stockfishState.currentAnalysis.moves.findIndex(
       (move) =>
         move.move.from === firstMove.from &&
         move.move.to === firstMove.to &&
-        move.multipv === multipv,
+        move.move.piece === firstMove.piece,
     );
 
     const analysisMove: AnalysisMove = {
@@ -418,10 +419,24 @@ const parseInfoMessage = (message: string): void => {
 
     if (existingMoveIndex >= 0) {
       // Update existing move with new depth and score
-      log(
-        `Updating existing move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}`,
-      );
-      stockfishState.currentAnalysis.moves[existingMoveIndex] = analysisMove;
+      // Only update if this result is better (higher depth or better score)
+      const existingMove =
+        stockfishState.currentAnalysis.moves[existingMoveIndex];
+      const shouldUpdate =
+        depth > existingMove.depth ||
+        (depth === existingMove.depth && score > existingMove.score);
+
+      if (shouldUpdate) {
+        log(
+          `Updating existing move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}`,
+        );
+        stockfishState.currentAnalysis.moves[existingMoveIndex] = analysisMove;
+      } else {
+        log(
+          `Skipping update for ${firstMove.from}${firstMove.to} - existing result is better (depth: ${existingMove.depth} vs ${depth})`,
+        );
+        return; // Don't trigger callback if we didn't update
+      }
     } else {
       // Add new variation
       log(
@@ -430,12 +445,12 @@ const parseInfoMessage = (message: string): void => {
       stockfishState.currentAnalysis.moves.push(analysisMove);
     }
 
-    // Sort moves by score (best first), then by multipv for same scores
+    // Sort moves by score (best first), then by depth for same scores
     stockfishState.currentAnalysis.moves.sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score;
       }
-      return (a.multipv || 1) - (b.multipv || 1);
+      return b.depth - a.depth; // Higher depth first for same scores
     });
 
     // Notify callbacks
