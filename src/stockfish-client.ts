@@ -562,7 +562,7 @@ const analyzePosition = async (
     }
 
     // Set up completion callback
-    const finalCallback = (result: AnalysisResult) => {
+    const finalCallback = (result: AnalysisResult): void => {
       if (result.completed) {
         resolve(result);
         // Remove this callback
