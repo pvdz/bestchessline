@@ -11,6 +11,8 @@ import {
   coordsToSquare,
   log,
   logError,
+  querySelectorHTMLElement,
+  querySelectorButton,
 } from "./utils.js";
 
 // ============================================================================
@@ -254,18 +256,17 @@ const showFallbackNotification = (): void => {
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   `;
 
-  const contentElement = notification.querySelector(
+  const contentElement = querySelectorHTMLElement(
+    notification,
     ".notification-content",
-  ) as HTMLElement;
+  );
   if (contentElement) {
     contentElement.style.cssText = `
       position: relative;
     `;
   }
 
-  const buttonElement = notification.querySelector(
-    "button",
-  ) as HTMLButtonElement;
+  const buttonElement = querySelectorButton(notification, "button");
   if (buttonElement) {
     buttonElement.style.cssText = `
       position: absolute;

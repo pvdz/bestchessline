@@ -1,9 +1,9 @@
-import { ChessPosition, ChessMove, PieceType, Color } from "./types.js";
+import { ChessPosition, ChessMove, PieceType, Color, Square, NotationFormat, PieceFormat } from "./types.js";
 export declare function parseFEN(fen: string): ChessPosition;
 export declare function toFEN(position: ChessPosition): string;
-export declare function squareToCoords(square: string): [number, number];
-export declare function coordsToSquare(rank: number, file: number): string;
-export declare function isValidSquare(square: string): boolean;
+export declare function squareToCoords(square: Square): [number, number];
+export declare function coordsToSquare(rank: number, file: number): Square;
+export declare function isValidSquare(square: string): square is Square;
 export declare function getPieceColor(piece: string): Color | null;
 export declare const PIECE_TYPES: {
     readonly KING: "K";
@@ -17,9 +17,9 @@ export declare function getPieceType(piece: string): PieceType | null;
 export declare function formatScore(score: number): string;
 export declare function formatTime(ms: number): string;
 export declare function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void;
-export declare function moveToNotation(move: ChessMove, format?: "short" | "long", pieceFormat?: "unicode" | "english", fen?: string): string;
-export declare function getPieceSymbol(type: PieceType, color: Color, format?: "unicode" | "english"): string;
-export declare function pvToNotation(pv: ChessMove[], format?: "short" | "long", pieceFormat?: "unicode" | "english", fen?: string): string;
+export declare function moveToNotation(move: ChessMove, format?: NotationFormat, pieceFormat?: PieceFormat, fen?: string): string;
+export declare function getPieceSymbol(type: PieceType, color: Color, format?: PieceFormat): string;
+export declare function pvToNotation(pv: ChessMove[], format?: NotationFormat, pieceFormat?: PieceFormat, fen?: string): string;
 /**
  * Enable or disable logging
  */
@@ -94,3 +94,19 @@ export declare function isHTMLButtonElement(element: Element | null): element is
  * Check if an element is an HTMLTextAreaElement
  */
 export declare function isHTMLTextAreaElement(element: Element | null): element is HTMLTextAreaElement;
+/**
+ * Safely get an element by querySelector with type checking
+ */
+export declare function querySelectorElement<T extends Element>(parent: Element, selector: string): T | null;
+/**
+ * Safely get an HTMLElement by querySelector
+ */
+export declare function querySelectorHTMLElement(parent: Element, selector: string): HTMLElement | null;
+/**
+ * Safely get an HTMLButtonElement by querySelector
+ */
+export declare function querySelectorButton(parent: Element, selector: string): HTMLButtonElement | null;
+/**
+ * Safely get an HTMLElement by querySelector
+ */
+export declare function querySelectorHTMLElementBySelector(selector: string): HTMLElement | null;

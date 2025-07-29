@@ -1,4 +1,4 @@
-import { moveToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName, } from "./utils.js";
+import { moveToNotation, parseFEN, toFEN, squareToCoords, coordsToSquare, log, logError, getInputElement, getTextAreaElement, getButtonElement, getCheckedRadio, getCheckedRadioByName, querySelectorHTMLElementBySelector, } from "./utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
@@ -180,7 +180,7 @@ const initializeEventListeners = () => {
  */
 const updateThreadsInputForFallbackMode = () => {
     const threadsInput = getInputElement("threads");
-    const threadsLabel = document.querySelector('label[for="threads"]');
+    const threadsLabel = querySelectorHTMLElementBySelector('label[for="threads"]');
     if (Stockfish.isFallbackMode()) {
         // In fallback mode, disable threads input and show it's forced to 1
         if (threadsInput) {
@@ -202,8 +202,7 @@ const updateThreadsInputForFallbackMode = () => {
         }
         if (threadsLabel) {
             threadsLabel.textContent = "Threads:";
-            threadsLabel.title =
-                "Number of CPU threads for analysis";
+            threadsLabel.title = "Number of CPU threads for analysis";
         }
     }
 };
@@ -782,16 +781,11 @@ const updateFENInput = () => {
  * Update controls from current position
  */
 const updateControlsFromPosition = () => {
-    const fen = Board.getFEN();
-    const fenParts = fen.split(" ");
-    if (fenParts.length < 4)
-        return;
-    const turn = fenParts[1];
-    const castling = fenParts[2];
-    const enPassant = fenParts[3];
+    const position = Board.getPosition();
+    const { turn, castling, enPassant } = position;
     // Update current player
-    const whiteRadio = document.querySelector('input[name="current-player"][value="w"]');
-    const blackRadio = document.querySelector('input[name="current-player"][value="b"]');
+    const whiteRadio = getCheckedRadio("current-player", "w");
+    const blackRadio = getCheckedRadio("current-player", "b");
     if (whiteRadio && blackRadio) {
         if (turn === "w") {
             whiteRadio.checked = true;
@@ -801,10 +795,10 @@ const updateControlsFromPosition = () => {
         }
     }
     // Update castling rights
-    const whiteKingside = document.getElementById("white-kingside");
-    const whiteQueenside = document.getElementById("white-queenside");
-    const blackKingside = document.getElementById("black-kingside");
-    const blackQueenside = document.getElementById("black-queenside");
+    const whiteKingside = getInputElement("white-kingside");
+    const whiteQueenside = getInputElement("white-queenside");
+    const blackKingside = getInputElement("black-kingside");
+    const blackQueenside = getInputElement("black-queenside");
     if (whiteKingside)
         whiteKingside.checked = castling.includes("K");
     if (whiteQueenside)
@@ -814,9 +808,10 @@ const updateControlsFromPosition = () => {
     if (blackQueenside)
         blackQueenside.checked = castling.includes("q");
     // Update en passant
-    const enPassantInput = document.getElementById("en-passant");
+    const enPassantInput = getInputElement("en-passant");
     if (enPassantInput) {
-        enPassantInput.value = enPassant === "-" ? "" : enPassant;
+        enPassantInput.value =
+            enPassant === null || enPassant === "-" ? "" : enPassant;
     }
 };
 /**
@@ -824,13 +819,13 @@ const updateControlsFromPosition = () => {
  */
 const updatePositionFromControls = () => {
     // Get current player
-    const whiteRadio = document.querySelector('input[name="current-player"][value="w"]');
+    const whiteRadio = getCheckedRadio("current-player", "w");
     const turn = whiteRadio?.checked ? "w" : "b";
     // Get castling rights
-    const whiteKingside = document.getElementById("white-kingside");
-    const whiteQueenside = document.getElementById("white-queenside");
-    const blackKingside = document.getElementById("black-kingside");
-    const blackQueenside = document.getElementById("black-queenside");
+    const whiteKingside = getInputElement("white-kingside");
+    const whiteQueenside = getInputElement("white-queenside");
+    const blackKingside = getInputElement("black-kingside");
+    const blackQueenside = getInputElement("black-queenside");
     let castling = "";
     if (whiteKingside?.checked)
         castling += "K";
@@ -843,7 +838,7 @@ const updatePositionFromControls = () => {
     if (!castling)
         castling = "-";
     // Get en passant
-    const enPassantInput = document.getElementById("en-passant");
+    const enPassantInput = getInputElement("en-passant");
     const enPassant = enPassantInput?.value || "-";
     // Construct new FEN
     const currentFEN = Board.getFEN();
@@ -1410,8 +1405,8 @@ const updateMoveList = () => {
     if (!movesPanel)
         return;
     // Get current format settings
-    const notationFormat = document.querySelector('input[name="notation-format"]:checked')?.value || "algebraic-short";
-    const pieceFormat = document.querySelector('input[name="piece-format"]:checked')?.value || "symbols";
+    const notationFormat = getCheckedRadioByName("notation-format")?.value || "algebraic-short";
+    const pieceFormat = getCheckedRadioByName("piece-format")?.value || "symbols";
     // Convert format values to match moveToNotation parameters
     const notationType = notationFormat === "algebraic-short" ? "short" : "long";
     const pieceType = pieceFormat === "symbols" ? "unicode" : "english";
@@ -1559,8 +1554,8 @@ const updateMoveList = () => {
  * Update navigation buttons
  */
 const updateNavigationButtons = () => {
-    const prevBtn = document.getElementById("prev-move");
-    const nextBtn = document.getElementById("next-move");
+    const prevBtn = getButtonElement("prev-move");
+    const nextBtn = getButtonElement("next-move");
     if (prevBtn) {
         prevBtn.disabled = appState.currentMoveIndex <= -1;
     }

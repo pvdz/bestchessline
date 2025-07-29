@@ -87,7 +87,15 @@ export interface AnalysisOptions {
   multiPV: number;
 }
 
-export type LogArguments = unknown[];
+// More specific types to replace unnecessary unknown
+export type LogArguments = (
+  | string
+  | number
+  | boolean
+  | object
+  | null
+  | undefined
+)[];
 
 export type LogFunction = (...args: LogArguments) => void;
 
@@ -251,3 +259,13 @@ declare global {
     Stockfish: StockfishConstructor;
   }
 }
+
+// Additional types for better type safety
+export type Square = string; // e.g., "e4", "a1", etc.
+export type File = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
+export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
+
+export type NotationFormat = "short" | "long";
+export type PieceFormat = "unicode" | "english";
+
+export type AnalysisStatus = "analyzing" | "complete" | "error";

@@ -4,6 +4,8 @@ import {
   ChessPosition,
   AnalysisOptions,
   AnalysisMove,
+  NotationFormat,
+  PieceFormat,
 } from "./types.js";
 import {
   moveToNotation,
@@ -22,6 +24,7 @@ import {
   getCheckedRadioByName,
   querySelector,
   isHTMLElement,
+  querySelectorHTMLElementBySelector,
 } from "./utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
@@ -271,7 +274,9 @@ const initializeEventListeners = (): void => {
  */
 const updateThreadsInputForFallbackMode = (): void => {
   const threadsInput = getInputElement("threads");
-  const threadsLabel = document.querySelector('label[for="threads"]');
+  const threadsLabel = querySelectorHTMLElementBySelector(
+    'label[for="threads"]',
+  );
 
   if (Stockfish.isFallbackMode()) {
     // In fallback mode, disable threads input and show it's forced to 1
@@ -282,7 +287,7 @@ const updateThreadsInputForFallbackMode = (): void => {
     }
     if (threadsLabel) {
       threadsLabel.textContent = "Threads (Forced):";
-      (threadsLabel as HTMLElement).title =
+      threadsLabel.title =
         "Single-threaded mode - multi-threading not available";
     }
   } else {
@@ -293,8 +298,7 @@ const updateThreadsInputForFallbackMode = (): void => {
     }
     if (threadsLabel) {
       threadsLabel.textContent = "Threads:";
-      (threadsLabel as HTMLElement).title =
-        "Number of CPU threads for analysis";
+      threadsLabel.title = "Number of CPU threads for analysis";
     }
   }
 };
@@ -429,8 +433,8 @@ const updateResults = (result: AnalysisResult): void => {
 const formatPVWithEffects = (
   pv: ChessMove[],
   position: string,
-  format: "short" | "long",
-  pieceFormat: "unicode" | "english",
+  format: NotationFormat,
+  pieceFormat: PieceFormat,
 ): string => {
   if (pv.length === 0) return "";
 
@@ -1029,21 +1033,12 @@ const updateFENInput = (): void => {
  * Update controls from current position
  */
 const updateControlsFromPosition = (): void => {
-  const fen = Board.getFEN();
-  const fenParts = fen.split(" ");
-  if (fenParts.length < 4) return;
-
-  const turn = fenParts[1];
-  const castling = fenParts[2];
-  const enPassant = fenParts[3];
+  const position = Board.getPosition();
+  const { turn, castling, enPassant } = position;
 
   // Update current player
-  const whiteRadio = document.querySelector(
-    'input[name="current-player"][value="w"]',
-  ) as HTMLInputElement;
-  const blackRadio = document.querySelector(
-    'input[name="current-player"][value="b"]',
-  ) as HTMLInputElement;
+  const whiteRadio = getCheckedRadio("current-player", "w");
+  const blackRadio = getCheckedRadio("current-player", "b");
 
   if (whiteRadio && blackRadio) {
     if (turn === "w") {
@@ -1054,18 +1049,10 @@ const updateControlsFromPosition = (): void => {
   }
 
   // Update castling rights
-  const whiteKingside = document.getElementById(
-    "white-kingside",
-  ) as HTMLInputElement;
-  const whiteQueenside = document.getElementById(
-    "white-queenside",
-  ) as HTMLInputElement;
-  const blackKingside = document.getElementById(
-    "black-kingside",
-  ) as HTMLInputElement;
-  const blackQueenside = document.getElementById(
-    "black-queenside",
-  ) as HTMLInputElement;
+  const whiteKingside = getInputElement("white-kingside");
+  const whiteQueenside = getInputElement("white-queenside");
+  const blackKingside = getInputElement("black-kingside");
+  const blackQueenside = getInputElement("black-queenside");
 
   if (whiteKingside) whiteKingside.checked = castling.includes("K");
   if (whiteQueenside) whiteQueenside.checked = castling.includes("Q");
@@ -1073,11 +1060,10 @@ const updateControlsFromPosition = (): void => {
   if (blackQueenside) blackQueenside.checked = castling.includes("q");
 
   // Update en passant
-  const enPassantInput = document.getElementById(
-    "en-passant",
-  ) as HTMLInputElement;
+  const enPassantInput = getInputElement("en-passant");
   if (enPassantInput) {
-    enPassantInput.value = enPassant === "-" ? "" : enPassant;
+    enPassantInput.value =
+      enPassant === null || enPassant === "-" ? "" : enPassant;
   }
 };
 
@@ -1086,24 +1072,14 @@ const updateControlsFromPosition = (): void => {
  */
 const updatePositionFromControls = (): void => {
   // Get current player
-  const whiteRadio = document.querySelector(
-    'input[name="current-player"][value="w"]',
-  ) as HTMLInputElement;
+  const whiteRadio = getCheckedRadio("current-player", "w");
   const turn = whiteRadio?.checked ? "w" : "b";
 
   // Get castling rights
-  const whiteKingside = document.getElementById(
-    "white-kingside",
-  ) as HTMLInputElement;
-  const whiteQueenside = document.getElementById(
-    "white-queenside",
-  ) as HTMLInputElement;
-  const blackKingside = document.getElementById(
-    "black-kingside",
-  ) as HTMLInputElement;
-  const blackQueenside = document.getElementById(
-    "black-queenside",
-  ) as HTMLInputElement;
+  const whiteKingside = getInputElement("white-kingside");
+  const whiteQueenside = getInputElement("white-queenside");
+  const blackKingside = getInputElement("black-kingside");
+  const blackQueenside = getInputElement("black-queenside");
 
   let castling = "";
   if (whiteKingside?.checked) castling += "K";
@@ -1113,9 +1089,7 @@ const updatePositionFromControls = (): void => {
   if (!castling) castling = "-";
 
   // Get en passant
-  const enPassantInput = document.getElementById(
-    "en-passant",
-  ) as HTMLInputElement;
+  const enPassantInput = getInputElement("en-passant");
   const enPassant = enPassantInput?.value || "-";
 
   // Construct new FEN
@@ -1832,17 +1806,8 @@ const updateMoveList = (): void => {
 
   // Get current format settings
   const notationFormat =
-    (
-      document.querySelector(
-        'input[name="notation-format"]:checked',
-      ) as HTMLInputElement
-    )?.value || "algebraic-short";
-  const pieceFormat =
-    (
-      document.querySelector(
-        'input[name="piece-format"]:checked',
-      ) as HTMLInputElement
-    )?.value || "symbols";
+    getCheckedRadioByName("notation-format")?.value || "algebraic-short";
+  const pieceFormat = getCheckedRadioByName("piece-format")?.value || "symbols";
 
   // Convert format values to match moveToNotation parameters
   const notationType = notationFormat === "algebraic-short" ? "short" : "long";
@@ -2036,8 +2001,8 @@ const updateMoveList = (): void => {
  * Update navigation buttons
  */
 const updateNavigationButtons = (): void => {
-  const prevBtn = document.getElementById("prev-move") as HTMLButtonElement;
-  const nextBtn = document.getElementById("next-move") as HTMLButtonElement;
+  const prevBtn = getButtonElement("prev-move");
+  const nextBtn = getButtonElement("next-move");
 
   if (prevBtn) {
     prevBtn.disabled = appState.currentMoveIndex <= -1;

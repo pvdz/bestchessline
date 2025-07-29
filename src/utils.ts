@@ -1,4 +1,14 @@
-import { ChessPosition, ChessMove, PieceType, Color } from "./types.js";
+import {
+  ChessPosition,
+  ChessMove,
+  PieceType,
+  Color,
+  Square,
+  File,
+  Rank,
+  NotationFormat,
+  PieceFormat,
+} from "./types.js";
 
 export function parseFEN(fen: string): ChessPosition {
   const parts = fen.split(" ");
@@ -78,19 +88,19 @@ export function toFEN(position: ChessPosition): string {
   return fen;
 }
 
-export function squareToCoords(square: string): [number, number] {
+export function squareToCoords(square: Square): [number, number] {
   const file = square.charCodeAt(0) - "a".charCodeAt(0);
   const rank = 8 - parseInt(square[1]);
   return [rank, file];
 }
 
-export function coordsToSquare(rank: number, file: number): string {
+export function coordsToSquare(rank: number, file: number): Square {
   const fileChar = String.fromCharCode("a".charCodeAt(0) + file);
   const rankChar = (8 - rank).toString();
-  return fileChar + rankChar;
+  return `${fileChar}${rankChar}` as Square;
 }
 
-export function isValidSquare(square: string): boolean {
+export function isValidSquare(square: string): square is Square {
   if (square.length !== 2) return false;
   const file = square[0];
   const rank = square[1];
@@ -161,8 +171,8 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 // Chess notation utilities
 export function moveToNotation(
   move: ChessMove,
-  format: "short" | "long" = "short",
-  pieceFormat: "unicode" | "english" = "unicode",
+  format: NotationFormat = "short",
+  pieceFormat: PieceFormat = "unicode",
   fen?: string,
 ): string {
   const piece = getPieceType(move.piece);
@@ -226,7 +236,7 @@ export function moveToNotation(
 export function getPieceSymbol(
   type: PieceType,
   color: Color,
-  format: "unicode" | "english" = "unicode",
+  format: PieceFormat = "unicode",
 ): string {
   if (format === "english") {
     return type;
@@ -257,8 +267,8 @@ export function getPieceSymbol(
 
 export function pvToNotation(
   pv: ChessMove[],
-  format: "short" | "long" = "short",
-  pieceFormat: "unicode" | "english" = "unicode",
+  format: NotationFormat = "short",
+  pieceFormat: PieceFormat = "unicode",
   fen?: string,
 ): string {
   if (pv.length === 0) return "";
@@ -466,4 +476,45 @@ export function isHTMLTextAreaElement(
   element: Element | null,
 ): element is HTMLTextAreaElement {
   return element instanceof HTMLTextAreaElement;
+}
+
+/**
+ * Safely get an element by querySelector with type checking
+ */
+export function querySelectorElement<T extends Element>(
+  parent: Element,
+  selector: string,
+): T | null {
+  const element = parent.querySelector(selector);
+  return element instanceof Element ? (element as T) : null;
+}
+
+/**
+ * Safely get an HTMLElement by querySelector
+ */
+export function querySelectorHTMLElement(
+  parent: Element,
+  selector: string,
+): HTMLElement | null {
+  return querySelectorElement<HTMLElement>(parent, selector);
+}
+
+/**
+ * Safely get an HTMLButtonElement by querySelector
+ */
+export function querySelectorButton(
+  parent: Element,
+  selector: string,
+): HTMLButtonElement | null {
+  return querySelectorElement<HTMLButtonElement>(parent, selector);
+}
+
+/**
+ * Safely get an HTMLElement by querySelector
+ */
+export function querySelectorHTMLElementBySelector(
+  selector: string,
+): HTMLElement | null {
+  const element = document.querySelector(selector);
+  return element instanceof HTMLElement ? element : null;
 }

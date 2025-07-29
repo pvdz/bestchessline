@@ -1,4 +1,4 @@
-import { ChessPosition, ChessMove, PieceType, Color } from "./types.js";
+import { ChessPosition, ChessMove, PieceType, Color, Square } from "./types.js";
 import {
   parseFEN,
   toFEN,
@@ -134,7 +134,7 @@ function createEmptyEffect(): MoveEffect {
 /**
  * Checks if a square coordinate is valid
  */
-function isValidSquare(square: string): boolean {
+function isValidSquare(square: string): square is Square {
   if (square.length !== 2) return false;
   const file = square[0];
   const rank = square[1];
@@ -716,9 +716,8 @@ function canPawnAttackSquare(
 /**
  * Finds the square of a king of the given color
  */
-function findKing(position: ChessPosition, color: Color): string | null {
+function findKing(position: ChessPosition, color: Color): Square | null {
   const kingPiece = color === "w" ? PIECES.WHITE_KING : PIECES.BLACK_KING;
-
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       if (position.board[rank][file] === kingPiece) {
@@ -726,7 +725,6 @@ function findKing(position: ChessPosition, color: Color): string | null {
       }
     }
   }
-
   return null;
 }
 

@@ -75,7 +75,7 @@ export function squareToCoords(square) {
 export function coordsToSquare(rank, file) {
     const fileChar = String.fromCharCode("a".charCodeAt(0) + file);
     const rankChar = (8 - rank).toString();
-    return fileChar + rankChar;
+    return `${fileChar}${rankChar}`;
 }
 export function isValidSquare(square) {
     if (square.length !== 2)
@@ -392,5 +392,31 @@ export function isHTMLButtonElement(element) {
  */
 export function isHTMLTextAreaElement(element) {
     return element instanceof HTMLTextAreaElement;
+}
+/**
+ * Safely get an element by querySelector with type checking
+ */
+export function querySelectorElement(parent, selector) {
+    const element = parent.querySelector(selector);
+    return element instanceof Element ? element : null;
+}
+/**
+ * Safely get an HTMLElement by querySelector
+ */
+export function querySelectorHTMLElement(parent, selector) {
+    return querySelectorElement(parent, selector);
+}
+/**
+ * Safely get an HTMLButtonElement by querySelector
+ */
+export function querySelectorButton(parent, selector) {
+    return querySelectorElement(parent, selector);
+}
+/**
+ * Safely get an HTMLElement by querySelector
+ */
+export function querySelectorHTMLElementBySelector(selector) {
+    const element = document.querySelector(selector);
+    return element instanceof HTMLElement ? element : null;
 }
 //# sourceMappingURL=utils.js.map

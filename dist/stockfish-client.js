@@ -1,4 +1,4 @@
-import { parseFEN, squareToCoords, log, logError, } from "./utils.js";
+import { parseFEN, squareToCoords, log, logError, querySelectorHTMLElement, querySelectorButton, } from "./utils.js";
 // ============================================================================
 // SHAREDARRAYBUFFER DETECTION
 // ============================================================================
@@ -188,13 +188,13 @@ const showFallbackNotification = () => {
     max-width: 300px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   `;
-    const contentElement = notification.querySelector(".notification-content");
+    const contentElement = querySelectorHTMLElement(notification, ".notification-content");
     if (contentElement) {
         contentElement.style.cssText = `
       position: relative;
     `;
     }
-    const buttonElement = notification.querySelector("button");
+    const buttonElement = querySelectorButton(notification, "button");
     if (buttonElement) {
         buttonElement.style.cssText = `
       position: absolute;

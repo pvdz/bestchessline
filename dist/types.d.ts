@@ -72,7 +72,7 @@ export interface AnalysisOptions {
     threads: number;
     multiPV: number;
 }
-export type LogArguments = unknown[];
+export type LogArguments = (string | number | boolean | object | null | undefined)[];
 export type LogFunction = (...args: LogArguments) => void;
 export interface DebounceFunction<T extends (...args: unknown[]) => unknown> {
     (...args: Parameters<T>): void;
@@ -200,3 +200,9 @@ declare global {
         Stockfish: StockfishConstructor;
     }
 }
+export type Square = string;
+export type File = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
+export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
+export type NotationFormat = "short" | "long";
+export type PieceFormat = "unicode" | "english";
+export type AnalysisStatus = "analyzing" | "complete" | "error";
