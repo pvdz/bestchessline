@@ -232,14 +232,14 @@ const initializeEventListeners = (): void => {
   );
   const pieceRadios = document.querySelectorAll('input[name="piece-format"]');
 
-  notationRadios.forEach((radio) => {
+  notationRadios.forEach((radio: Element) => {
     radio.addEventListener("change", () => {
       updateMoveList();
       updateResultsPanel(appState.currentResults?.moves || []);
     });
   });
 
-  pieceRadios.forEach((radio) => {
+  pieceRadios.forEach((radio: Element) => {
     radio.addEventListener("change", () => {
       updateMoveList();
       updateResultsPanel(appState.currentResults?.moves || []);
@@ -253,7 +253,7 @@ const initializeEventListeners = (): void => {
   const threadsInput = getInputElement("threads");
 
   [whiteMovesInput, blackMovesInput, maxDepthInput, threadsInput].forEach(
-    (input) => {
+    (input: HTMLInputElement | null) => {
       if (input) {
         input.addEventListener("change", () => {
           // Update results panel to reflect new configuration
@@ -311,7 +311,7 @@ const initializePositionControls = (): void => {
   const playerRadios = document.querySelectorAll(
     'input[name="current-player"]',
   );
-  playerRadios.forEach((radio) => {
+  playerRadios.forEach((radio: Element) => {
     radio.addEventListener("change", updatePositionFromControls);
   });
 
@@ -319,7 +319,7 @@ const initializePositionControls = (): void => {
   const castlingCheckboxes = document.querySelectorAll(
     'input[type="checkbox"]',
   );
-  castlingCheckboxes.forEach((checkbox) => {
+  castlingCheckboxes.forEach((checkbox: Element) => {
     checkbox.addEventListener("change", updatePositionFromControls);
   });
 
@@ -652,7 +652,7 @@ const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
 
   resultsPanel.innerHTML = "";
 
-  filteredMoves.forEach((move, index) => {
+  filteredMoves.forEach((move: AnalysisMove, index: number) => {
     // Determine move effects if not already present
     if (!move.move.effect) {
       const position = parseFEN(Board.getFEN());
@@ -710,7 +710,7 @@ const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
   });
 
   // Add arrows for each displayed analysis result
-  filteredMoves.forEach((move, index) => {
+  filteredMoves.forEach((move: AnalysisMove, index: number) => {
     if (move.move.from && move.move.to && move.move.piece) {
       // Create a unique arrow ID for this specific analysis result
       const arrowId = `analysis-${index}-${move.move.from}-${move.move.to}`;

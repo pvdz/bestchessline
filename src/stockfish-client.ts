@@ -153,14 +153,14 @@ const initializeStockfish = (): void => {
     const worker = new Worker(workerUrl);
 
     // Set up message handler
-    worker.onmessage = (event) => {
+    worker.onmessage = (event: MessageEvent) => {
       const message = event.data;
       log("Received message from Stockfish:", message);
       handleMessage(message);
     };
 
     // Set up error handler
-    worker.onerror = (error) => {
+    worker.onerror = (error: ErrorEvent) => {
       logError("Stockfish worker error:", error);
 
       // If the main worker fails, try fallback
@@ -199,14 +199,14 @@ const initializeStockfishFallback = (): void => {
     const worker = new Worker("dist/stockfish-single.js");
 
     // Set up message handler
-    worker.onmessage = (event) => {
+    worker.onmessage = (event: MessageEvent) => {
       const message = event.data;
       log("Received message from Stockfish fallback:", message);
       handleMessage(message);
     };
 
     // Set up error handler
-    worker.onerror = (error) => {
+    worker.onerror = (error: ErrorEvent) => {
       logError("Stockfish fallback worker error:", error);
     };
 
@@ -455,9 +455,11 @@ const parseInfoMessage = (message: string): void => {
     });
 
     // Notify callbacks
-    stockfishState.analysisCallbacks.forEach((callback) => {
-      callback(stockfishState.currentAnalysis!);
-    });
+    stockfishState.analysisCallbacks.forEach(
+      (callback: (result: AnalysisResult) => void) => {
+        callback(stockfishState.currentAnalysis!);
+      },
+    );
   }
 };
 
@@ -477,9 +479,11 @@ const handleBestMove = (message: string): void => {
       stockfishState.currentAnalysis.completed = true;
 
       // Notify callbacks of final result
-      stockfishState.analysisCallbacks.forEach((callback) => {
-        callback(stockfishState.currentAnalysis!);
-      });
+      stockfishState.analysisCallbacks.forEach(
+        (callback: (result: AnalysisResult) => void) => {
+          callback(stockfishState.currentAnalysis!);
+        },
+      );
     }
   }
 };

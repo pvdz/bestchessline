@@ -761,14 +761,14 @@ const hideMoveArrow = (arrowId?: string): void => {
   } else {
     // Hide all arrows and score labels
     const elementsToRemove = Array.from(arrowElements.values());
-    elementsToRemove.forEach((element) => {
+    elementsToRemove.forEach((element: HTMLElement) => {
       element.remove();
     });
     arrowElements.clear();
 
     // Also remove any orphaned score labels from document.body
     const orphanedLabels = document.querySelectorAll(".move-score-label");
-    orphanedLabels.forEach((label) => {
+    orphanedLabels.forEach((label: Element) => {
       label.remove();
     });
   }
@@ -781,7 +781,7 @@ const clearLastMoveHighlight = (): void => {
   const highlightedSquares = document.querySelectorAll(
     ".last-move-from, .last-move-to",
   );
-  highlightedSquares.forEach((square) => {
+  highlightedSquares.forEach((square: Element) => {
     square.classList.remove("last-move-from", "last-move-to");
   });
 };
