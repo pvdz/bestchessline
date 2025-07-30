@@ -569,9 +569,27 @@ export function parseSimpleMove(moveText, fen) {
     const fromFile = cleanMove[0];
     const toSquare = cleanMove.substring(2);
     const piece = isWhiteTurn ? "P" : "p";
-    const fromSquare = findFromSquare(piece, toSquare, fen);
-    if (fromSquare) {
-      return { from: fromSquare, to: toSquare, piece };
+    // Find all pawns that can capture to the destination
+    const position = parseFEN(fen);
+    const candidates = [];
+    for (let rank = 0; rank < 8; rank++) {
+      for (let file = 0; file < 8; file++) {
+        const square = coordsToSquare(rank, file);
+        if (position.board[rank][file] === piece) {
+          candidates.push(square);
+        }
+      }
+    }
+    // Filter candidates that can actually move to the destination
+    const validCandidates = candidates.filter((fromSquare) =>
+      canPawnMoveTo(fromSquare, toSquare, position.board),
+    );
+    // Use the file information to disambiguate
+    const fileCandidates = validCandidates.filter(
+      (fromSquare) => fromSquare[0] === fromFile,
+    );
+    if (fileCandidates.length === 1) {
+      return { from: fileCandidates[0], to: toSquare, piece };
     }
   }
   // Handle pawn promotions (e8=Q, e8Q, etc.)
@@ -810,10 +828,12 @@ export function canPawnMoveTo(fromSquare, toSquare, board) {
     if (rankDiff > 0) return false; // White pawns move up (decreasing rank)
     if (rankDiff < -2) return false; // Can't move more than 2 squares
     if (rankDiff === -2 && fromRank !== 6) return false; // Double move only from starting position
+    if (isCapture && rankDiff !== -1) return false; // Captures must be exactly 1 square
   } else {
     if (rankDiff < 0) return false; // Black pawns move down (increasing rank)
     if (rankDiff > 2) return false; // Can't move more than 2 squares
     if (rankDiff === 2 && fromRank !== 1) return false; // Double move only from starting position
+    if (isCapture && rankDiff !== 1) return false; // Captures must be exactly 1 square
   }
   return true;
 }

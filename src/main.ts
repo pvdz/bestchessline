@@ -2592,7 +2592,7 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
   }
 
   // Handle pawn moves (both white and black)
-  if (moveText.match(/^[a-h][2-7]$/)) {
+  if (moveText.match(/^[a-h][1-8]$/)) {
     // Simple pawn move
     const toSquare = moveText;
     const piece = isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN;
@@ -2603,7 +2603,7 @@ const parseMove = (moveText: string, currentFEN: string): ChessMove | null => {
   }
 
   // Handle pawn captures (both white and black)
-  if (moveText.match(/^[a-h]x[a-h][2-7]$/)) {
+  if (moveText.match(/^[a-h]x[a-h][1-8]$/)) {
     const fromFile = moveText[0];
     const toSquare = moveText.substring(2);
     const piece = isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN;
