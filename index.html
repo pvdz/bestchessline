@@ -47,23 +47,41 @@
               <button id="stop-tree-digger">Stop</button>
               <button id="clear-tree-digger">Clear</button>
               <button id="copy-tree-digger-tree">Copy</button>
+              <div
+                class="thread-controls"
+                title="Note: capped to 16 because the wasm throws when trying a value higher than 16 :') In single threaded mode this is forced to 1 (which makes it very slow!)"
+              >
+                <label for="tree-digger-threads">Threads:</label>
+                <input
+                  type="range"
+                  id="tree-digger-threads"
+                  min="1"
+                  max="16"
+                  value="16"
+                />
+                <span id="tree-digger-threads-value">16</span>
+              </div>
             </div>
-            <div class="tree-digger-white-moves">
-              <div class="white-moves-controls">
-                <label for="tree-digger-white-move-1">1st White Move:</label>
+            <div class="tree-digger-initiator-moves">
+              <div class="initiator-moves-controls">
+                <label for="tree-digger-initiator-move-1"
+                  >1st Initiator Move:</label
+                >
                 <input
                   type="text"
-                  id="tree-digger-white-move-1"
+                  id="tree-digger-initiator-move-1"
                   placeholder="e.g., Nf3"
                   value="Nf3"
                   style="width: 80px; margin-left: 8px"
                 />
               </div>
-              <div class="white-moves-controls">
-                <label for="tree-digger-white-move-2">2nd White Move:</label>
+              <div class="initiator-moves-controls">
+                <label for="tree-digger-initiator-move-2"
+                  >2nd Initiator Move:</label
+                >
                 <input
                   type="text"
-                  id="tree-digger-white-move-2"
+                  id="tree-digger-initiator-move-2"
                   placeholder="e.g., g3"
                   value="g3"
                   style="width: 80px; margin-left: 8px"
@@ -92,30 +110,42 @@
                 />
                 <span id="tree-digger-depth-scaler-value">2</span>
               </div>
-              <div class="black-moves-controls">
-                <label for="tree-digger-black-moves">Black Moves:</label>
+              <div class="responder-moves-controls">
+                <label for="tree-digger-responder-moves"
+                  >Responder Moves:</label
+                >
                 <input
                   type="range"
-                  id="tree-digger-black-moves"
+                  id="tree-digger-responder-moves"
                   min="1"
                   max="30"
                   value="3"
                 />
-                <span id="tree-digger-black-moves-value">3</span>
+                <span id="tree-digger-responder-moves-value">3</span>
               </div>
-              <div
-                class="thread-controls"
-                title="Note: capped to 16 because the wasm throws when trying a value higher than 16 :') In single threaded mode this is forced to 1 (which makes it very slow!)"
-              >
-                <label for="tree-digger-threads">Threads:</label>
+              <div class="override-controls">
+                <label for="tree-digger-override-1">1st Reply Override:</label>
                 <input
                   type="range"
-                  id="tree-digger-threads"
-                  min="1"
-                  max="16"
-                  value="16"
+                  id="tree-digger-override-1"
+                  min="0"
+                  max="10"
+                  value="0"
+                  title="Override number of responder responses for 1st initiator move (0 = use default)"
                 />
-                <span id="tree-digger-threads-value">16</span>
+                <span id="tree-digger-override-1-value">0</span>
+              </div>
+              <div class="override-controls">
+                <label for="tree-digger-override-2">2nd Reply Override:</label>
+                <input
+                  type="range"
+                  id="tree-digger-override-2"
+                  min="0"
+                  max="10"
+                  value="0"
+                  title="Override number of responder responses for 2nd initiator move (0 = use default)"
+                />
+                <span id="tree-digger-override-2-value">0</span>
               </div>
             </div>
           </div>
@@ -244,8 +274,14 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
             <input type="number" id="white-moves" min="1" max="20" value="5" />
           </div>
           <div class="control-group">
-            <label for="black-moves">Black Moves:</label>
-            <input type="number" id="black-moves" min="1" max="20" value="5" />
+            <label for="responder-moves">Responder Moves:</label>
+            <input
+              type="number"
+              id="responder-moves"
+              min="1"
+              max="20"
+              value="5"
+            />
           </div>
           <div class="control-group">
             <label for="threads">Threads:</label>

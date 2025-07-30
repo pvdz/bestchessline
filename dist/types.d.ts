@@ -228,7 +228,7 @@ export interface BestLinesAnalysis {
   rootFen: string;
   nodes: BestLineNode[];
   maxDepth: number;
-  blackResponses: number;
+  responderResponses: number;
   isComplete: boolean;
   currentPosition: string;
   analysisQueue: string[];
@@ -236,9 +236,11 @@ export interface BestLinesAnalysis {
   totalPositions: number;
   config: {
     depthScaler: number;
-    blackMovesCount: number;
+    responderMovesCount: number;
     threads: number;
-    whiteMoves: string[];
+    initiatorMoves: string[];
+    firstReplyOverride: number;
+    secondReplyOverride: number;
   };
 }
 export interface BestLinesState {

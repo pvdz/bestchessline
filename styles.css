@@ -1037,7 +1037,7 @@ h2 {
   flex-wrap: wrap;
 }
 
-.tree-digger-white-moves {
+.tree-digger-initiator-moves {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
@@ -1116,7 +1116,8 @@ h2 {
 /* Unified slider control styles */
 .tree-controls,
 .depth-controls,
-.black-moves-controls,
+.responder-moves-controls,
+.override-controls,
 .thread-controls {
   display: flex;
   align-items: center;
@@ -1129,7 +1130,8 @@ h2 {
 
 .tree-controls label,
 .depth-controls label,
-.black-moves-controls label,
+.responder-moves-controls label,
+.override-controls label,
 .thread-controls label {
   font-size: 0.9em;
   font-weight: 500;
@@ -1139,7 +1141,8 @@ h2 {
 
 .tree-controls input[type="range"],
 .depth-controls input[type="range"],
-.black-moves-controls input[type="range"],
+.responder-moves-controls input[type="range"],
+.override-controls input[type="range"],
 .thread-controls input[type="range"] {
   width: 80px;
   height: 20px;
@@ -1147,7 +1150,7 @@ h2 {
 
 .tree-controls span,
 .depth-controls span,
-.black-moves-controls span,
+.responder-moves-controls span,
 .thread-controls span {
   font-size: 0.8em;
   color: #6c757d;
@@ -1226,7 +1229,7 @@ h2 {
 }
 
 .white-moves-section,
-.black-moves-section {
+.responder-moves-section {
   margin-bottom: 15px;
 }
 
@@ -1244,7 +1247,7 @@ h2 {
   border: 1px solid #c3e6cb;
 }
 
-.black-moves-section .move-color-label {
+.responder-moves-section .move-color-label {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
@@ -1593,21 +1596,21 @@ h2 {
   }
 }
 
-.white-moves-controls {
+.initiator-moves-controls {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
 }
 
-.white-moves-controls label {
+.initiator-moves-controls label {
   font-size: 0.9em;
   font-weight: 500;
   color: #495057;
   white-space: nowrap;
 }
 
-.white-moves-controls input[type="text"] {
+.initiator-moves-controls input[type="text"] {
   padding: 4px 8px;
   border: 1px solid #dee2e6;
   border-radius: 4px;
@@ -1615,7 +1618,7 @@ h2 {
   font-family: "Courier New", monospace;
 }
 
-.white-moves-controls input[type="text"]:focus {
+.initiator-moves-controls input[type="text"]:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);

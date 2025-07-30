@@ -44,9 +44,13 @@ import {
   canKingMoveTo,
   selectCorrectMove,
   getDepthScaler,
-  getBlackMovesCount,
+  getResponderMovesCount,
   getThreadCount,
-  getWhiteMoves,
+  getInitiatorMoves,
+  getFirstReplyOverride,
+  getSecondReplyOverride,
+  calculateTotalPositionsWithOverrides,
+  getStartingPlayer,
   showToast,
 } from "./utils.js";
 import * as Board from "./chess-board.js";
@@ -439,11 +443,11 @@ const initializeEventListeners = (): void => {
 
   // Analysis configuration controls
   const whiteMovesInput = getInputElement("white-moves");
-  const blackMovesInput = getInputElement("black-moves");
+  const responderMovesInput = getInputElement("responder-moves");
   const maxDepthInput = getInputElement("max-depth");
   const threadsInput = getInputElement("threads");
 
-  [whiteMovesInput, blackMovesInput, maxDepthInput, threadsInput].forEach(
+  [whiteMovesInput, responderMovesInput, maxDepthInput, threadsInput].forEach(
     (input: HTMLInputElement | null) => {
       if (input) {
         input.addEventListener("change", () => {
@@ -503,16 +507,41 @@ const initializeEventListeners = (): void => {
   );
   window.addEventListener("best-lines-progress", debouncedBestLinesUpdate);
 
-  // Black moves control for best lines
-  const treeDiggerBlackMovesInput = document.getElementById(
-    "tree-digger-black-moves",
+  // Responder moves control for best lines
+  const treeDiggerResponderMovesInput = document.getElementById(
+    "tree-digger-responder-moves",
   ) as HTMLInputElement;
-  const blackMovesValue = document.getElementById(
-    "tree-digger-black-moves-value",
+  const responderMovesValue = document.getElementById(
+    "tree-digger-responder-moves-value",
   );
-  if (treeDiggerBlackMovesInput && blackMovesValue) {
-    treeDiggerBlackMovesInput.addEventListener("input", () => {
-      blackMovesValue.textContent = treeDiggerBlackMovesInput.value;
+  if (treeDiggerResponderMovesInput && responderMovesValue) {
+    treeDiggerResponderMovesInput.addEventListener("input", () => {
+      responderMovesValue.textContent = treeDiggerResponderMovesInput.value;
+    });
+  }
+
+  // Override controls for best lines
+  const treeDiggerOverride1Input = document.getElementById(
+    "tree-digger-override-1",
+  ) as HTMLInputElement;
+  const override1Value = document.getElementById(
+    "tree-digger-override-1-value",
+  );
+  if (treeDiggerOverride1Input && override1Value) {
+    treeDiggerOverride1Input.addEventListener("input", () => {
+      override1Value.textContent = treeDiggerOverride1Input.value;
+    });
+  }
+
+  const treeDiggerOverride2Input = document.getElementById(
+    "tree-digger-override-2",
+  ) as HTMLInputElement;
+  const override2Value = document.getElementById(
+    "tree-digger-override-2-value",
+  );
+  if (treeDiggerOverride2Input && override2Value) {
+    treeDiggerOverride2Input.addEventListener("input", () => {
+      override2Value.textContent = treeDiggerOverride2Input.value;
     });
   }
 };
@@ -684,7 +713,7 @@ const stopAnalysis = (): void => {
 const getAnalysisOptions = (): AnalysisOptions => {
   const maxDepth = getInputElement("max-depth")?.value || "20";
   const whiteMoves = getInputElement("white-moves")?.value || "5";
-  const blackMoves = getInputElement("black-moves")?.value || "5";
+  const responderMoves = getInputElement("responder-moves")?.value || "5";
 
   // Force threads to 1 in fallback mode
   const threads = Stockfish.isFallbackMode()
@@ -694,7 +723,7 @@ const getAnalysisOptions = (): AnalysisOptions => {
   return {
     depth: parseInt(maxDepth),
     threads: parseInt(threads),
-    multiPV: Math.max(parseInt(whiteMoves), parseInt(blackMoves)),
+    multiPV: Math.max(parseInt(whiteMoves), parseInt(responderMoves)),
   };
 };
 
@@ -898,13 +927,40 @@ const updateBestLinesProgress = (
         ? Math.round(recentCount / (timeWindow / 1000))
         : 0;
 
+  // Calculate total positions with overrides
+  const depthScaler = getDepthScaler();
+  const responderMovesCount = getResponderMovesCount();
+  const firstReplyOverride = getFirstReplyOverride();
+  const secondReplyOverride = getSecondReplyOverride();
+
+  // Calculate total positions considering overrides
+  const totalPositionsWithOverrides = calculateTotalPositionsWithOverrides(
+    depthScaler,
+    responderMovesCount,
+    firstReplyOverride,
+    secondReplyOverride,
+  );
+
+  let overrideExplanation = "";
+  if (firstReplyOverride > 0 || secondReplyOverride > 0) {
+    // Build override explanation
+    const overrides = [];
+    if (firstReplyOverride > 0)
+      overrides.push(`1st reply: ${firstReplyOverride}`);
+    if (secondReplyOverride > 0)
+      overrides.push(`2nd reply: ${secondReplyOverride}`);
+    overrideExplanation = ` (with overrides: ${overrides.join(", ")})`;
+  }
+
+  const computationFormula = `1 + 2*${firstReplyOverride || responderMovesCount} + 2*${secondReplyOverride || responderMovesCount}<sup>2</sup> + 2∑(${responderMovesCount}<sup>n</sup>) for n from 3 to ⌊${depthScaler}/2⌋ = ${totalPositionsWithOverrides}`;
+
   const html = `
     <div class="best-line-progress-container">
       <div class="best-line-progress-left">
         <div class="best-line-stats">
-          <div class="stat">
-            <div class="stat-label">Total Positions</div>
-            <div class="stat-value">${progress.totalPositions}</div>
+          <div class="stat = ${totalPositionsWithOverrides}">
+            <div class="stat-label">Total positions to analyze</div>
+            <div class="stat-value">${totalPositionsWithOverrides}</div>
           </div>
           <div class="stat">
             <div class="stat-label">Analyzed</div>
@@ -930,11 +986,41 @@ const updateBestLinesProgress = (
         <div class="best-line-settings">
           <div class="setting">
             <div class="setting-label">Depth Scaler</div>
-            <div class="setting-value">${getDepthScaler()}</div>
+            <div class="setting-value">${depthScaler}</div>
           </div>
           <div class="setting">
-            <div class="setting-label">Black Moves</div>
-            <div class="setting-value">${getBlackMovesCount()}</div>
+            <div class="setting-label">1st ${(() => {
+              const currentAnalysis = BestLines.getCurrentAnalysis();
+              const rootFen =
+                currentAnalysis?.rootFen ||
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+              const startingPlayer = getStartingPlayer(rootFen);
+              return startingPlayer === "w" ? "White" : "Black";
+            })()} Move</div>
+            <div class="setting-value">${(document.getElementById("tree-digger-initiator-move-1") as HTMLInputElement | null)?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">2nd ${(() => {
+              const currentAnalysis = BestLines.getCurrentAnalysis();
+              const rootFen =
+                currentAnalysis?.rootFen ||
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+              const startingPlayer = getStartingPlayer(rootFen);
+              return startingPlayer === "w" ? "White" : "Black";
+            })()} Move</div>
+            <div class="setting-value">${(document.getElementById("tree-digger-initiator-move-2") as HTMLInputElement | null)?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">Responder Moves</div>
+            <div class="setting-value">${responderMovesCount}</div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">1st Reply Override</div>
+            <div class="setting-value">${firstReplyOverride > 0 ? firstReplyOverride : "0 (default)"}</div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">2nd Reply Override</div>
+            <div class="setting-value">${secondReplyOverride > 0 ? secondReplyOverride : "0 (default)"}</div>
           </div>
           <div class="setting">
             <div class="setting-label">Threads</div>
@@ -948,11 +1034,12 @@ const updateBestLinesProgress = (
           <h3>Analysis Progress</h3>
           <ul>
             <li><strong>Initial position</strong>: ${progress.initialPosition}</li>
-            <li><strong>Total positions</strong>: ${progress.totalPositions} positions to analyze</li>
+            <li><strong>Total positions</strong>: ${computationFormula} positions to analyze${overrideExplanation}</li>
             <li><strong>Analyzed</strong>: ${progress.analyzedPositions} positions completed</li>
             <li><strong>Total leafs</strong>: ${totalLeafs} leaf nodes in the tree</li>
             <li><strong>Unique Positions</strong>: ${uniquePositions} distinct positions analyzed</li>
             <li><strong>Current activity</strong>: ${isAnalyzing ? "🔄 Analyzing position" : "Ready"} ${progress.currentPosition.substring(0, 30)}...</li>
+            ${firstReplyOverride > 0 || secondReplyOverride > 0 ? `<li><strong>Computation</strong>: Depth ${depthScaler} × 2 = ${depthScaler * 2} levels, with ${firstReplyOverride > 0 ? `1st reply: ${firstReplyOverride}` : `1st reply: ${responderMovesCount}`} and ${secondReplyOverride > 0 ? `2nd reply: ${secondReplyOverride}` : `2nd reply: ${responderMovesCount}`} responder responses</li>` : ""}
           </ul>
         </div>
       </div>
@@ -982,8 +1069,8 @@ const renderProgressBoard = (boardElement: HTMLElement, fen: string): void => {
     const position = parseFEN(fen);
     let html = "";
 
-    // Render board from black's perspective (top to bottom)
-    for (let rank = 7; rank >= 0; rank--) {
+    // Render board from white's perspective (bottom to top)
+    for (let rank = 0; rank <= 7; rank++) {
       for (let file = 0; file < 8; file++) {
         const square = coordsToSquare(rank, file);
         const piece = position.board[rank][file];
@@ -2250,7 +2337,7 @@ const updateFENInput = (): void => {
       position.enPassant,
     );
   }
-  clearWhiteMoveInputs();
+  clearInitiatorMoveInputs();
 };
 
 /**
@@ -3127,18 +3214,18 @@ function generateAllLines(nodes: BestLineNode[]): string {
 }
 
 /**
- * Clear white move inputs when board changes
+ * Clear initiator move inputs when board changes
  */
-const clearWhiteMoveInputs = (): void => {
-  const whiteMove1Input = document.getElementById(
-    "tree-digger-white-move-1",
+const clearInitiatorMoveInputs = (): void => {
+  const initiatorMove1Input = document.getElementById(
+    "tree-digger-initiator-move-1",
   ) as HTMLInputElement;
-  const whiteMove2Input = document.getElementById(
-    "tree-digger-white-move-2",
+  const initiatorMove2Input = document.getElementById(
+    "tree-digger-initiator-move-2",
   ) as HTMLInputElement;
 
-  if (whiteMove1Input) whiteMove1Input.value = "";
-  if (whiteMove2Input) whiteMove2Input.value = "";
+  if (initiatorMove1Input) initiatorMove1Input.value = "";
+  if (initiatorMove2Input) initiatorMove2Input.value = "";
 };
 
 /**
@@ -3192,7 +3279,7 @@ window.addEventListener("move-parse-warning", (event: Event) => {
     if (!found) {
       // Fallback: highlight all move inputs by id pattern
       const moveInputs = document.querySelectorAll(
-        'input[id^="tree-digger-white-move"], input[id^="tree-digger-black-move"]',
+        'input[id^="tree-digger-initiator-move"], input[id^="tree-digger-responder-move"]',
       );
       moveInputs.forEach((input) => {
         input.classList.add("input-invalid");

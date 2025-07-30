@@ -290,7 +290,7 @@ export interface BestLinesAnalysis {
   rootFen: string;
   nodes: BestLineNode[];
   maxDepth: number;
-  blackResponses: number; // 5 responses
+  responderResponses: number; // 5 responses
   isComplete: boolean;
   currentPosition: string;
   analysisQueue: string[]; // FEN positions to analyze
@@ -299,9 +299,11 @@ export interface BestLinesAnalysis {
   // Configuration captured at startup
   config: {
     depthScaler: number;
-    blackMovesCount: number;
+    responderMovesCount: number;
     threads: number;
-    whiteMoves: string[];
+    initiatorMoves: string[];
+    firstReplyOverride: number;
+    secondReplyOverride: number;
   };
 }
 

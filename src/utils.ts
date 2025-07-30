@@ -1175,24 +1175,24 @@ export function getDepthScaler(): number {
 /**
  * Get black moves count from UI
  */
-export function getBlackMovesCount(): number {
-  const blackMovesInput = document.getElementById(
-    "tree-digger-black-moves",
+export function getResponderMovesCount(): number {
+  const responderMovesInput = document.getElementById(
+    "tree-digger-responder-moves",
   ) as HTMLInputElement;
-  const blackMovesValue = document.getElementById(
-    "tree-digger-black-moves-value",
+  const responderMovesValue = document.getElementById(
+    "tree-digger-responder-moves-value",
   );
 
   // Try to get the value from the display span first, then fall back to input value
-  if (blackMovesValue && blackMovesValue.textContent) {
-    const spanValue = parseInt(blackMovesValue.textContent);
+  if (responderMovesValue && responderMovesValue.textContent) {
+    const spanValue = parseInt(responderMovesValue.textContent);
     if (!isNaN(spanValue)) {
       return spanValue;
     }
   }
 
   // Fall back to input value
-  return blackMovesInput ? parseInt(blackMovesInput.value) : 6;
+  return responderMovesInput ? parseInt(responderMovesInput.value) : 6;
 }
 
 /**
@@ -1217,24 +1217,101 @@ export function getThreadCount(): number {
 }
 
 /**
- * Get white moves from UI inputs
+ * Get the starting player from a FEN string
  */
-export function getWhiteMoves(): string[] {
-  const whiteMove1Input = document.getElementById(
-    "tree-digger-white-move-1",
+export function getStartingPlayer(fen: string): "w" | "b" {
+  const parts = fen.split(" ");
+  return parts[1] as "w" | "b";
+}
+
+/**
+ * Get initiator moves from UI inputs
+ */
+export function getInitiatorMoves(): string[] {
+  const initiatorMove1Input = document.getElementById(
+    "tree-digger-initiator-move-1",
   ) as HTMLInputElement;
-  const whiteMove2Input = document.getElementById(
-    "tree-digger-white-move-2",
+  const initiatorMove2Input = document.getElementById(
+    "tree-digger-initiator-move-2",
   ) as HTMLInputElement;
 
-  const move1 = whiteMove1Input?.value.trim() || "";
-  const move2 = whiteMove2Input?.value.trim() || "";
+  const move1 = initiatorMove1Input?.value.trim() || "";
+  const move2 = initiatorMove2Input?.value.trim() || "";
 
   const moves: string[] = [];
   if (move1) moves.push(move1);
   if (move2) moves.push(move2);
 
   return moves;
+}
+
+/**
+ * Get first reply override from UI (0 = use default)
+ */
+export function getFirstReplyOverride(): number {
+  const overrideInput = document.getElementById(
+    "tree-digger-override-1",
+  ) as HTMLInputElement;
+  const overrideValue = document.getElementById("tree-digger-override-1-value");
+
+  // Try to get the value from the display span first, then fall back to input value
+  if (overrideValue && overrideValue.textContent) {
+    const spanValue = parseInt(overrideValue.textContent);
+    if (!isNaN(spanValue)) {
+      return spanValue;
+    }
+  }
+
+  // Fall back to input value
+  return overrideInput ? parseInt(overrideInput.value) : 0;
+}
+
+/**
+ * Get second reply override from UI (0 = use default)
+ */
+export function getSecondReplyOverride(): number {
+  const overrideInput = document.getElementById(
+    "tree-digger-override-2",
+  ) as HTMLInputElement;
+  const overrideValue = document.getElementById("tree-digger-override-2-value");
+
+  // Try to get the value from the display span first, then fall back to input value
+  if (overrideValue && overrideValue.textContent) {
+    const spanValue = parseInt(overrideValue.textContent);
+    if (!isNaN(spanValue)) {
+      return spanValue;
+    }
+  }
+
+  // Fall back to input value
+  return overrideInput ? parseInt(overrideInput.value) : 0;
+}
+
+/**
+ * Calculate total positions with overrides
+ */
+export function calculateTotalPositionsWithOverrides(
+  maxDepth: number,
+  responderResponses: number,
+  firstReplyOverride: number = 0,
+  secondReplyOverride: number = 0,
+): number {
+  if (responderResponses === 1) {
+    // Special case: if n=1, it's just maxDepth + 1
+    return maxDepth + 1;
+  }
+
+  let total = 1; // Start with root node
+
+  for (let i = 1; i <= maxDepth; i++) {
+    let nextN = responderResponses;
+    if (i === 0) nextN = firstReplyOverride || responderResponses;
+    else if (i === 1) nextN = secondReplyOverride || responderResponses;
+
+    total += 2 * Math.pow(nextN, i);
+  }
+
+  return total;
 }
 
 /**
