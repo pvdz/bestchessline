@@ -186,3 +186,10 @@ export declare function getThreadCount(): number;
  * Get white moves from UI inputs
  */
 export declare function getWhiteMoves(): string[];
+/**
+ * Show a toast notification
+ * @param message The message to display
+ * @param background The background color (default: #333)
+ * @param duration How long to show (ms, default: 4000)
+ */
+export declare function showToast(message: string, background?: string, duration?: number): void;

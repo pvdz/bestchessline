@@ -73,6 +73,3 @@ declare const updateMoveList: () => void;
  */
 declare const updateNavigationButtons: () => void;
 export { initializeApp, getAppState, updateAppState, startAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight, };
-/**
- * Update FEN input with current board position
- */

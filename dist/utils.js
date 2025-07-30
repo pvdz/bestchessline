@@ -513,24 +513,167 @@ export function applyMoveToFEN(fen, move) {
 export function parseSimpleMove(moveText, fen) {
     const position = parseFEN(fen);
     const isWhiteTurn = position.turn === "w";
-    // Handle the specific moves we need
-    switch (moveText) {
-        case "Nf3":
+    // Clean the move text
+    const cleanMove = moveText.replace(/[+#?!]/, ""); // Remove check/checkmate symbols
+    // Handle castling
+    if (cleanMove === "O-O" || cleanMove === "0-0") {
+        if (isWhiteTurn) {
             return {
-                from: "g1",
-                to: "f3",
-                piece: isWhiteTurn ? "N" : "n",
+                from: "e1",
+                to: "g1",
+                piece: "K",
+                special: "castling",
+                rookFrom: "h1",
+                rookTo: "f1",
             };
-        case "g3":
+        }
+        else {
             return {
-                from: "g2",
-                to: "g3",
-                piece: isWhiteTurn ? "P" : "p",
+                from: "e8",
+                to: "g8",
+                piece: "k",
+                special: "castling",
+                rookFrom: "h8",
+                rookTo: "f8",
             };
-        default:
-            logError(`Unknown move: ${moveText}`);
-            return null;
+        }
     }
+    if (cleanMove === "O-O-O" || cleanMove === "0-0-0") {
+        if (isWhiteTurn) {
+            return {
+                from: "e1",
+                to: "c1",
+                piece: "K",
+                special: "castling",
+                rookFrom: "a1",
+                rookTo: "d1",
+            };
+        }
+        else {
+            return {
+                from: "e8",
+                to: "c8",
+                piece: "k",
+                special: "castling",
+                rookFrom: "a8",
+                rookTo: "d8",
+            };
+        }
+    }
+    // Handle pawn moves (e4, e5, etc.)
+    if (cleanMove.match(/^[a-h][1-8]$/)) {
+        const toSquare = cleanMove;
+        const piece = (isWhiteTurn ? "P" : "p");
+        const fromSquare = findFromSquare(piece, toSquare, fen);
+        if (fromSquare) {
+            return { from: fromSquare, to: toSquare, piece };
+        }
+    }
+    // Handle pawn captures (exd5, etc.)
+    if (cleanMove.match(/^[a-h]x[a-h][1-8]$/)) {
+        const fromFile = cleanMove[0];
+        const toSquare = cleanMove.substring(2);
+        const piece = (isWhiteTurn ? "P" : "p");
+        const fromSquare = findFromSquare(piece, toSquare, fen);
+        if (fromSquare) {
+            return { from: fromSquare, to: toSquare, piece };
+        }
+    }
+    // Handle pawn promotions (e8=Q, e8Q, etc.)
+    const promotionMatch = cleanMove.match(/^([a-h]x?[a-h][18])=?([QRBN])$/);
+    if (promotionMatch) {
+        const movePart = promotionMatch[1];
+        const promotionPiece = promotionMatch[2];
+        const piece = (isWhiteTurn ? "P" : "p");
+        // Extract to square from the move part
+        const toSquare = movePart.match(/[a-h][18]/)?.[0];
+        if (toSquare) {
+            const fromSquare = findFromSquare(piece, toSquare, fen);
+            if (fromSquare) {
+                return {
+                    from: fromSquare,
+                    to: toSquare,
+                    piece,
+                    promotion: (isWhiteTurn
+                        ? promotionPiece
+                        : promotionPiece.toLowerCase()),
+                };
+            }
+        }
+    }
+    // Handle piece moves (Nf3, Rg1, etc.) - including disambiguation
+    const pieceMatch = cleanMove.match(/^([KQRBN])([a-h]?[1-8]?)?x?([a-h][1-8])$/);
+    if (pieceMatch) {
+        const pieceType = pieceMatch[1];
+        const disambiguation = pieceMatch[2] || "";
+        const toSquare = pieceMatch[3];
+        const pieceNotation = (isWhiteTurn ? pieceType : pieceType.toLowerCase());
+        const fromSquare = findFromSquareWithDisambiguation(pieceNotation, toSquare, disambiguation, fen);
+        if (fromSquare) {
+            const piece = (isWhiteTurn ? pieceType : pieceType.toLowerCase());
+            return { from: fromSquare, to: toSquare, piece };
+        }
+    }
+    // Handle piece captures (Nxe4, etc.) - including disambiguation
+    const captureMatch = cleanMove.match(/^([KQRBN])([a-h]?[1-8]?)?x([a-h][1-8])$/);
+    if (captureMatch) {
+        const pieceType = captureMatch[1];
+        const disambiguation = captureMatch[2] || "";
+        const toSquare = captureMatch[3];
+        const pieceNotation = (isWhiteTurn ? pieceType : pieceType.toLowerCase());
+        const fromSquare = findFromSquareWithDisambiguation(pieceNotation, toSquare, disambiguation, fen);
+        if (fromSquare) {
+            const piece = (isWhiteTurn ? pieceType : pieceType.toLowerCase());
+            return { from: fromSquare, to: toSquare, piece };
+        }
+    }
+    // Handle promotion captures (exd8=Q, exd8Q, etc.)
+    const promotionCaptureMatch = cleanMove.match(/^([a-h])x([a-h][18])=?([QRBN])$/);
+    if (promotionCaptureMatch) {
+        const fromFile = promotionCaptureMatch[1];
+        const toSquare = promotionCaptureMatch[2];
+        const promotionPiece = promotionCaptureMatch[3];
+        const piece = (isWhiteTurn ? "P" : "p");
+        const fromSquare = findFromSquare(piece, toSquare, fen);
+        if (fromSquare) {
+            return {
+                from: fromSquare,
+                to: toSquare,
+                piece,
+                promotion: (isWhiteTurn
+                    ? promotionPiece
+                    : promotionPiece.toLowerCase()),
+            };
+        }
+    }
+    // Handle en passant captures (exd6) - must be after regular pawn captures
+    const enPassantMatch = cleanMove.match(/^([a-h])x([a-h][1-8])$/);
+    if (enPassantMatch) {
+        const fromFile = enPassantMatch[1];
+        const toSquare = enPassantMatch[2];
+        const piece = (isWhiteTurn ? "P" : "p");
+        const fromSquare = findFromSquare(piece, toSquare, fen);
+        if (fromSquare) {
+            return {
+                from: fromSquare,
+                to: toSquare,
+                piece,
+                special: "en-passant",
+            };
+        }
+    }
+    // Console warning for unparseable moves
+    const warningDetail = {
+        move: moveText,
+        fen: fen,
+        message: `Cannot parse move: "${moveText}" in position: ${fen.substring(0, 30)}...`,
+    };
+    if (typeof window !== "undefined" && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent("move-parse-warning", { detail: warningDetail }));
+    }
+    console.warn(`⚠️  ${warningDetail.message}`);
+    logError(`Unknown move: ${moveText}`);
+    return null;
 }
 /**
  * Find the from square for a piece moving to a destination
@@ -820,5 +963,28 @@ export function getWhiteMoves() {
     if (move2)
         moves.push(move2);
     return moves;
+}
+/**
+ * Show a toast notification
+ * @param message The message to display
+ * @param background The background color (default: #333)
+ * @param duration How long to show (ms, default: 4000)
+ */
+export function showToast(message, background = "#333", duration = 4000) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.position = "fixed";
+    toast.style.bottom = "64px";
+    toast.style.left = "50%";
+    toast.style.transform = "translateX(-50%)";
+    toast.style.background = background;
+    toast.style.color = "#fff";
+    toast.style.padding = "8px 16px";
+    toast.style.borderRadius = "6px";
+    toast.style.zIndex = "9999";
+    toast.style.fontWeight = "bold";
+    toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
 }
 //# sourceMappingURL=utils.js.map

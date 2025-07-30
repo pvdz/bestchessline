@@ -64,7 +64,7 @@ const getBestLinesState = (): BestLinesState => ({ ...bestLinesState });
 // ============================================================================
 
 /**
- * Get analysis options from stored configuration
+ * Get analysis options from predefined configuration
  */
 const getAnalysisOptions = (analysis: BestLinesAnalysis): StockfishOptions => {
   log(`Best lines analysis using ${analysis.config.threads} threads`);
@@ -215,6 +215,7 @@ const analyzePosition = async (
     return result;
   } catch (error) {
     logError(`Failed to analyze position ${fen}:`, error);
+    console.log(`analyzePosition() failed with error:`, error);
     return null;
   }
 };
@@ -260,14 +261,14 @@ const processWhiteMoves = async (
 
   log(`Analyzing for white move at move number ${moveNumber}`);
 
-  // Get white moves from stored config
+  // Get white moves from predefined config
   const whiteMoves = analysis.config.whiteMoves;
   const whiteMoveIndex = moveNumber - 1; // 1-based to 0-based
 
   if (whiteMoveIndex < whiteMoves.length && whiteMoves[whiteMoveIndex]) {
-    // Use move from stored config
+    // Use move from predefined config
     const moveText = whiteMoves[whiteMoveIndex];
-    log(`Using white move from stored config: ${moveText}`);
+    log(`Using white move from predefined config: ${moveText}`);
 
     const result = parseAndApplyMove(moveText, fen);
 
@@ -287,9 +288,13 @@ const processWhiteMoves = async (
       analysis.nodes.push(node);
       analysis.analysisQueue.push(newFen);
 
-      log(`Applied white move from stored config: ${moveText} -> ${newFen}`);
+      log(
+        `Applied white move from predefined config: ${moveText} -> ${newFen}`,
+      );
     } else {
-      logError(`Failed to parse white move from stored config: ${moveText}`);
+      logError(
+        `Failed to parse white move from predefined config: ${moveText}`,
+      );
     }
   } else {
     // No UI move available - analyze and pick best move
@@ -376,6 +381,13 @@ const processBlackMoves = async (
  */
 const startBestLinesAnalysis = async (): Promise<void> => {
   log("Starting best lines analysis...");
+
+  // Add debugging info
+  console.log("=== Tree Digger Debug Info ===");
+  console.log("Current board FEN:", Board.getFEN());
+  console.log("Current move index:", getGlobalCurrentMoveIndex());
+  console.log("Board position:", Board.getPosition());
+  console.log("=== End Debug Info ===");
 
   // Prevent multiple simultaneous analysis processes
   if (bestLinesState.isAnalyzing) {
@@ -466,9 +478,22 @@ const buildAnalysisTree = async (
   parentNode: BestLineNode | null,
   depth: number,
 ): Promise<void> => {
+  // Update progress with more detailed information
+  const currentAnalyzed = bestLinesState.progress.analyzedPositions + 1;
+
+  window.dispatchEvent(
+    new CustomEvent("best-lines-progress", {
+      detail: {
+        analyzedPositions: currentAnalyzed,
+        totalPositions: bestLinesState.progress.totalPositions,
+        currentPosition: fen,
+      },
+    }),
+  );
+
   // Check if we've reached max depth
   if (depth >= analysis.maxDepth) {
-    log(`Reached max depth ${depth}, stopping analysis`);
+    log(`Reached max depth ${depth}, stopping analysis for this line`);
     return;
   }
 
@@ -484,9 +509,6 @@ const buildAnalysisTree = async (
       `DEBUG: Processing at depth ${depth}, position: ${fen.substring(0, 30)}...`,
     );
   }
-
-  // Update progress with more detailed information
-  const currentAnalyzed = bestLinesState.progress.analyzedPositions + 1;
 
   updateBestLinesState({
     progress: {
@@ -528,23 +550,21 @@ const processWhiteMoveInTree = async (
   // Calculate the move number for this tree node
   // Each depth level represents one half-move (ply)
   // White moves happen at even depths (0, 2, 4, etc.)
+  // The tree shows what happens NEXT from the current position
   const whiteMoveIndex = Math.floor(depth / 2);
-  const moveNumber = currentGameMoveNumber + whiteMoveIndex;
+  const moveNumber = currentGameMoveNumber + whiteMoveIndex + 1; // +1 because we're showing the next move
 
-  console.log(
-    `Processing white move at depth ${depth}, current game move: ${currentGameMoveNumber}, tree move: ${moveNumber}`,
-  );
   log(
     `Processing white move at depth ${depth}, current game move: ${currentGameMoveNumber}, tree move: ${moveNumber}`,
   );
 
-  // Get white moves from stored config
+  // Get white moves from predefined config
   const whiteMoves = analysis.config.whiteMoves;
 
   if (whiteMoveIndex < whiteMoves.length && whiteMoves[whiteMoveIndex]) {
-    // Use move from stored config
+    // Use move from predefined config
     const moveText = whiteMoves[whiteMoveIndex];
-    log(`Using white move from stored config: ${moveText}`);
+    log(`Using white move from predefined config: ${moveText}`);
 
     const result = parseAndApplyMove(moveText, fen);
 
@@ -575,98 +595,119 @@ const processWhiteMoveInTree = async (
       } else {
         // Root node - add to root nodes array
         analysis.nodes.push(node);
-        log(`Added root node: ${moveToNotation(node.move)}`);
+        log(
+          `ROOT NODE CREATED: with predefined move: ${moveToNotation(node.move)}`,
+        );
+        const treeSection = document.getElementById(
+          "tree-digger-tree-empty-message",
+        ) as HTMLElement | null;
+        if (treeSection) {
+          treeSection.remove();
+        }
       }
 
-      log(`Applied white move from stored config: ${moveText} -> ${newFen}`);
+      log(
+        `Applied white move from predefined config: ${moveText} -> ${newFen}`,
+      );
 
       // Continue building the tree from this new position
       log(
         `Recursive call: depth ${depth} -> ${depth + 1}, position: ${newFen.substring(0, 30)}...`,
       );
       await buildAnalysisTree(newFen, analysis, node, depth + 1);
+      return; // Successfully processed predefined move, exit
     } else {
-      logError(`Failed to parse white move from stored config: ${moveText}`);
-    }
-  } else {
-    // No UI move available - analyze and pick best move
-    log(`Analyzing for white move at depth ${depth}`);
-
-    // Analyze the position to find best white move
-    const analysisOptions = getAnalysisOptions(analysis);
-
-    const analysisResult = await analyzePosition(fen, analysis);
-
-    if (!analysisResult || analysisResult.moves.length === 0) {
-      logError(`No analysis results for white move: ${fen}`);
-      return;
-    }
-
-    // Filter moves that have reached full depth and sort by quality
-    const targetDepth = getAnalysisOptions(analysis).depth || 20;
-    const fullyAnalyzedMoves = analysisResult.moves.filter(
-      (move) => move.depth >= targetDepth,
-    );
-
-    if (fullyAnalyzedMoves.length === 0) {
-      log(`No fully analyzed moves at depth ${targetDepth} for white move`);
-      return;
-    }
-
-    // Sort by quality: mate moves first, then by score
-    const sortedMoves = fullyAnalyzedMoves.sort((a, b) => {
-      // Mate moves get highest priority
-      if (a.score > 9000 && b.score <= 9000) return -1;
-      if (b.score > 9000 && a.score <= 9000) return 1;
-      if (a.score > 9000 && b.score > 9000) {
-        // Both are mate moves, prefer shorter mates (lower score)
-        return a.score - b.score;
-      }
-      // Non-mate moves sorted by score (higher is better for white)
-      return b.score - a.score;
-    });
-
-    // Take the best move
-    const bestMove = sortedMoves[0];
-    const newFen = applyMoveToFEN(fen, bestMove.move);
-
-    // Create node for this move
-    const node = createNode(
-      fen,
-      bestMove.move,
-      bestMove.score,
-      bestMove.depth,
-      true,
-      moveNumber, // Use calculated move number
-      parentNode || undefined,
-    );
-
-    log(
-      `Created analyzed white node with move number: ${node.moveNumber}, move: ${moveToNotation(node.move)}`,
-    );
-
-    // Add to parent's children if it exists, otherwise add to root nodes
-    if (parentNode) {
-      parentNode.children.push(node);
-      log(
-        `Added node: ${moveToNotation(node.move)} -> parent: ${moveToNotation(parentNode.move)}`,
+      logError(
+        `Failed to parse white move from predefined config: ${moveText}`,
       );
-    } else {
-      // Root node - add to root nodes array
-      analysis.nodes.push(node);
-      log(`Added root node: ${moveToNotation(node.move)}`);
+      console.warn(
+        `predefined move "${moveText}" failed to parse, falling back to analysis`,
+      );
+      // Continue to analysis branch below
     }
-
-    log(
-      `Applied white move from analysis: ${moveToNotation(bestMove.move)} -> ${newFen}`,
-    );
-
-    // Continue building the tree from this new position
-    log(
-      `Recursive call: depth ${depth} -> ${depth + 1}, position: ${newFen.substring(0, 30)}...`,
-    );
-    await buildAnalysisTree(newFen, analysis, node, depth + 1);
   }
+
+  // No predefined move available OR predefined move failed to parse - analyze and pick best move
+  log(`Analyzing for white move at depth ${depth}`);
+
+  // Analyze the position to find best white move
+  const analysisResult = await analyzePosition(fen, analysis);
+
+  if (!analysisResult || analysisResult.moves.length === 0) {
+    logError(`No analysis results for white move: ${fen}`);
+    return;
+  }
+
+  // Filter moves that have reached full depth and sort by quality
+  const targetDepth = getAnalysisOptions(analysis).depth || 20;
+  const fullyAnalyzedMoves = analysisResult.moves.filter(
+    (move) => move.depth >= targetDepth,
+  );
+
+  if (fullyAnalyzedMoves.length === 0) {
+    log(`No fully analyzed moves at depth ${targetDepth} for white move`);
+    return;
+  }
+
+  // Sort by quality: mate moves first, then by score
+  const sortedMoves = fullyAnalyzedMoves.sort((a, b) => {
+    // Mate moves get highest priority
+    if (a.score > 9000 && b.score <= 9000) return -1;
+    if (b.score > 9000 && a.score <= 9000) return 1;
+    if (a.score > 9000 && b.score > 9000) {
+      // Both are mate moves, prefer shorter mates (lower score)
+      return a.score - b.score;
+    }
+    // Non-mate moves sorted by score (higher is better for white)
+    return b.score - a.score;
+  });
+
+  // Take the best move
+  const bestMove = sortedMoves[0];
+  const newFen = applyMoveToFEN(fen, bestMove.move);
+
+  // Create node for this move
+  const node = createNode(
+    fen,
+    bestMove.move,
+    bestMove.score,
+    bestMove.depth,
+    true,
+    moveNumber, // Use calculated move number
+    parentNode || undefined,
+  );
+
+  log(
+    `Created analyzed white node with move number: ${node.moveNumber}, move: ${moveToNotation(node.move)}`,
+  );
+
+  // Add to parent's children if it exists, otherwise add to root nodes
+  if (parentNode) {
+    parentNode.children.push(node);
+    log(
+      `Added node: ${moveToNotation(node.move)} -> parent: ${moveToNotation(parentNode.move)}`,
+    );
+  } else {
+    // Root node - add to root nodes array
+    analysis.nodes.push(node);
+    log(`ROOT NODE CREATED: with dynamic move: ${moveToNotation(node.move)}`);
+    const treeSection = document.getElementById(
+      "tree-digger-tree-empty-message",
+    ) as HTMLElement | null;
+    if (treeSection) {
+      treeSection.remove();
+    }
+  }
+
+  log(
+    `Applied white move from analysis: ${moveToNotation(bestMove.move)} -> ${newFen}`,
+  );
+
+  // Continue building the tree from this new position
+  log(
+    `Recursive call: depth ${depth} -> ${depth + 1}, position: ${newFen.substring(0, 30)}...`,
+  );
+  await buildAnalysisTree(newFen, analysis, node, depth + 1);
 };
 
 /**
@@ -685,12 +726,10 @@ const processBlackMovesInTree = async (
 
   // Calculate the move number for this tree node
   // Black moves happen at odd depths (1, 3, 5, etc.)
+  // The tree shows what happens NEXT from the current position
   const blackMoveIndex = Math.floor((depth - 1) / 2);
-  const moveNumber = currentGameMoveNumber + blackMoveIndex;
+  const moveNumber = currentGameMoveNumber + blackMoveIndex + 1; // +1 because we're showing the next move
 
-  console.log(
-    `Processing black moves at depth ${depth}, current game move: ${currentGameMoveNumber}, tree move: ${moveNumber}`,
-  );
   log(
     `Analyzing black responses at depth ${depth}, current game move: ${currentGameMoveNumber}, tree move: ${moveNumber}, position: ${fen.substring(0, 30)}...`,
   );
@@ -762,7 +801,7 @@ const processBlackMovesInTree = async (
     return b.score - a.score;
   });
 
-  // Take top N responses (or fewer if less available) - use stored config
+  // Take top N responses (or fewer if less available) - use predefined config
   const topMoves = sortedMoves.slice(0, analysis.config.blackMovesCount);
 
   log(

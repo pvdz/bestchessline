@@ -31,6 +31,7 @@ import {
   querySelectorHTMLElementBySelector,
   getFENWithCorrectMoveCounter,
   setGlobalCurrentMoveIndex,
+  getGlobalCurrentMoveIndex,
   applyMoveToFEN,
   findFromSquare,
   findFromSquareWithDisambiguation,
@@ -46,6 +47,7 @@ import {
   getBlackMovesCount,
   getThreadCount,
   getWhiteMoves,
+  showToast,
 } from "./utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
@@ -94,6 +96,14 @@ let appState: AppState = {
   branchMoves: [],
   branchStartIndex: -1,
   isInBranch: false,
+};
+
+// Event tracking state for Stockfish events
+const eventTrackingState = {
+  totalCount: 0,
+  recentCount: 0,
+  recentStartTime: Date.now(),
+  lastEventTime: Date.now(),
 };
 
 /**
@@ -149,6 +159,9 @@ const initializeApp = (): void => {
   // Initialize event listeners
   initializeEventListeners();
   initializeMoveHoverEvents();
+
+  // Initialize copy button
+  initializeCopyButton();
 
   // Initialize global move index
   setGlobalCurrentMoveIndex(appState.currentMoveIndex);
@@ -356,7 +369,6 @@ const initializeEventListeners = (): void => {
   window.addEventListener("stockfish-pv-update", ((event: Event) => {
     const customEvent = event as CustomEvent;
     const pvLines = customEvent.detail?.pvLines || 0;
-    console.log(`PV lines received: ${pvLines}`);
 
     // Update the status immediately with PV count
     const statusElement = document.getElementById("tree-digger-status");
@@ -447,15 +459,49 @@ const initializeEventListeners = (): void => {
   // Update threads input based on fallback mode
   updateThreadsInputForFallbackMode();
 
-  // Start periodic updates for best lines analysis
-  setInterval(() => {
+  // Debounced update mechanism for best lines analysis
+  let bestLinesUpdateTimeout: number | null = null;
+
+  const debouncedBestLinesUpdate = () => {
+    // Reset event rate when analysis stops
     if (BestLines.isAnalyzing()) {
+      eventTrackingState.totalCount++;
+    } else {
+      eventTrackingState.recentCount = 0;
+    }
+
+    if (bestLinesUpdateTimeout) return;
+    bestLinesUpdateTimeout = setTimeout(() => {
+      bestLinesUpdateTimeout = null;
+      const now = Date.now();
+
+      // Track recent events (last 1 second)
+      if (now - eventTrackingState.recentStartTime > 1000) {
+        // Reset recent window
+        eventTrackingState.recentCount = 1;
+        eventTrackingState.recentStartTime = now;
+      } else {
+        eventTrackingState.recentCount++;
+      }
+
+      eventTrackingState.lastEventTime = now;
+
+      // Update immediately
       updateBestLinesStatus();
       updateBestLinesResults();
-    }
-    // Always update button states to ensure they're responsive
-    updateBestLinesButtonStates();
-  }, 200); // More frequent updates for better responsiveness // Update every half second for more responsive UI
+      updateBestLinesButtonStates();
+    }, 200);
+  };
+
+  // Listen for Stockfish events to trigger UI updates
+  window.addEventListener("stockfish-pv-update", debouncedBestLinesUpdate);
+  window.addEventListener("stockfish-pv-line", debouncedBestLinesUpdate);
+  window.addEventListener("stockfish-info-update", debouncedBestLinesUpdate);
+  window.addEventListener(
+    "stockfish-analysis-complete",
+    debouncedBestLinesUpdate,
+  );
+  window.addEventListener("best-lines-progress", debouncedBestLinesUpdate);
 
   // Black moves control for best lines
   const treeDiggerBlackMovesInput = document.getElementById(
@@ -838,6 +884,20 @@ const updateBestLinesProgress = (
     analysis,
   );
 
+  // Calculate event rate for stats (based on recent events)
+  const now = Date.now();
+  const timeSinceRecentStart = now - eventTrackingState.recentStartTime;
+  const recentCount = eventTrackingState.recentCount;
+
+  // Calculate rate based on actual time window (max 1 second)
+  const timeWindow = Math.min(timeSinceRecentStart, 1000);
+  const eventsPerSecond =
+    !isAnalyzing || analysis?.isComplete
+      ? "--"
+      : timeWindow > 0
+        ? Math.round(recentCount / (timeWindow / 1000))
+        : 0;
+
   const html = `
     <div class="best-line-progress-container">
       <div class="best-line-progress-left">
@@ -857,6 +917,14 @@ const updateBestLinesProgress = (
           <div class="stat">
             <div class="stat-label">Unique Positions</div>
             <div class="stat-value">${uniquePositions}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Stockfish Events</div>
+            <div class="stat-value">${eventTrackingState.totalCount}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Event Rate</div>
+            <div class="stat-value">${eventsPerSecond || 0}/s</div>
           </div>
         </div>
         <div class="best-line-settings">
@@ -1299,10 +1367,10 @@ const updateBestLinesTreeIncrementally = (
     resultsElement.appendChild(treeSection);
   }
 
-  // Only update if we have nodes
+  // Always update the tree section, even when there are no nodes
   if (analysis.nodes.length === 0) {
     treeSection.innerHTML =
-      "<p>No analysis results yet. Starting analysis...</p>";
+      "<p id='tree-digger-tree-empty-message'>No analysis results yet. Starting analysis...</p>";
     shadowTree = null;
     return;
   }
@@ -1405,13 +1473,13 @@ const getLineCompletion = (
   const isTransposition = analysis.analyzedPositions.has(positionAfterMove);
 
   if (isTransposition) {
-    // Show both the current line and the line it transposes into
+    // Show incomplete line for transposed positions
     const currentLine = getCompleteLine(node);
     const existingLine = findExistingLine(positionAfterMove, analysis);
     if (existingLine) {
-      return `<span class="transposition-line">→ ${currentLine} → transposes into: ${existingLine}</span>`;
+      return `<span class="incomplete-line">→ Incomplete line: ${currentLine} → transposes into: ${existingLine}</span>`;
     }
-    return `<span class="transposition-line">→ ${currentLine} → position already analyzed</span>`;
+    return `<span class="incomplete-line">→ Incomplete line: ${currentLine} → position already analyzed</span>`;
   } else {
     // Show the complete line from root to this leaf
     const completeLine = getCompleteLine(node);
@@ -1453,13 +1521,19 @@ const findExistingLine = (
 const formatLineWithMoveNumbers = (moves: BestLineNode[]): string => {
   let formattedLine = "";
 
+  // Get the starting move number from the first node's moveNumber
+  // This accounts for the current game position
+  const startingMoveNumber = moves.length > 0 ? moves[0].moveNumber : 1;
+
   for (let i = 0; i < moves.length; i++) {
     const moveNode = moves[i];
-    const moveText = moveToNotation(moveNode.move);
+    // Always use algebraic notation (KQR etc.) for copy functionality
+    const moveText = moveToNotation(moveNode.move, "short", "english");
 
     if (moveNode.isWhiteMove) {
       // White move - start new move number
       if (i > 0) formattedLine += " ";
+      // Use the node's calculated move number (which accounts for current game position)
       formattedLine += `${moveNode.moveNumber}. ${moveText}`;
     } else {
       // Black move - add to current move number
@@ -1493,6 +1567,7 @@ const getCompleteLine = (node: BestLineNode): string => {
     if (moveNode.isWhiteMove) {
       // White move - start new move number
       if (i > 0) formattedLine += " ";
+      // Use the node's calculated move number (which accounts for current game position)
       formattedLine += `${moveNode.moveNumber}. ${moveText}`;
     } else {
       // Black move - add to current move number
@@ -2938,51 +3013,78 @@ const countTotalNodes = (nodes: BestLineNode[]): number => {
   return count;
 };
 
-// 1. Add a button to the Best Lines panel in the DOM
-// Find the tree-digger-controls section and add a copy button
-const treeDiggerControls = document.querySelector(".tree-digger-controls");
-if (treeDiggerControls && !document.getElementById("copy-tree-digger-tree")) {
-  const copyBtn = document.createElement("button");
-  copyBtn.id = "copy-tree-digger-tree";
-  copyBtn.textContent = "Copy Tree as Text";
-  copyBtn.style.marginLeft = "8px";
-  copyBtn.style.padding = "4px 8px";
-  copyBtn.style.fontSize = "0.8em";
-  copyBtn.style.backgroundColor = "#6c757d";
-  copyBtn.style.color = "white";
-  copyBtn.style.border = "none";
-  copyBtn.style.borderRadius = "3px";
-  copyBtn.style.cursor = "pointer";
+// Initialize copy button functionality
+const initializeCopyButton = (): void => {
+  const copyBtn = document.getElementById("copy-tree-digger-tree");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      const analysis = BestLines.getCurrentAnalysis();
+      if (analysis && analysis.nodes.length > 0) {
+        const treeText = generateAllLines(analysis.nodes);
 
-  copyBtn.addEventListener("click", () => {
-    const analysis = BestLines.getCurrentAnalysis();
-    if (analysis && analysis.nodes.length > 0) {
-      const treeText = generateAllLines(analysis.nodes);
-      navigator.clipboard
-        .writeText(treeText)
-        .then(() => {
-          copyBtn.textContent = "Copied!";
-          setTimeout(() => {
-            copyBtn.textContent = "Copy Tree as Text";
-          }, 2000);
-        })
-        .catch((err) => {
-          console.error("Failed to copy: ", err);
-          copyBtn.textContent = "Copy Failed";
-          setTimeout(() => {
-            copyBtn.textContent = "Copy Tree as Text";
-          }, 2000);
-        });
-    }
-  });
+        // Debug: Log the generated text to see if it's complete
+        console.log("Generated tree text:", treeText);
+        console.log("Text length:", treeText.length);
+        console.log("Number of lines:", treeText.split("\n").length);
 
-  treeDiggerControls.appendChild(copyBtn);
-}
+        navigator.clipboard
+          .writeText(treeText)
+          .then(() => {
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => {
+              copyBtn.textContent = "Copy";
+            }, 2000);
+          })
+          .catch((err) => {
+            console.error("Failed to copy: ", err);
+            copyBtn.textContent = "Copy Failed";
+            setTimeout(() => {
+              copyBtn.textContent = "Copy";
+            }, 2000);
+          });
+      } else {
+        // Show a short confirmation for no data
+        const toast = document.createElement("div");
+        toast.textContent = "No tree to copy!";
+        toast.style.position = "fixed";
+        toast.style.bottom = "24px";
+        toast.style.left = "50%";
+        toast.style.transform = "translateX(-50%)";
+        toast.style.background = "#dc3545";
+        toast.style.color = "#fff";
+        toast.style.padding = "8px 16px";
+        toast.style.borderRadius = "6px";
+        toast.style.zIndex = "9999";
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 1200);
+      }
+    });
+  }
+};
+
+// Add debugging for tree digger initialization
+const debugTreeDiggerStart = (): void => {
+  console.log("=== Tree Digger Debug Info ===");
+  console.log("Current board FEN:", Board.getFEN());
+  console.log("Current move index:", getGlobalCurrentMoveIndex());
+  console.log("Board position:", Board.getPosition());
+
+  const analysis = BestLines.getCurrentAnalysis();
+  if (analysis) {
+    console.log("Analysis root FEN:", analysis.rootFen);
+    console.log("Analysis nodes count:", analysis.nodes.length);
+    console.log("Analysis max depth:", analysis.maxDepth);
+    console.log("Analysis config:", analysis.config);
+  } else {
+    console.log("No current analysis found");
+  }
+  console.log("=== End Debug Info ===");
+};
 
 // 2. Function to generate all complete lines from the tree
 function generateAllLines(nodes: BestLineNode[]): string {
   let result = "";
-  let lineNumber = 1;
+  let lineCount = 0;
 
   const traverseNode = (
     node: BestLineNode,
@@ -2992,10 +3094,21 @@ function generateAllLines(nodes: BestLineNode[]): string {
     const newLine = [...currentLine, node];
 
     if (node.children.length === 0) {
-      // This is a leaf node - output the complete line
-      const lineText = formatLineWithMoveNumbers(newLine);
-      result += `${lineNumber}. ${lineText}\n`;
-      lineNumber++;
+      // Check if this is a transposed node (not a real leaf)
+      const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+      const analysis = BestLines.getCurrentAnalysis();
+      const isTransposition =
+        analysis && analysis.analyzedPositions.has(positionAfterMove);
+
+      if (!isTransposition) {
+        // This is a real leaf node - output the complete line
+        const lineText = formatLineWithMoveNumbers(newLine);
+        result += `${lineText}\n`;
+        lineCount++;
+        console.log(`Generated line ${lineCount}:`, lineText);
+      } else {
+        console.log(`Skipping transposed node: ${moveToNotation(node.move)}`);
+      }
     } else {
       // Continue traversing children
       for (const child of node.children) {
@@ -3009,39 +3122,8 @@ function generateAllLines(nodes: BestLineNode[]): string {
     traverseNode(rootNode);
   }
 
+  console.log(`Total lines generated: ${lineCount}`);
   return result;
-}
-
-// 3. Copy handler
-const copyBtn = document.getElementById("copy-tree-digger-tree");
-if (copyBtn) {
-  copyBtn.onclick = () => {
-    // Access the current analysis through the existing state
-    const state = BestLines.getBestLinesState();
-    const analysis = state.currentAnalysis;
-    if (!analysis || !analysis.nodes) {
-      alert("No tree to copy!");
-      return;
-    }
-
-    const text = generateAllLines(analysis.nodes);
-    navigator.clipboard.writeText(text).then(() => {
-      // Show a short confirmation
-      const toast = document.createElement("div");
-      toast.textContent = "Lines copied to clipboard!";
-      toast.style.position = "fixed";
-      toast.style.bottom = "24px";
-      toast.style.left = "50%";
-      toast.style.transform = "translateX(-50%)";
-      toast.style.background = "#222";
-      toast.style.color = "#fff";
-      toast.style.padding = "8px 16px";
-      toast.style.borderRadius = "6px";
-      toast.style.zIndex = "9999";
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 1200);
-    });
-  };
 }
 
 /**
@@ -3062,3 +3144,64 @@ const clearWhiteMoveInputs = (): void => {
 /**
  * Update FEN input with current board position
  */
+
+// Add this near the top-level of your main.ts (after DOMContentLoaded or in initializeApp)
+function showMoveParseWarningToast(message: string) {
+  const toast = document.createElement("div");
+  toast.textContent = message;
+  toast.style.position = "fixed";
+  toast.style.bottom = "64px";
+  toast.style.left = "50%";
+  toast.style.transform = "translateX(-50%)";
+  toast.style.background = "#ff9800";
+  toast.style.color = "#fff";
+  toast.style.padding = "8px 16px";
+  toast.style.borderRadius = "6px";
+  toast.style.zIndex = "9999";
+  toast.style.fontWeight = "bold";
+  toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+window.addEventListener("move-parse-warning", (event: Event) => {
+  const detail = (event as CustomEvent).detail;
+  if (detail && detail.message) {
+    showToast(detail.message, "#ff9800", 5000);
+    // Highlight the relevant input(s)
+    let found = false;
+    if (detail.move) {
+      // Try to find an input whose value matches the move
+      const inputs = document.querySelectorAll(
+        'input[type="text"], input[type="search"]',
+      );
+      inputs.forEach((input) => {
+        if ((input as HTMLInputElement).value.trim() === detail.move.trim()) {
+          input.classList.add("input-invalid");
+          found = true;
+          // Remove on input/change
+          input.addEventListener("input", function handler() {
+            input.classList.remove("input-invalid");
+            input.removeEventListener("input", handler);
+          });
+          // Remove after 2 seconds if not edited
+          setTimeout(() => input.classList.remove("input-invalid"), 2000);
+        }
+      });
+    }
+    if (!found) {
+      // Fallback: highlight all move inputs by id pattern
+      const moveInputs = document.querySelectorAll(
+        'input[id^="tree-digger-white-move"], input[id^="tree-digger-black-move"]',
+      );
+      moveInputs.forEach((input) => {
+        input.classList.add("input-invalid");
+        input.addEventListener("input", function handler() {
+          input.classList.remove("input-invalid");
+          input.removeEventListener("input", handler);
+        });
+        setTimeout(() => input.classList.remove("input-invalid"), 2000);
+      });
+    }
+  }
+});

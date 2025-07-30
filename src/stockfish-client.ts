@@ -13,25 +13,14 @@ import {
   logError,
   querySelectorHTMLElement,
   querySelectorButton,
+  showToast,
 } from "./utils.js";
 
 /**
  * Show error toast notification
  */
 const showErrorToast = (message: string): void => {
-  const toast = document.createElement("div");
-  toast.textContent = message;
-  toast.style.position = "fixed";
-  toast.style.bottom = "24px";
-  toast.style.left = "50%";
-  toast.style.transform = "translateX(-50%)";
-  toast.style.background = "#f44336";
-  toast.style.color = "#fff";
-  toast.style.padding = "8px 16px";
-  toast.style.borderRadius = "6px";
-  toast.style.zIndex = "9999";
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
+  showToast(message, "#f44336", 4000);
 };
 
 // ============================================================================
@@ -458,7 +447,22 @@ const parseInfoMessage = (message: string): void => {
     `Info: depth=${depth}, multipv=${multipv}, score=${score}, nodes=${nodes}, time=${time}, pv=${pv.join(" ")}`,
   );
 
-  // Dispatch PV line update event for best lines tracking
+  // Dispatch comprehensive update event for all info messages
+  window.dispatchEvent(
+    new CustomEvent("stockfish-info-update", {
+      detail: {
+        depth,
+        multipv,
+        score,
+        nodes,
+        time,
+        pvMoves: pv.length,
+        hasPV: pv.length > 0,
+      },
+    }),
+  );
+
+  // Dispatch PV line update event for best lines tracking (for backward compatibility)
   if (pv.length > 0) {
     window.dispatchEvent(
       new CustomEvent("stockfish-pv-line", {
@@ -619,12 +623,27 @@ const analyzePosition = async (
   onUpdate?: (result: AnalysisResult) => void,
 ): Promise<AnalysisResult> => {
   return new Promise((resolve, reject) => {
+    // Validate input parameters
+    if (!fen || typeof fen !== "string") {
+      console.warn("Stockfish analyzePosition: Invalid FEN parameter:", fen);
+      reject(new Error("Invalid FEN parameter"));
+      return;
+    }
+
     if (!stockfishState.isReady) {
       log("Stockfish not ready, queuing analysis...");
       updateStockfishState({
         pendingAnalysis: () =>
           analyzePosition(fen, options, onUpdate).then(resolve).catch(reject),
       });
+      return;
+    }
+
+    // Validate FEN format
+    const fenParts = fen.split(" ");
+    if (fenParts.length < 4) {
+      console.warn("Stockfish analyzePosition: Invalid FEN format:", fen);
+      reject(new Error("Invalid FEN format"));
       return;
     }
 
