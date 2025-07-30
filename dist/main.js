@@ -1711,9 +1711,9 @@ const actuallyUpdateResultsPanel = (moves) => {
         const score = move.score > 0 ? `+${move.score / 100}` : `${move.score / 100}`;
         const pv = formatPVWithEffects(move.pv, Board.getFEN(), notationType, pieceType);
         moveItem.innerHTML = `
-      <div class="move-header">
-        <span class="move-rank" title="Move rank">${rank}</span>
-        <span class="move-notation" title="Move notation">${notation}</span>
+      <div class="move-header clickable" title="Click to apply this move and add it to the move list. It will just append it to the game without verificaton.">
+        <span class="move-rank">${rank}</span>
+        <span class="move-notation">${notation}</span>
         <div class="move-info" title="Analysis information">
           <span class="depth-info" title="Analysis depth">d${move.depth}</span>
           <span class="nodes-info" title="Nodes searched">${move.nodes.toLocaleString()}</span>
@@ -1725,11 +1725,9 @@ const actuallyUpdateResultsPanel = (moves) => {
         <div class="move-pv" title="Principal variation">${pv}</div>
       </div>
     `;
-        // Add click handler to make the move
-        // Temporarily disabled to test PV click handling
-        // moveItem.addEventListener("click", () => {
-        //   makeAnalysisMove(move.move);
-        // });
+        moveItem.querySelector(".move-header")?.addEventListener("click", () => {
+            handleMakeEngineMove(move);
+        });
         resultsPanel.appendChild(moveItem);
     });
     // Add arrows for each displayed analysis result
@@ -1971,6 +1969,34 @@ const handlePVClick = (e) => {
                 console.log("After all updates, final appState:", getAppState());
             }
         }
+    }
+};
+/**
+ * Handle click on main move notation in Engine Moves results
+ */
+const handleMakeEngineMove = (move) => {
+    console.log("Main move clicked:", move);
+    const appState = getAppState();
+    const currentFEN = Board.getFEN();
+    // Check if we're at the last move of the game
+    const isAtLastMove = appState.currentMoveIndex === appState.moves.length - 1;
+    if (isAtLastMove) {
+        // If we're at the last move, just make the move directly
+        console.log("At last move, making move directly");
+        makeAnalysisMove(move.move);
+    }
+    else {
+        // If we're not at the last move, create a branch
+        console.log("Not at last move, creating branch");
+        createBranch([move.move], currentFEN);
+        updateMoveList();
+        // Apply the move to the board
+        const newFEN = applyMoveToFEN(currentFEN, move.move);
+        Board.setPosition(newFEN);
+        // Update UI
+        updateFENInput();
+        updateControlsFromPosition();
+        highlightLastMove(move.move);
     }
 };
 // ============================================================================
