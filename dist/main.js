@@ -1710,6 +1710,16 @@ const actuallyUpdateResultsPanel = (moves) => {
         const notation = moveToNotation(move.move, notationType, pieceType, Board.getFEN());
         const score = move.score > 0 ? `+${move.score / 100}` : `${move.score / 100}`;
         const pv = formatPVWithEffects(move.pv, Board.getFEN(), notationType, pieceType);
+        // Create JSON representation of the move for the tooltip (trimmed to first move only)
+        const trimmedMove = {
+            ...move,
+            pv: move.pv.length > 0 ? [move.pv[0], "(...)"] : [],
+        };
+        const moveJson = JSON.stringify(trimmedMove, null, 2)
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
         moveItem.innerHTML = `
       <div class="move-header clickable" title="Click to apply this move and add it to the move list. It will just append it to the game without verificaton.">
         <span class="move-rank">${rank}</span>
@@ -1720,6 +1730,7 @@ const actuallyUpdateResultsPanel = (moves) => {
           <span class="time-info" title="Analysis time">${move.time}ms</span>
         </div>
         <span class="move-score" title="Move evaluation">${score}</span>
+        <div class="move-help-bulb" title="${moveJson}">?</div>
       </div>
       <div class="move-details">
         <div class="move-pv" title="Principal variation">${pv}</div>
