@@ -363,6 +363,22 @@ const updatePositionEvaluationDisplay = (): void => {
 // ============================================================================
 
 /**
+ * Load a FEN position and update all related state
+ */
+const loadFENPosition = (fen: string): void => {
+  updateAppState({
+    initialFEN: fen,
+    moves: [],
+    currentMoveIndex: -1,
+  });
+  Board.setPosition(fen);
+  updateControlsFromPosition();
+  updateMoveList();
+  updateNavigationButtons();
+  resetPositionEvaluation();
+};
+
+/**
  * Initialize event listeners
  */
 const initializeEventListeners = (): void => {
@@ -378,30 +394,14 @@ const initializeEventListeners = (): void => {
     resetBtn.addEventListener("click", () => {
       const initialFEN =
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-      updateAppState({
-        initialFEN,
-        moves: [],
-        currentMoveIndex: -1,
-      });
-      Board.setPosition(initialFEN);
-      updateMoveList();
-      updateNavigationButtons();
-      resetPositionEvaluation();
+      loadFENPosition(initialFEN);
     });
   }
 
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
       const emptyFEN = "8/8/8/8/8/8/8/8 w - - 0 1";
-      updateAppState({
-        initialFEN: emptyFEN,
-        moves: [],
-        currentMoveIndex: -1,
-      });
-      Board.setPosition(emptyFEN);
-      updateMoveList();
-      updateNavigationButtons();
-      resetPositionEvaluation();
+      loadFENPosition(emptyFEN);
     });
   }
 
@@ -409,15 +409,7 @@ const initializeEventListeners = (): void => {
     loadFenBtn.addEventListener("click", () => {
       const fen = fenInput.value.trim();
       if (fen) {
-        updateAppState({
-          initialFEN: fen,
-          moves: [],
-          currentMoveIndex: -1,
-        });
-        Board.setPosition(fen);
-        updateMoveList();
-        updateNavigationButtons();
-        resetPositionEvaluation();
+        loadFENPosition(fen);
       }
     });
   }
@@ -440,6 +432,14 @@ const initializeEventListeners = (): void => {
   }
   if (nextMoveBtn) {
     nextMoveBtn.addEventListener("click", () => nextMove());
+  }
+
+  // Load mate-in-4 position
+  const loadMateIn4Btn = document.getElementById("load-mate-in-4");
+  if (loadMateIn4Btn) {
+    loadMateIn4Btn.addEventListener("click", () => {
+      loadFENPosition("r4r1k/2p3R1/5pQ1/pp1b4/8/3P4/1q3PPP/5RK1 b - - 0 2");
+    });
   }
 
   // Analysis controls
