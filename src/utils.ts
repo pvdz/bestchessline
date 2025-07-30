@@ -317,7 +317,7 @@ export function pvToNotation(
   if (pv.length === 0) return "";
 
   // Process moves in the context of the actual position
-  const moves = pv.map((move, index) => {
+  const moves = pv.map((move: ChessMove, index: number) => {
     // For now, use the original position for all moves
     // In a more sophisticated implementation, we'd update the position after each move
     return moveToNotation(move, format, pieceFormat, fen);
@@ -867,7 +867,7 @@ export function findFromSquare(
   }
 
   // Filter candidates that can actually move to the destination
-  const validCandidates = candidates.filter((fromSquare) =>
+  const validCandidates = candidates.filter((fromSquare: string) =>
     canPieceMoveTo(fromSquare, toSquare, piece, position.board),
   );
 
@@ -908,7 +908,7 @@ export function findFromSquareWithDisambiguation(
   }
 
   // Filter candidates that can actually move to the destination
-  const validCandidates = candidates.filter((fromSquare) =>
+  const validCandidates = candidates.filter((fromSquare: string) =>
     canPieceMoveTo(fromSquare, toSquare, piece, position.board),
   );
 

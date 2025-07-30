@@ -1752,7 +1752,7 @@ const formatPVWithEffects = (
 
   // Process moves in the context of the actual position
   let currentPosition = parseFEN(position);
-  const moves = pv.map((move, index) => {
+  const moves = pv.map((move: ChessMove, index: number) => {
     // Validate each move against the current position
     const validation = validateMove(currentPosition, move);
 
@@ -1872,8 +1872,12 @@ const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
   const targetDepth = getAnalysisOptions().depth;
 
   // First, separate mate lines from non-mate lines
-  const mateLines = moves.filter((move) => Math.abs(move.score) >= 10000);
-  const nonMateLines = moves.filter((move) => Math.abs(move.score) < 10000);
+  const mateLines = moves.filter(
+    (move: AnalysisMove) => Math.abs(move.score) >= 10000,
+  );
+  const nonMateLines = moves.filter(
+    (move: AnalysisMove) => Math.abs(move.score) < 10000,
+  );
 
   // Sort mate lines by score (best mate first)
   mateLines.sort((a, b) => b.score - a.score);
@@ -1914,19 +1918,21 @@ const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
 
     // Calculate lowest depth of visible non-mating moves, or mating moves if that's all we have
     const visibleNonMatingMoves = filteredMoves.filter(
-      (move) => Math.abs(move.score) < 10000,
+      (move: AnalysisMove) => Math.abs(move.score) < 10000,
     );
     const visibleMatingMoves = filteredMoves.filter(
-      (move) => Math.abs(move.score) >= 10000,
+      (move: AnalysisMove) => Math.abs(move.score) >= 10000,
     );
 
     let lowestDepth = 0;
     if (visibleNonMatingMoves.length > 0) {
       lowestDepth = Math.min(
-        ...visibleNonMatingMoves.map((move) => move.depth),
+        ...visibleNonMatingMoves.map((move: AnalysisMove) => move.depth),
       );
     } else if (visibleMatingMoves.length > 0) {
-      lowestDepth = Math.max(...visibleMatingMoves.map((move) => move.depth));
+      lowestDepth = Math.max(
+        ...visibleMatingMoves.map((move: AnalysisMove) => move.depth),
+      );
     }
 
     // Check if we're in fallback mode
@@ -2242,7 +2248,7 @@ const handlePVClick = (e: Event): void => {
         resultIndex: currentResults.moves.indexOf(matchingResult),
         pvLength: pvMoves.length,
         clickedIndex,
-        pvMoves: pvMoves.map((m) => `${m.from}${m.to}`),
+        pvMoves: pvMoves.map((m: ChessMove) => `${m.from}${m.to}`),
       });
 
       console.log("PV click processing:", {
@@ -3233,7 +3239,7 @@ const clearInitiatorMoveInputs = (): void => {
  */
 
 // Add this near the top-level of your main.ts (after DOMContentLoaded or in initializeApp)
-function showMoveParseWarningToast(message: string) {
+function showMoveParseWarningToast(message: string): void {
   const toast = document.createElement("div");
   toast.textContent = message;
   toast.style.position = "fixed";
@@ -3262,7 +3268,7 @@ window.addEventListener("move-parse-warning", (event: Event) => {
       const inputs = document.querySelectorAll(
         'input[type="text"], input[type="search"]',
       );
-      inputs.forEach((input) => {
+      inputs.forEach((input: Element) => {
         if ((input as HTMLInputElement).value.trim() === detail.move.trim()) {
           input.classList.add("input-invalid");
           found = true;
@@ -3281,7 +3287,7 @@ window.addEventListener("move-parse-warning", (event: Event) => {
       const moveInputs = document.querySelectorAll(
         'input[id^="tree-digger-initiator-move"], input[id^="tree-digger-responder-move"]',
       );
-      moveInputs.forEach((input) => {
+      moveInputs.forEach((input: Element) => {
         input.classList.add("input-invalid");
         input.addEventListener("input", function handler() {
           input.classList.remove("input-invalid");

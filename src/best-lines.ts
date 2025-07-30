@@ -4,6 +4,7 @@ import {
   BestLinesState,
   ChessMove,
   AnalysisResult,
+  AnalysisMove,
   StockfishOptions,
   ChessPosition,
 } from "./types.js";
@@ -695,17 +696,19 @@ const processInitiatorMoveInTree = async (
   }
 
   // Sort by quality: mate moves first, then by score
-  const sortedMoves = fullyAnalyzedMoves.sort((a, b) => {
-    // Mate moves get highest priority
-    if (a.score > 9000 && b.score <= 9000) return -1;
-    if (b.score > 9000 && a.score <= 9000) return 1;
-    if (a.score > 9000 && b.score > 9000) {
-      // Both are mate moves, prefer shorter mates (lower score)
-      return a.score - b.score;
-    }
-    // Non-mate moves sorted by score (higher is better for white)
-    return b.score - a.score;
-  });
+  const sortedMoves = fullyAnalyzedMoves.sort(
+    (a: AnalysisMove, b: AnalysisMove) => {
+      // Mate moves get highest priority
+      if (a.score > 9000 && b.score <= 9000) return -1;
+      if (b.score > 9000 && a.score <= 9000) return 1;
+      if (a.score > 9000 && b.score > 9000) {
+        // Both are mate moves, prefer shorter mates (lower score)
+        return a.score - b.score;
+      }
+      // Non-mate moves sorted by score (higher is better for white)
+      return b.score - a.score;
+    },
+  );
 
   // Take the best move
   const bestMove = sortedMoves[0];
@@ -814,7 +817,7 @@ const processResponderMovesInTree = async (
   }
 
   log(
-    `Analysis complete: ${analysisResult.moves.length} moves found, depths: ${analysisResult.moves.map((m) => m.depth).join(", ")}`,
+    `Analysis complete: ${analysisResult.moves.length} moves found, depths: ${analysisResult.moves.map((m: AnalysisMove) => m.depth).join(", ")}`,
   );
 
   // Increment PV lines counter
@@ -847,17 +850,19 @@ const processResponderMovesInTree = async (
   }
 
   // Sort by quality: mate moves first, then by score
-  const sortedMoves = fullyAnalyzedMoves.sort((a, b) => {
-    // Mate moves get highest priority
-    if (a.score > 9000 && b.score <= 9000) return -1;
-    if (b.score > 9000 && a.score <= 9000) return 1;
-    if (a.score > 9000 && b.score > 9000) {
-      // Both are mate moves, prefer shorter mates (lower score)
-      return a.score - b.score;
-    }
-    // Non-mate moves sorted by score (higher is better for white)
-    return b.score - a.score;
-  });
+  const sortedMoves = fullyAnalyzedMoves.sort(
+    (a: AnalysisMove, b: AnalysisMove) => {
+      // Mate moves get highest priority
+      if (a.score > 9000 && b.score <= 9000) return -1;
+      if (b.score > 9000 && a.score <= 9000) return 1;
+      if (a.score > 9000 && b.score > 9000) {
+        // Both are mate moves, prefer shorter mates (lower score)
+        return a.score - b.score;
+      }
+      // Non-mate moves sorted by score (higher is better for white)
+      return b.score - a.score;
+    },
+  );
 
   // Determine how many responder responses to analyze based on depth and overrides
   let responderMovesToAnalyze = analysis.config.responderMovesCount;
@@ -882,7 +887,7 @@ const processResponderMovesInTree = async (
   const topMoves = sortedMoves.slice(0, responderMovesToAnalyze);
 
   log(
-    `Selected ${topMoves.length} moves (override: ${responderMovesToAnalyze}): ${topMoves.map((m) => `${moveToNotation(m.move)} (${m.score})`).join(", ")}`,
+    `Selected ${topMoves.length} moves (override: ${responderMovesToAnalyze}): ${topMoves.map((m: AnalysisMove) => `${moveToNotation(m.move)} (${m.score})`).join(", ")}`,
   );
 
   // Clear existing children and add new ones (simpler approach)
