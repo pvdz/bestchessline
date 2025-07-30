@@ -12,6 +12,7 @@ import {
   createPieceNotation,
   getPieceTypeFromNotation,
   getColorFromNotation,
+  PLAYER_COLORS,
 } from "./types.js";
 import {
   parseFEN,
@@ -218,7 +219,7 @@ function isLegalPawnMove(position: ChessPosition, move: ChessMove): boolean {
   const [toRank, toFile] = squareToCoords(move.to);
   const piece = position.board[fromRank][fromFile];
   const color = getPieceColor(createPieceNotation(piece));
-  const direction = color === "w" ? -1 : 1; // White moves up (decreasing rank), black moves down
+  const direction = color === PLAYER_COLORS.WHITE ? -1 : 1; // White moves up (decreasing rank), black moves down
 
   const rankDiff = toRank - fromRank;
   const fileDiff = Math.abs(toFile - fromFile);
@@ -231,7 +232,7 @@ function isLegalPawnMove(position: ChessPosition, move: ChessMove): boolean {
     }
     // Double square move from starting position
     if (rankDiff === 2 * direction) {
-      const startRank = color === "w" ? 6 : 1;
+      const startRank = color === PLAYER_COLORS.WHITE ? 6 : 1;
       if (fromRank === startRank) {
         const middleRank = fromRank + direction;
         return (
@@ -449,7 +450,10 @@ function isPathClear(
 function applyMove(position: ChessPosition, move: ChessMove): ChessPosition {
   const newPosition: ChessPosition = {
     board: position.board.map((row) => [...row]),
-    turn: position.turn === "w" ? "b" : "w",
+    turn:
+      position.turn === PLAYER_COLORS.WHITE
+        ? PLAYER_COLORS.BLACK
+        : PLAYER_COLORS.WHITE,
     castling: position.castling,
     enPassant: null,
     halfMoveClock: position.halfMoveClock + 1,
@@ -717,7 +721,7 @@ function canPawnAttackSquare(
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
   const color = getColorFromNotation(piece);
-  const direction = color === "w" ? -1 : 1; // White moves up (decreasing rank), black moves down
+  const direction = color === PLAYER_COLORS.WHITE ? -1 : 1; // White moves up (decreasing rank), black moves down
 
   const rankDiff = toRank - fromRank;
   const fileDiff = Math.abs(toFile - fromFile);
@@ -736,7 +740,8 @@ function canPawnAttackSquare(
  * Finds the square of a king of the given color
  */
 function findKing(position: ChessPosition, color: Color): Square | null {
-  const kingPiece = color === "w" ? PIECES.WHITE_KING : PIECES.BLACK_KING;
+  const kingPiece =
+    color === PLAYER_COLORS.WHITE ? PIECES.WHITE_KING : PIECES.BLACK_KING;
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       if (position.board[rank][file] === kingPiece) {
@@ -793,7 +798,10 @@ function determineMoveEffect(
   }
 
   // Check for check/mate
-  const opponentColor = originalPosition.turn === "w" ? "b" : "w";
+  const opponentColor =
+    originalPosition.turn === PLAYER_COLORS.WHITE
+      ? PLAYER_COLORS.BLACK
+      : PLAYER_COLORS.WHITE;
   const kingInCheck = isKingInCheck(newPosition, opponentColor);
   effect.isCheck = kingInCheck;
   if (effect.isCheck) {
@@ -838,7 +846,10 @@ function isCheckMate(position: ChessPosition, color: Color): boolean {
           const kingMove: ChessMove = {
             from: kingSquare,
             to: coordsToSquare(newRank, newFile),
-            piece: color === "w" ? PIECES.WHITE_KING : PIECES.BLACK_KING,
+            piece:
+              color === PLAYER_COLORS.WHITE
+                ? PIECES.WHITE_KING
+                : PIECES.BLACK_KING,
           };
 
           // Validate the king move
@@ -866,7 +877,9 @@ function isCheckMate(position: ChessPosition, color: Color): boolean {
 
             tempPosition.board[kingRank][kingFile] = "";
             tempPosition.board[newRank][newFile] =
-              color === "w" ? PIECES.WHITE_KING : PIECES.BLACK_KING;
+              color === PLAYER_COLORS.WHITE
+                ? PIECES.WHITE_KING
+                : PIECES.BLACK_KING;
 
             if (!isKingInCheck(tempPosition, color)) {
               return false; // King can escape
@@ -878,7 +891,8 @@ function isCheckMate(position: ChessPosition, color: Color): boolean {
   }
 
   // Check if any piece can block the check or capture the attacking piece
-  const opponentColor = color === "w" ? "b" : "w";
+  const opponentColor =
+    color === PLAYER_COLORS.WHITE ? PLAYER_COLORS.BLACK : PLAYER_COLORS.WHITE;
 
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {

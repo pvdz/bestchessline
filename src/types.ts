@@ -1,6 +1,6 @@
 export interface ChessPosition {
   board: string[][];
-  turn: "w" | "b";
+  turn: PlayerColor;
   castling: string;
   enPassant: string | null;
   halfMoveClock: number;
@@ -73,6 +73,14 @@ export interface BoardState {
 
 export type PieceType = "P" | "R" | "N" | "B" | "Q" | "K";
 export type Color = "w" | "b";
+
+// Player color constants to avoid magic literals
+export const PLAYER_COLORS = {
+  WHITE: "w" as const,
+  BLACK: "b" as const,
+} as const;
+
+export type PlayerColor = (typeof PLAYER_COLORS)[keyof typeof PLAYER_COLORS];
 
 export interface Piece {
   type: PieceType;

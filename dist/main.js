@@ -1,4 +1,8 @@
-import { createPieceNotation, getColorFromNotation } from "./types.js";
+import {
+  createPieceNotation,
+  getColorFromNotation,
+  PLAYER_COLORS,
+} from "./types.js";
 import {
   moveToNotation,
   parseFEN,
@@ -26,6 +30,7 @@ import {
   calculateTotalPositionsWithOverrides,
   getStartingPlayer,
   showToast,
+  compareAnalysisMoves,
 } from "./utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
@@ -1416,7 +1421,7 @@ const formatPVWithEffects = (pv, position, format, pieceFormat) => {
   if (pv.length === 0) return "";
   // Parse the position to determine whose turn it is
   const parsedPosition = parseFEN(position);
-  const isBlackTurn = parsedPosition.turn === "b";
+  const isBlackTurn = parsedPosition.turn === PLAYER_COLORS.BLACK;
   // Get current game state to determine starting move number
   const appState = getAppState();
   const currentMoveCount = appState.currentMoveIndex + 1; // +1 because currentMoveIndex is 0-based
@@ -1523,7 +1528,6 @@ const actuallyUpdateResultsPanel = (moves) => {
   // Filter moves based on analysis criteria
   const appState = getAppState();
   const isAnalyzing = appState.isAnalyzing;
-  const targetDepth = getAnalysisOptions().depth;
   // First, separate mate lines from non-mate lines
   const mateLines = moves.filter((move) => Math.abs(move.score) >= 10000);
   const nonMateLines = moves.filter((move) => Math.abs(move.score) < 10000);
@@ -1531,8 +1535,9 @@ const actuallyUpdateResultsPanel = (moves) => {
   mateLines.sort((a, b) => b.score - a.score);
   // Sort non-mate lines by depth (descending), then by score (descending), then by multipv
   nonMateLines.sort((a, b) => {
-    if (b.depth !== a.depth) return b.depth - a.depth;
-    if (b.score !== a.score) return b.score - a.score;
+    // For score comparison, use shared logic
+    const scoreComparison = compareAnalysisMoves(a, b);
+    if (scoreComparison !== 0) return scoreComparison;
     return (a.multipv || 1) - (b.multipv || 1);
   });
   // Get the configured number of lines from UI
@@ -2078,7 +2083,7 @@ const parseGameNotation = (notation) => {
 const parseMove = (moveText, currentFEN) => {
   log("Parsing move:", moveText, "from FEN:", currentFEN);
   const position = parseFEN(currentFEN);
-  const isWhiteTurn = position.turn === "w";
+  const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
   // Handle castling
   if (moveText === "O-O" || moveText === "0-0") {
     if (isWhiteTurn) {

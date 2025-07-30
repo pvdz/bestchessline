@@ -14,6 +14,7 @@ import {
   getPieceTypeFromNotation,
   getColorFromNotation,
   createPieceNotation,
+  PLAYER_COLORS,
 } from "./types.js";
 import {
   parseFEN,
@@ -341,7 +342,9 @@ const endDrag = (clientX: number, clientY: number): void => {
   const toSquare = findSquareAtPosition(clientX, clientY);
 
   if (fromSquare && toSquare && fromSquare !== toSquare) {
-    const piece = dragState.originalPiece?.dataset.piece;
+    // Get piece from board state using square coordinates
+    const [fromRank, fromFile] = squareToCoords(fromSquare);
+    const piece = boardState.position.board[fromRank][fromFile];
     if (piece) {
       makeMove(fromSquare, toSquare, piece);
     }
@@ -518,7 +521,10 @@ const applyMoveToPosition = (
   return {
     ...position,
     board: newBoard,
-    turn: position.turn === "w" ? "b" : "w",
+    turn:
+      position.turn === PLAYER_COLORS.WHITE
+        ? PLAYER_COLORS.BLACK
+        : PLAYER_COLORS.WHITE,
     castling: newCastling || "-",
     enPassant: newEnPassant,
   };

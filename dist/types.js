@@ -1,3 +1,8 @@
+// Player color constants to avoid magic literals
+export const PLAYER_COLORS = {
+  WHITE: "w",
+  BLACK: "b",
+};
 // ============================================================================
 // TYPE GUARDS FOR PIECE NOTATIONS
 // ============================================================================

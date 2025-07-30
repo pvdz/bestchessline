@@ -7,6 +7,7 @@ import {
   PieceTypeNotation,
   ColorNotation,
   PieceNotation,
+  PlayerColor,
 } from "./types.js";
 export declare function parseFEN(fen: string): ChessPosition;
 export declare function toFEN(position: ChessPosition): string;
@@ -294,7 +295,27 @@ export declare function getThreadCount(): number;
 /**
  * Get the starting player from a FEN string
  */
-export declare function getStartingPlayer(fen: string): "w" | "b";
+export declare function getStartingPlayer(fen: string): PlayerColor;
+/**
+ * Compare two analysis moves for sorting. The moves should always be for the same player
+ * from the same position, maybe even the same piece (with different targets).
+ * Mate is always the best move. When two moves mate or have same score, use consistent ordering.
+ *
+ * @param a First analysis move. Score should be >= 0 and would be 100.0 for a mate
+ * @param b Second analysis move. Score should be >= 0 and would be 100.0 for a mate
+ * @param currentPlayer The player whose turn it is ("w" for white, "b" for black)
+ * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
+ */
+export declare function compareAnalysisMoves(
+  a: {
+    score: number;
+    depth: number;
+  },
+  b: {
+    score: number;
+    depth: number;
+  },
+): number;
 /**
  * Get initiator moves from UI inputs
  */

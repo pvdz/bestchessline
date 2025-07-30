@@ -6,6 +6,7 @@ import {
   querySelectorHTMLElement,
   querySelectorButton,
   showToast,
+  compareAnalysisMoves,
 } from "./utils.js";
 /**
  * Show error toast notification
@@ -448,12 +449,8 @@ const parseInfoMessage = (message) => {
       );
       stockfishState.currentAnalysis.moves.push(analysisMove);
     }
-    // Sort moves by score (best first), then by depth for same scores
     stockfishState.currentAnalysis.moves.sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      return b.depth - a.depth; // Higher depth first for same scores
+      return compareAnalysisMoves(a, b);
     });
     // Notify callbacks
     stockfishState.analysisCallbacks.forEach((callback) => {

@@ -1,28 +1,31 @@
 import {
   ChessPosition,
   ChessMove,
-  PieceType,
-  Color,
   Square,
   NotationFormat,
   PieceFormat,
   PieceTypeNotation,
   ColorNotation,
   PieceNotation,
-  isPieceTypeNotation,
-  isColorNotation,
-  isPieceNotation,
   createPieceTypeNotation,
   createColorNotation,
   createPieceNotation,
   getPieceTypeFromNotation,
   getColorFromNotation,
+  PLAYER_COLORS,
+  PlayerColor,
 } from "./types.js";
 
 export function parseFEN(fen: string): ChessPosition {
   const parts = fen.split(" ");
   const boardPart = parts[0];
-  const turn = parts[1] as "w" | "b";
+  if (parts[1] !== "w" && parts[0] !== "b")
+    console.warn(
+      "Warning: parseFEN() received a FEN where the current turn character was not as expected",
+      parts,
+      [fen],
+    );
+  const turn = parts[1] as PlayerColor;
   const castling = parts[2];
   const enPassant = parts[3] === "-" ? null : parts[3];
   const halfMoveClock = parseInt(parts[4]);
@@ -627,7 +630,10 @@ export function applyMoveToFEN(fen: string, move: ChessMove): string {
   const newPosition: ChessPosition = {
     ...position,
     board: newBoard,
-    turn: position.turn === "w" ? "b" : "w",
+    turn:
+      position.turn === PLAYER_COLORS.WHITE
+        ? PLAYER_COLORS.BLACK
+        : PLAYER_COLORS.WHITE,
     castling: newCastling || "-",
     enPassant: newEnPassant,
   };
@@ -643,7 +649,7 @@ export function parseSimpleMove(
   fen: string,
 ): ChessMove | null {
   const position = parseFEN(fen);
-  const isWhiteTurn = position.turn === "w";
+  const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
 
   // Clean the move text
   const cleanMove = moveText.replace(/[+#?!]/, ""); // Remove check/checkmate symbols
@@ -1244,9 +1250,43 @@ export function getThreadCount(): number {
 /**
  * Get the starting player from a FEN string
  */
-export function getStartingPlayer(fen: string): "w" | "b" {
-  const parts = fen.split(" ");
-  return parts[1] as "w" | "b";
+export function getStartingPlayer(fen: string): PlayerColor {
+  const position = parseFEN(fen);
+  return position.turn;
+}
+
+/**
+ * Compare two analysis moves for sorting. The moves should always be for the same player
+ * from the same position, maybe even the same piece (with different targets).
+ * Mate is always the best move. When two moves mate or have same score, use consistent ordering.
+ *
+ * @param a First analysis move. Score should be >= 0 and would be 100.0 for a mate
+ * @param b Second analysis move. Score should be >= 0 and would be 100.0 for a mate
+ * @param currentPlayer The player whose turn it is ("w" for white, "b" for black)
+ * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
+ */
+export function compareAnalysisMoves(
+  a: { score: number; depth: number },
+  b: { score: number; depth: number },
+): number {
+  // Determine if moves are mate moves (score > 9000 indicates mate)
+  const aIsMate = a.score > 9000;
+  const bIsMate = b.score > 9000;
+
+  // Handle mate moves with highest priority
+  if (aIsMate && !bIsMate) return -1; // a is mate, b is not
+  if (!aIsMate && bIsMate) return 1; // b is mate, a is not
+  if (aIsMate && bIsMate) {
+    // Both are mate moves, prefer shorter mates (lower absolute score)
+    return a.depth - b.depth;
+  }
+
+  // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.
+  if (a.depth !== b.depth) return b.depth - a.depth;
+
+  // Both are non-mate moves, always sort by higher scores first
+  // Always descending order (higher scores first)
+  return b.score - a.score;
 }
 
 /**

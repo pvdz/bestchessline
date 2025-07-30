@@ -1,8 +1,10 @@
+import { PLAYER_COLORS } from "./types.js";
 import {
   parseFEN,
   log,
   logError,
   moveToNotation,
+  compareAnalysisMoves,
   getFENWithCorrectMoveCounter,
   getGlobalCurrentMoveIndex,
   applyMoveToFEN,
@@ -188,15 +190,15 @@ const processPosition = async (fen, analysis) => {
   log(`Analyzing position: ${fen}`);
   // Parse the position to determine whose turn it is
   const position = parseFEN(fen);
-  const isWhiteTurn = position.turn === "w";
+  const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
   // Get the starting player from the root FEN
   const startingPlayer = getStartingPlayer(analysis.rootFen);
   // Determine if this is the initiator's turn
   // If starting player is white, then white's turn means initiator's turn
   // If starting player is black, then black's turn means initiator's turn
   const isInitiatorTurn =
-    (startingPlayer === "w" && isWhiteTurn) ||
-    (startingPlayer === "b" && !isWhiteTurn);
+    (startingPlayer === PLAYER_COLORS.WHITE && isWhiteTurn) ||
+    (startingPlayer === PLAYER_COLORS.BLACK && !isWhiteTurn);
   if (isInitiatorTurn) {
     // Initiator's turn - apply hardcoded moves
     await processInitiatorMoves(fen, analysis);
@@ -425,15 +427,15 @@ const buildAnalysisTree = async (fen, analysis, parentNode, depth) => {
     },
   });
   const position = parseFEN(fen);
-  const isWhiteTurn = position.turn === "w";
+  const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
   // Get the starting player from the root FEN
   const startingPlayer = getStartingPlayer(analysis.rootFen);
   // Determine if this is the initiator's turn
   // If starting player is white, then white's turn means initiator's turn
   // If starting player is black, then black's turn means initiator's turn
   const isInitiatorTurn =
-    (startingPlayer === "w" && isWhiteTurn) ||
-    (startingPlayer === "b" && !isWhiteTurn);
+    (startingPlayer === PLAYER_COLORS.WHITE && isWhiteTurn) ||
+    (startingPlayer === PLAYER_COLORS.BLACK && !isWhiteTurn);
   // Check if we've reached max depth
   // Ensure lines always end with an initiator move (even depth) unless there's a mate
   // If we're at max depth + 1 and it's initiator's turn, stop (this is the final initiator move)
@@ -560,17 +562,9 @@ const processInitiatorMoveInTree = async (fen, analysis, parentNode, depth) => {
     return;
   }
   // Sort by quality: mate moves first, then by score
-  const sortedMoves = fullyAnalyzedMoves.sort((a, b) => {
-    // Mate moves get highest priority
-    if (a.score > 9000 && b.score <= 9000) return -1;
-    if (b.score > 9000 && a.score <= 9000) return 1;
-    if (a.score > 9000 && b.score > 9000) {
-      // Both are mate moves, prefer shorter mates (lower score)
-      return a.score - b.score;
-    }
-    // Non-mate moves sorted by score (higher is better for white)
-    return b.score - a.score;
-  });
+  const sortedMoves = fullyAnalyzedMoves.sort((a, b) =>
+    compareAnalysisMoves(a, b),
+  );
   // Take the best move
   const bestMove = sortedMoves[0];
   const newFen = applyMoveToFEN(fen, bestMove.move);
@@ -691,17 +685,9 @@ const processResponderMovesInTree = async (
     return;
   }
   // Sort by quality: mate moves first, then by score
-  const sortedMoves = fullyAnalyzedMoves.sort((a, b) => {
-    // Mate moves get highest priority
-    if (a.score > 9000 && b.score <= 9000) return -1;
-    if (b.score > 9000 && a.score <= 9000) return 1;
-    if (a.score > 9000 && b.score > 9000) {
-      // Both are mate moves, prefer shorter mates (lower score)
-      return a.score - b.score;
-    }
-    // Non-mate moves sorted by score (higher is better for white)
-    return b.score - a.score;
-  });
+  const sortedMoves = fullyAnalyzedMoves.sort((a, b) =>
+    compareAnalysisMoves(a, b),
+  );
   // Determine how many responder responses to analyze based on depth and overrides
   let responderMovesToAnalyze = analysis.config.responderMovesCount;
   // Check if we're at a depth that corresponds to an initiator move with an override

@@ -6,16 +6,14 @@ import {
   AnalysisResult,
   AnalysisMove,
   StockfishOptions,
-  ChessPosition,
+  PLAYER_COLORS,
 } from "./types.js";
 import {
   parseFEN,
-  toFEN,
   log,
   logError,
   moveToNotation,
-  squareToCoords,
-  coordsToSquare,
+  compareAnalysisMoves,
   getFENWithCorrectMoveCounter,
   getGlobalCurrentMoveIndex,
   applyMoveToFEN,
@@ -31,7 +29,6 @@ import {
 } from "./utils.js";
 import * as Stockfish from "./stockfish-client.js";
 import * as Board from "./chess-board.js";
-import { PIECES, PIECE_TYPES } from "./move-validator.js";
 
 // ============================================================================
 // BEST LINES STATE MANAGEMENT
@@ -235,7 +232,7 @@ const processPosition = async (
 
   // Parse the position to determine whose turn it is
   const position = parseFEN(fen);
-  const isWhiteTurn = position.turn === "w";
+  const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
 
   // Get the starting player from the root FEN
   const startingPlayer = getStartingPlayer(analysis.rootFen);
@@ -244,8 +241,8 @@ const processPosition = async (
   // If starting player is white, then white's turn means initiator's turn
   // If starting player is black, then black's turn means initiator's turn
   const isInitiatorTurn =
-    (startingPlayer === "w" && isWhiteTurn) ||
-    (startingPlayer === "b" && !isWhiteTurn);
+    (startingPlayer === PLAYER_COLORS.WHITE && isWhiteTurn) ||
+    (startingPlayer === PLAYER_COLORS.BLACK && !isWhiteTurn);
 
   if (isInitiatorTurn) {
     // Initiator's turn - apply hardcoded moves
@@ -531,7 +528,7 @@ const buildAnalysisTree = async (
   });
 
   const position = parseFEN(fen);
-  const isWhiteTurn = position.turn === "w";
+  const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
 
   // Get the starting player from the root FEN
   const startingPlayer = getStartingPlayer(analysis.rootFen);
@@ -540,8 +537,8 @@ const buildAnalysisTree = async (
   // If starting player is white, then white's turn means initiator's turn
   // If starting player is black, then black's turn means initiator's turn
   const isInitiatorTurn =
-    (startingPlayer === "w" && isWhiteTurn) ||
-    (startingPlayer === "b" && !isWhiteTurn);
+    (startingPlayer === PLAYER_COLORS.WHITE && isWhiteTurn) ||
+    (startingPlayer === PLAYER_COLORS.BLACK && !isWhiteTurn);
 
   // Check if we've reached max depth
   // Ensure lines always end with an initiator move (even depth) unless there's a mate
@@ -697,17 +694,7 @@ const processInitiatorMoveInTree = async (
 
   // Sort by quality: mate moves first, then by score
   const sortedMoves = fullyAnalyzedMoves.sort(
-    (a: AnalysisMove, b: AnalysisMove) => {
-      // Mate moves get highest priority
-      if (a.score > 9000 && b.score <= 9000) return -1;
-      if (b.score > 9000 && a.score <= 9000) return 1;
-      if (a.score > 9000 && b.score > 9000) {
-        // Both are mate moves, prefer shorter mates (lower score)
-        return a.score - b.score;
-      }
-      // Non-mate moves sorted by score (higher is better for white)
-      return b.score - a.score;
-    },
+    (a: AnalysisMove, b: AnalysisMove) => compareAnalysisMoves(a, b),
   );
 
   // Take the best move
@@ -851,17 +838,7 @@ const processResponderMovesInTree = async (
 
   // Sort by quality: mate moves first, then by score
   const sortedMoves = fullyAnalyzedMoves.sort(
-    (a: AnalysisMove, b: AnalysisMove) => {
-      // Mate moves get highest priority
-      if (a.score > 9000 && b.score <= 9000) return -1;
-      if (b.score > 9000 && a.score <= 9000) return 1;
-      if (a.score > 9000 && b.score > 9000) {
-        // Both are mate moves, prefer shorter mates (lower score)
-        return a.score - b.score;
-      }
-      // Non-mate moves sorted by score (higher is better for white)
-      return b.score - a.score;
-    },
+    (a: AnalysisMove, b: AnalysisMove) => compareAnalysisMoves(a, b),
   );
 
   // Determine how many responder responses to analyze based on depth and overrides

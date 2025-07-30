@@ -1,29 +1,27 @@
-import { ChessBoard } from "../../src/chess-board.js";
-import { StockfishClient } from "../../src/stockfish-client.js";
 import {
-  moveToNotation,
-  pvToNotation,
-  getInputElement,
-  getTextAreaElement,
-  getButtonElement,
-  getCheckedRadioByName,
-  getAllRadios,
-  isHTMLElement,
-  PIECE_TYPES,
-  parseFEN,
-} from "../../src/utils.js";
-import { validateMove } from "../../src/move-validator.js";
-import {
+  ChessPosition,
   ChessMove,
-  AnalysisResult,
-  AnalysisOptions,
   AnalysisMove,
-  ProcessedMoveItem,
-} from "../../src/types.js";
+  AnalysisResult,
+  StockfishOptions,
+  ColorNotation,
+  createColorNotation,
+  PLAYER_COLORS,
+} from "../src/types.js";
+import {
+  parseFEN,
+  moveToNotation,
+  applyMoveToFEN,
+  compareAnalysisMoves,
+} from "../src/utils.js";
+import { Stockfish } from "../src/stockfish-client.js";
+import { ChessBoard } from "../src/chess-board.js";
+import { validateMove } from "../../src/move-validator.js";
+import { ProcessedMoveItem } from "../../src/types.js";
 
 class ChessAnalysisApp {
   private board: ChessBoard;
-  private stockfish: StockfishClient;
+  private stockfish: Stockfish;
   private isAnalyzing = false;
   private currentResults: AnalysisResult | null = null;
   private moves: ChessMove[] = [];
@@ -37,7 +35,7 @@ class ChessAnalysisApp {
       throw new Error("Chess board element not found");
     }
     this.board = new ChessBoard(boardElement);
-    this.stockfish = new StockfishClient();
+    this.stockfish = new Stockfish();
     this.initializeEventListeners();
     this.initializeMoveHoverEvents();
 
@@ -210,7 +208,7 @@ class ChessAnalysisApp {
     this.updateStatus("Analysis stopped");
   }
 
-  private getAnalysisOptions(): AnalysisOptions {
+  private getAnalysisOptions(): StockfishOptions {
     const whiteMoves = parseInt(getInputElement("white-moves")?.value || "5");
     return {
       depth: parseInt(getInputElement("max-depth")?.value || "20"),
@@ -323,9 +321,16 @@ class ChessAnalysisApp {
     );
 
     // Sort by score to maintain best moves first
-    uniqueMoves.sort(
-      (a: ProcessedMoveItem, b: ProcessedMoveItem) => b.score - a.score,
-    );
+    uniqueMoves.sort((a: ProcessedMoveItem, b: ProcessedMoveItem) => {
+      const currentFEN = this.currentResults?.position || "";
+      if (currentFEN) {
+        const position = parseFEN(currentFEN);
+        return compareAnalysisMoves(a, b);
+      } else {
+        // Fallback to white's perspective if we can't determine turn
+        return b.score - a.score;
+      }
+    });
 
     // Update the single results panel with all moves
     this.updateResultsPanel(uniqueMoves);
