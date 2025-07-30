@@ -586,7 +586,7 @@ const showMoveArrow = (
     arrow.setAttribute("data-score", scoreText);
   }
   positionArrow(arrow, from, to);
-  const boardContainer = document.querySelector(".board-container");
+  const boardContainer = document.querySelector(".board-section");
   if (boardContainer) {
     boardContainer.appendChild(arrow);
   }
@@ -688,7 +688,7 @@ const clearLastMoveHighlight = () => {
 const positionArrow = (arrow, from, to) => {
   const fromElement = document.querySelector(`[data-square="${from}"]`);
   const toElement = document.querySelector(`[data-square="${to}"]`);
-  const boardContainer = document.querySelector(".board-container");
+  const boardContainer = document.querySelector(".board-section");
   if (!fromElement || !toElement || !boardContainer) {
     return;
   }

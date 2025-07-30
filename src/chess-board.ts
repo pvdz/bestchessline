@@ -737,7 +737,7 @@ const showMoveArrow = (
   positionArrow(arrow, from, to);
 
   const boardContainer = document.querySelector(
-    ".board-container",
+    ".board-section",
   ) as HTMLElement;
   if (boardContainer) {
     boardContainer.appendChild(arrow);
@@ -858,7 +858,7 @@ const positionArrow = (arrow: HTMLElement, from: string, to: string): void => {
   const fromElement = document.querySelector(`[data-square="${from}"]`);
   const toElement = document.querySelector(`[data-square="${to}"]`);
   const boardContainer = document.querySelector(
-    ".board-container",
+    ".board-section",
   ) as HTMLElement;
 
   if (!fromElement || !toElement || !boardContainer) {

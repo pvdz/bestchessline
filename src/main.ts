@@ -73,6 +73,14 @@ interface AppState {
   branchMoves: ChessMove[];
   branchStartIndex: number;
   isInBranch: boolean;
+
+  // Position evaluation state
+  positionEvaluation: {
+    score: number | null;
+    isMate: boolean;
+    mateIn: number | null;
+    isAnalyzing: boolean;
+  };
 }
 
 /**
@@ -87,6 +95,12 @@ let appState: AppState = {
   branchMoves: [],
   branchStartIndex: -1,
   isInBranch: false,
+  positionEvaluation: {
+    score: null,
+    isMate: false,
+    mateIn: null,
+    isAnalyzing: false,
+  },
 };
 
 // Event tracking state for Stockfish events
@@ -139,6 +153,8 @@ const initializeApp = (): void => {
   Board.setOnPositionChange((position) => {
     updateFENInput();
     updateControlsFromPosition();
+    // Reset position evaluation when board changes
+    resetPositionEvaluation();
   });
 
   Board.setOnMoveMade((move) => {
@@ -160,7 +176,186 @@ const initializeApp = (): void => {
   // Initialize controls from current board state
   updateControlsFromPosition();
 
+  // Initialize position evaluation button
+  initializePositionEvaluationButton();
+
   log("Application initialized successfully");
+};
+
+// ============================================================================
+// POSITION EVALUATION
+// ============================================================================
+
+/**
+ * Reset position evaluation to initial state
+ */
+const resetPositionEvaluation = (): void => {
+  updateAppState({
+    positionEvaluation: {
+      score: null,
+      isMate: false,
+      mateIn: null,
+      isAnalyzing: false,
+    },
+  });
+  updatePositionEvaluationDisplay();
+  updateButtonStates();
+};
+
+/**
+ * Initialize position evaluation button
+ */
+const initializePositionEvaluationButton = (): void => {
+  const evaluationButton = document.getElementById(
+    "position-evaluation-btn",
+  ) as HTMLButtonElement;
+  if (evaluationButton) {
+    evaluationButton.addEventListener("click", () => {
+      evaluateCurrentPosition();
+    });
+  }
+};
+
+/**
+ * Evaluate the current board position using Stockfish
+ */
+const evaluateCurrentPosition = async (): Promise<void> => {
+  const currentFEN = Board.getFEN();
+  if (!currentFEN) {
+    log("No position available for evaluation");
+    return;
+  }
+
+  log(`Evaluating position: ${currentFEN}`);
+
+  // Don't evaluate if main analysis is running
+  if (appState.isAnalyzing) {
+    log("Skipping position evaluation - main analysis is running");
+    return;
+  }
+
+  // Update state to show we're analyzing
+  updateAppState({
+    positionEvaluation: {
+      ...appState.positionEvaluation,
+      isAnalyzing: true,
+    },
+  });
+  updatePositionEvaluationDisplay();
+  updateButtonStates();
+
+  try {
+    // Get a proper evaluation with adequate depth and timeout
+    const result = await Promise.race([
+      Stockfish.analyzePosition(currentFEN, {
+        depth: 20,
+        threads: 1,
+        multiPV: 1,
+      }),
+      new Promise<AnalysisResult>((_, reject) =>
+        setTimeout(() => reject(new Error("Analysis timeout")), 10000),
+      ),
+    ]);
+
+    if (result.moves.length > 0) {
+      const bestMove = result.moves[0];
+      const score = bestMove.score;
+
+      // Log the evaluation for debugging
+      log(`Position evaluation: ${score} centipawns (${score / 100} pawns)`);
+
+      // Determine if it's a mate
+      const isMate = Math.abs(score) >= 10000;
+      const mateIn = isMate ? Math.ceil((10000 - Math.abs(score)) / 2) : null;
+
+      updateAppState({
+        positionEvaluation: {
+          score,
+          isMate,
+          mateIn,
+          isAnalyzing: false,
+        },
+      });
+    } else {
+      log("No moves found in analysis result");
+      updateAppState({
+        positionEvaluation: {
+          score: null,
+          isMate: false,
+          mateIn: null,
+          isAnalyzing: false,
+        },
+      });
+    }
+  } catch (error) {
+    logError("Error evaluating position:", error);
+    updateAppState({
+      positionEvaluation: {
+        score: null,
+        isMate: false,
+        mateIn: null,
+        isAnalyzing: false,
+      },
+    });
+  }
+
+  updatePositionEvaluationDisplay();
+  updateButtonStates();
+};
+
+/**
+ * Update the position evaluation display
+ */
+const updatePositionEvaluationDisplay = (): void => {
+  const evaluationButton = document.getElementById(
+    "position-evaluation-btn",
+  ) as HTMLButtonElement;
+  if (!evaluationButton) {
+    return;
+  }
+
+  const { score, isMate, mateIn, isAnalyzing } = appState.positionEvaluation;
+
+  if (isAnalyzing) {
+    evaluationButton.textContent = "...";
+    evaluationButton.className = "evaluation-button neutral";
+    evaluationButton.disabled = true;
+    return;
+  }
+
+  if (score === null) {
+    evaluationButton.textContent = "??";
+    evaluationButton.className = "evaluation-button neutral";
+    evaluationButton.disabled = false;
+    return;
+  }
+
+  let displayText: string;
+  let className: string;
+
+  if (isMate) {
+    if (mateIn === 0) {
+      displayText = "M";
+    } else {
+      displayText = score > 0 ? `+M${mateIn}` : `-M${mateIn}`;
+    }
+    className = "evaluation-button mate";
+  } else {
+    // Convert centipawns to pawns and format
+    const pawns = score / 100;
+    if (Math.abs(pawns) < 0.1) {
+      displayText = "0.0";
+      className = "evaluation-button neutral";
+    } else {
+      displayText = pawns > 0 ? `+${pawns.toFixed(1)}` : `${pawns.toFixed(1)}`;
+      className =
+        pawns > 0 ? "evaluation-button positive" : "evaluation-button negative";
+    }
+  }
+
+  evaluationButton.textContent = displayText;
+  evaluationButton.className = className;
+  evaluationButton.disabled = false;
 };
 
 // ============================================================================
@@ -191,6 +386,7 @@ const initializeEventListeners = (): void => {
       Board.setPosition(initialFEN);
       updateMoveList();
       updateNavigationButtons();
+      resetPositionEvaluation();
     });
   }
 
@@ -205,6 +401,7 @@ const initializeEventListeners = (): void => {
       Board.setPosition(emptyFEN);
       updateMoveList();
       updateNavigationButtons();
+      resetPositionEvaluation();
     });
   }
 
@@ -220,6 +417,7 @@ const initializeEventListeners = (): void => {
         Board.setPosition(fen);
         updateMoveList();
         updateNavigationButtons();
+        resetPositionEvaluation();
       }
     });
   }
@@ -649,8 +847,11 @@ const initializePositionControls = (): void => {
 const startAnalysis = async (): Promise<void> => {
   if (appState.isAnalyzing) return;
 
-  updateAppState({ isAnalyzing: true });
+  updateAppState({
+    isAnalyzing: true,
+  });
   updateButtonStates();
+  updatePositionEvaluationDisplay();
 
   try {
     const options = getAnalysisOptions();
@@ -721,7 +922,11 @@ const updateButtonStates = (): void => {
   const startBtn = getButtonElement("start-analysis");
   const stopBtn = getButtonElement("stop-analysis");
 
-  if (startBtn) startBtn.disabled = appState.isAnalyzing;
+  // Disable start button if main analysis is running OR position evaluation is running
+  const isStockfishBusy =
+    appState.isAnalyzing || appState.positionEvaluation.isAnalyzing;
+
+  if (startBtn) startBtn.disabled = isStockfishBusy;
   if (stopBtn) stopBtn.disabled = !appState.isAnalyzing;
 };
 
@@ -789,9 +994,11 @@ const updateBestLinesButtonStates = (): void => {
   const clearBtn = getButtonElement("clear-tree-digger");
 
   const isAnalyzing = BestLines.isAnalyzing();
+  const isStockfishBusy =
+    appState.isAnalyzing || appState.positionEvaluation.isAnalyzing;
 
   if (startBtn) {
-    startBtn.disabled = isAnalyzing;
+    startBtn.disabled = isAnalyzing || isStockfishBusy;
   } else {
     console.error("Start button not found!");
   }
@@ -2063,6 +2270,9 @@ const makeAnalysisMove = (move: ChessMove): void => {
   // Highlight the new move
   highlightLastMove(move);
 
+  // Evaluate the new position
+  resetPositionEvaluation();
+
   updateStatus(`Made move: ${move.from}${move.to}`);
 };
 
@@ -2151,6 +2361,9 @@ const clearBranch = (): void => {
     isInBranch: false,
   });
   updateMoveList();
+
+  // Evaluate the current position after clearing branch
+  resetPositionEvaluation();
 };
 
 /**
@@ -2441,6 +2654,9 @@ const addMove = (move: ChessMove): void => {
   // (not the move list, since the board has already been updated)
   updateFENInput();
   updateControlsFromPosition();
+
+  // Evaluate the new position
+  resetPositionEvaluation();
 };
 
 /**
@@ -2464,7 +2680,17 @@ const importGame = (notation: string): void => {
   // Set board to initial position
   Board.setPosition(appState.initialFEN);
 
+  // Apply all moves to get to the final position
+  let currentFEN = appState.initialFEN;
+  for (const move of moves) {
+    currentFEN = applyMoveToFEN(currentFEN, move);
+  }
+  Board.setPosition(currentFEN);
+
   console.log("Game import complete, parsed moves:", moves);
+
+  // Evaluate the final position
+  resetPositionEvaluation();
 };
 
 /**
@@ -2638,6 +2864,7 @@ const previousMove = (): void => {
     updateNavigationButtons();
     updateFENInput();
     updateControlsFromPosition();
+    resetPositionEvaluation();
   }
 };
 
@@ -2652,6 +2879,7 @@ const nextMove = (): void => {
     updateNavigationButtons();
     updateFENInput();
     updateControlsFromPosition();
+    resetPositionEvaluation();
   }
 };
 
@@ -2675,6 +2903,9 @@ const navigateToMove = (moveIndex: number): void => {
   // Update the move list to reflect the new current position
   updateMoveList();
   updateNavigationButtons();
+
+  // Evaluate the new position
+  resetPositionEvaluation();
 
   updateStatus(`Navigated to move ${moveIndex + 1}`);
 };

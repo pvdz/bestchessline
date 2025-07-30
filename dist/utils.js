@@ -9,7 +9,7 @@ import {
 export function parseFEN(fen) {
   const parts = fen.split(" ");
   const boardPart = parts[0];
-  if (parts[1] !== "w" && parts[0] !== "b")
+  if (parts[1] !== "w" && parts[1] !== "b")
     console.warn(
       "Warning: parseFEN() received a FEN where the current turn character was not as expected",
       parts,
