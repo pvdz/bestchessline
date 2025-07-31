@@ -1,5 +1,6 @@
 import { createPieceNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
-import { getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, applyMoveToFEN, calculateTotalPositionsWithOverrides, getStartingPlayer, showToast, compareAnalysisMoves, formatScoreWithMateIn, } from "./utils.js";
+import { getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, calculateTotalPositionsWithOverrides, getStartingPlayer, showToast, compareAnalysisMoves, formatScoreWithMateIn, } from "./utils.js";
+import { applyMoveToFEN, } from "./utils/fen-manipulation.js";
 import { moveToNotation, } from "./utils/notation-utils.js";
 import { findFromSquare, findFromSquareWithDisambiguation, } from "./utils/move-parser.js";
 import { parseFEN, toFEN, coordsToSquare, } from "./utils/fen-utils.js";

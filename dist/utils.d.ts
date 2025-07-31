@@ -1,4 +1,4 @@
-import { ChessMove, PieceTypeNotation, ColorNotation, PieceNotation, PlayerColor } from "./types.js";
+import { PieceTypeNotation, ColorNotation, PieceNotation, PlayerColor } from "./types.js";
 export declare function getPieceColor(piece: PieceNotation): ColorNotation;
 export declare function getPieceType(piece: PieceNotation): PieceTypeNotation;
 /**
@@ -22,10 +22,6 @@ export declare function getGlobalCurrentMoveIndex(): number;
  */
 export declare function getFENWithCorrectMoveCounter(boardFEN: string, currentMoveIndex: number, castling?: string, enPassant?: string | null): string;
 export declare function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void;
-/**
- * Apply a chess move to a FEN string and return the new FEN
- */
-export declare function applyMoveToFEN(fen: string, move: ChessMove): string;
 /**
  * Get the starting player from a FEN string
  */
