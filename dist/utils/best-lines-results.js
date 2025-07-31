@@ -1,6 +1,12 @@
 import * as BestLines from "../best-lines.js";
 import { getStartingPlayer } from "../utils.js";
-import { getThreadCount, getDepthScaler, getFirstReplyOverride, getSecondReplyOverride, getResponderMovesCount } from "./ui-getters.js";
+import {
+  getThreadCount,
+  getDepthScaler,
+  getFirstReplyOverride,
+  getSecondReplyOverride,
+  getResponderMovesCount,
+} from "./ui-getters.js";
 import { getEventTrackingState } from "../main.js";
 import { updateBestLinesTreeIncrementally } from "./best-lines-manager.js";
 import { renderProgressBoard } from "./board-rendering.js";
@@ -13,64 +19,72 @@ import { renderProgressBoard } from "./board-rendering.js";
  * Update best lines results display
  */
 export function updateBestLinesResults() {
-    const resultsElement = document.getElementById("tree-digger-results");
-    if (!resultsElement)
-        return;
-    const analysis = BestLines.getCurrentAnalysis();
-    if (!analysis) {
-        resultsElement.innerHTML = "<p>No analysis results available.</p>";
-        return;
-    }
-    // Update progress section
-    updateBestLinesProgress(resultsElement, analysis);
-    // Update tree section incrementally
-    updateBestLinesTreeIncrementally(resultsElement, analysis);
+  const resultsElement = document.getElementById("tree-digger-results");
+  if (!resultsElement) return;
+  const analysis = BestLines.getCurrentAnalysis();
+  if (!analysis) {
+    resultsElement.innerHTML = "<p>No analysis results available.</p>";
+    return;
+  }
+  // Update progress section
+  updateBestLinesProgress(resultsElement, analysis);
+  // Update tree section incrementally
+  updateBestLinesTreeIncrementally(resultsElement, analysis);
 }
 /**
  * Update progress section
  */
 export function updateBestLinesProgress(resultsElement, analysis) {
-    let progressSection = resultsElement.querySelector(".tree-digger-progress-section");
-    if (!progressSection) {
-        progressSection = document.createElement("div");
-        progressSection.className = "tree-digger-progress-section";
-        resultsElement.appendChild(progressSection);
+  let progressSection = resultsElement.querySelector(
+    ".tree-digger-progress-section",
+  );
+  if (!progressSection) {
+    progressSection = document.createElement("div");
+    progressSection.className = "tree-digger-progress-section";
+    resultsElement.appendChild(progressSection);
+  }
+  const isAnalyzing = BestLines.isAnalyzing();
+  const progress = BestLines.getProgress();
+  const totalLeafs = BestLines.calculateTotalLeafs(analysis.nodes);
+  const uniquePositions = BestLines.calculateUniquePositions(
+    analysis.nodes,
+    analysis,
+  );
+  const eventTrackingState = getEventTrackingState();
+  // Calculate events per second from recent data
+  const now = Date.now();
+  const timeSinceRecentStart = now - eventTrackingState.recentStartTime;
+  const timeWindow = Math.min(timeSinceRecentStart, 1000);
+  const eventsPerSecond =
+    !isAnalyzing || analysis?.isComplete
+      ? 0
+      : timeWindow > 0
+        ? Math.round(eventTrackingState.recentCount / (timeWindow / 1000))
+        : 0;
+  // Get configuration values
+  const depthScaler = getDepthScaler();
+  const responderMovesCount = getResponderMovesCount();
+  const firstReplyOverride = getFirstReplyOverride();
+  const secondReplyOverride = getSecondReplyOverride();
+  // Calculate total positions with overrides
+  let totalPositionsWithOverrides = analysis.totalPositions;
+  let overrideExplanation = "";
+  if (firstReplyOverride > 0 || secondReplyOverride > 0) {
+    // Recalculate with overrides
+    const firstReply =
+      firstReplyOverride > 0 ? firstReplyOverride : responderMovesCount;
+    const secondReply =
+      secondReplyOverride > 0 ? secondReplyOverride : responderMovesCount;
+    totalPositionsWithOverrides =
+      1 + 2 * firstReply + 2 * Math.pow(secondReply, 2);
+    // Add remaining terms
+    for (let n = 3; n <= Math.floor(depthScaler / 2); n++) {
+      totalPositionsWithOverrides += 2 * Math.pow(responderMovesCount, n);
     }
-    const isAnalyzing = BestLines.isAnalyzing();
-    const progress = BestLines.getProgress();
-    const totalLeafs = BestLines.calculateTotalLeafs(analysis.nodes);
-    const uniquePositions = BestLines.calculateUniquePositions(analysis.nodes, analysis);
-    const eventTrackingState = getEventTrackingState();
-    // Calculate events per second from recent data
-    const now = Date.now();
-    const timeSinceRecentStart = now - eventTrackingState.recentStartTime;
-    const timeWindow = Math.min(timeSinceRecentStart, 1000);
-    const eventsPerSecond = !isAnalyzing || analysis?.isComplete
-        ? 0
-        : timeWindow > 0
-            ? Math.round(eventTrackingState.recentCount / (timeWindow / 1000))
-            : 0;
-    // Get configuration values
-    const depthScaler = getDepthScaler();
-    const responderMovesCount = getResponderMovesCount();
-    const firstReplyOverride = getFirstReplyOverride();
-    const secondReplyOverride = getSecondReplyOverride();
-    // Calculate total positions with overrides
-    let totalPositionsWithOverrides = analysis.totalPositions;
-    let overrideExplanation = "";
-    if (firstReplyOverride > 0 || secondReplyOverride > 0) {
-        // Recalculate with overrides
-        const firstReply = firstReplyOverride > 0 ? firstReplyOverride : responderMovesCount;
-        const secondReply = secondReplyOverride > 0 ? secondReplyOverride : responderMovesCount;
-        totalPositionsWithOverrides = 1 + 2 * firstReply + 2 * Math.pow(secondReply, 2);
-        // Add remaining terms
-        for (let n = 3; n <= Math.floor(depthScaler / 2); n++) {
-            totalPositionsWithOverrides += 2 * Math.pow(responderMovesCount, n);
-        }
-        overrideExplanation = ` (with overrides: 1st reply=${firstReply}, 2nd reply=${secondReply})`;
-    }
-    const computationFormula = `1 + 2*${firstReplyOverride || responderMovesCount} + 2*${secondReplyOverride || responderMovesCount}<sup>2</sup> + 2∑(${responderMovesCount}<sup>n</sup>) for n from 3 to ⌊${depthScaler}/2⌋ = ${totalPositionsWithOverrides}`;
-    const html = `
+    overrideExplanation = ` (with overrides: 1st reply=${firstReply}, 2nd reply=${secondReply})`;
+  }
+  const computationFormula = `1 + 2*${firstReplyOverride || responderMovesCount} + 2*${secondReplyOverride || responderMovesCount}<sup>2</sup> + 2∑(${responderMovesCount}<sup>n</sup>) for n from 3 to ⌊${depthScaler}/2⌋ = ${totalPositionsWithOverrides}`;
+  const html = `
     <div class="best-line-progress-container">
       <div class="best-line-progress-left">
         <div class="best-line-stats">
@@ -106,22 +120,24 @@ export function updateBestLinesProgress(resultsElement, analysis) {
           </div>
           <div class="setting">
             <div class="setting-label">1st ${(() => {
-        const currentAnalysis = BestLines.getCurrentAnalysis();
-        const rootFen = currentAnalysis?.rootFen ||
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        const startingPlayer = getStartingPlayer(rootFen);
-        return startingPlayer === "w" ? "White" : "Black";
-    })()} Move</div>
+              const currentAnalysis = BestLines.getCurrentAnalysis();
+              const rootFen =
+                currentAnalysis?.rootFen ||
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+              const startingPlayer = getStartingPlayer(rootFen);
+              return startingPlayer === "w" ? "White" : "Black";
+            })()} Move</div>
             <div class="setting-value">${document.getElementById("tree-digger-initiator-move-1")?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
           </div>
           <div class="setting">
             <div class="setting-label">2nd ${(() => {
-        const currentAnalysis = BestLines.getCurrentAnalysis();
-        const rootFen = currentAnalysis?.rootFen ||
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        const startingPlayer = getStartingPlayer(rootFen);
-        return startingPlayer === "w" ? "White" : "Black";
-    })()} Move</div>
+              const currentAnalysis = BestLines.getCurrentAnalysis();
+              const rootFen =
+                currentAnalysis?.rootFen ||
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+              const startingPlayer = getStartingPlayer(rootFen);
+              return startingPlayer === "w" ? "White" : "Black";
+            })()} Move</div>
             <div class="setting-value">${document.getElementById("tree-digger-initiator-move-2")?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
           </div>
           <div class="setting">
@@ -163,11 +179,11 @@ export function updateBestLinesProgress(resultsElement, analysis) {
       </div>
     </div>
   `;
-    progressSection.innerHTML = html;
-    // Render the progress board
-    const progressBoardElement = progressSection.querySelector("#progress-board");
-    if (progressBoardElement) {
-        renderProgressBoard(progressBoardElement, analysis.rootFen);
-    }
+  progressSection.innerHTML = html;
+  // Render the progress board
+  const progressBoardElement = progressSection.querySelector("#progress-board");
+  if (progressBoardElement) {
+    renderProgressBoard(progressBoardElement, analysis.rootFen);
+  }
 }
 //# sourceMappingURL=best-lines-results.js.map

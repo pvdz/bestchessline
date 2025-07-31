@@ -1,6 +1,6 @@
-import { PLAYER_COLORS, createPieceNotation, } from "../types.js";
+import { PLAYER_COLORS, createPieceNotation } from "../types.js";
 import { parseFEN } from "./fen-utils.js";
-import { findFromSquare, findFromSquareWithDisambiguation } from "./move-parser.js";
+import { findFromSquare, findFromSquareWithDisambiguation, } from "./move-parser.js";
 import { validateMove, PIECES } from "../move-validator.js";
 import { log } from "./logging.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";

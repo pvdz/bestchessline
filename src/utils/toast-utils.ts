@@ -1,6 +1,6 @@
 /**
  * Toast Utility Functions
- * 
+ *
  * Provides functions for displaying toast notifications with specific styling.
  */
 
@@ -24,4 +24,4 @@ export function showMoveParseWarningToast(message: string): void {
   toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 5000);
-} 
+}

@@ -13,7 +13,7 @@ import { updateMoveList } from "./game-navigation.js";
 
 /**
  * Navigation Utility Functions
- * 
+ *
  * Provides functions for navigating through game moves.
  */
 
@@ -52,7 +52,7 @@ export function navigateToMove(moveIndex: number): void {
  */
 export function applyMovesUpToIndex(index: number): void {
   const appState = getAppState();
-  
+
   // Reset to initial position
   Board.setPosition(appState.initialFEN);
 
@@ -74,4 +74,4 @@ export function applyMovesUpToIndex(index: number): void {
   } else {
     Board.clearLastMoveHighlight();
   }
-} 
+}

@@ -24,19 +24,34 @@ export declare const updateBestLinesButtonStates: () => void;
 /**
  * Update an existing DOM element for a tree node
  */
-export declare const updateTreeNodeElement: (element: HTMLElement, node: BestLineNode, analysis: BestLinesAnalysis) => void;
+export declare const updateTreeNodeElement: (
+  element: HTMLElement,
+  node: BestLineNode,
+  analysis: BestLinesAnalysis,
+) => void;
 /**
  * Sync the DOM with the shadow tree
  */
-export declare const syncDOMWithShadowTree: (container: HTMLElement, shadowNodes: UITreeNode[], analysis: BestLinesAnalysis) => void;
+export declare const syncDOMWithShadowTree: (
+  container: HTMLElement,
+  shadowNodes: UITreeNode[],
+  analysis: BestLinesAnalysis,
+) => void;
 /**
  * Update the tree UI incrementally
  */
-export declare const updateBestLinesTreeIncrementally: (resultsElement: HTMLElement, analysis: BestLinesAnalysis) => void;
+export declare const updateBestLinesTreeIncrementally: (
+  resultsElement: HTMLElement,
+  analysis: BestLinesAnalysis,
+) => void;
 /**
  * Render a tree node recursively
  */
-export declare const renderTreeNode: (node: BestLineNode, depth: number, analysis: BestLinesAnalysis) => string;
+export declare const renderTreeNode: (
+  node: BestLineNode,
+  depth: number,
+  analysis: BestLinesAnalysis,
+) => string;
 /**
  * Render a best line node
  */

@@ -1,9 +1,12 @@
-import { getInputElement, querySelectorHTMLElementBySelector } from "./dom-helpers.js";
+import {
+  getInputElement,
+  querySelectorHTMLElementBySelector,
+} from "./dom-helpers.js";
 import * as Stockfish from "../stockfish-client.js";
 
 /**
  * Thread Management Utility Functions
- * 
+ *
  * Provides functions for managing thread inputs and fallback mode.
  */
 
@@ -84,4 +87,4 @@ export function updateTreeDiggerThreadsForFallbackMode(): void {
         "Number of CPU threads for tree digger analysis";
     }
   }
-} 
+}

@@ -30,4 +30,7 @@ export declare const calculateTotalLeafs: (nodes: BestLineNode[]) => number;
 /**
  * Calculate number of unique positions analyzed
  */
-export declare const calculateUniquePositions: (nodes: BestLineNode[], analysis: BestLinesAnalysis) => number;
+export declare const calculateUniquePositions: (
+  nodes: BestLineNode[],
+  analysis: BestLinesAnalysis,
+) => number;

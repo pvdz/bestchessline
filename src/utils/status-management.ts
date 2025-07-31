@@ -3,7 +3,7 @@ import * as BestLines from "../tree-digger.js";
 
 /**
  * Status Management Utility Functions
- * 
+ *
  * Provides functions for updating status messages and progress displays.
  */
 
@@ -57,4 +57,4 @@ export function updateAnalysisStatus(message?: string): void {
   } else {
     statusElement.textContent = "Ready";
   }
-} 
+}

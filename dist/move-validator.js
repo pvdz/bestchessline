@@ -1,5 +1,5 @@
 import { createPieceTypeNotation, createPieceNotation, getPieceTypeFromNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
-import { getPieceColor, getPieceType, } from "./utils.js";
+import { getPieceColor, getPieceType } from "./utils.js";
 import { parseFEN, squareToCoords, coordsToSquare, isValidSquare, } from "./utils/fen-utils.js";
 // Constants for piece types
 export const PIECES = {

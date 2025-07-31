@@ -5,7 +5,7 @@ import { moveToNotation } from "./notation-utils.js";
 
 /**
  * Line Analysis Utility Functions
- * 
+ *
  * Provides functions for analyzing and formatting chess lines.
  */
 
@@ -101,4 +101,4 @@ export function getCompleteLine(node: BestLineNode): string {
   }
 
   return formattedLine;
-} 
+}

@@ -1,6 +1,6 @@
 /**
  * Logging Utility Functions
- * 
+ *
  * Provides controlled logging capabilities with enable/disable functionality.
  * These functions allow for debug logging that can be turned on/off as needed.
  */
@@ -29,4 +29,4 @@ export function logError(...args: unknown[]): void {
   if (loggingEnabled) {
     console.error(...args);
   }
-} 
+}

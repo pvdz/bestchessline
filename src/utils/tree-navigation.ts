@@ -6,7 +6,7 @@ import { updateMoveList } from "./game-navigation.js";
 
 /**
  * Tree Navigation Utility Functions
- * 
+ *
  * Provides functions for navigating and manipulating tree structures.
  */
 
@@ -48,9 +48,7 @@ export function getPathToNode(
  * Apply a sequence of moves to the board, replacing the current game
  * @param moves Array of BestLineNode moves to apply
  */
-export function applyMovesToBoard(
-  moves: BestLineNode[],
-): void {
+export function applyMovesToBoard(moves: BestLineNode[]): void {
   // Clear any existing branch
   clearBranch();
 
@@ -79,4 +77,4 @@ export function applyMovesToBoard(
 
   // Update the UI
   updateMoveList();
-} 
+}

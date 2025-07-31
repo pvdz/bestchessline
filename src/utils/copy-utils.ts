@@ -5,7 +5,7 @@ import * as BestLines from "../tree-digger.js";
 
 /**
  * Copy and Export Utility Functions
- * 
+ *
  * Provides functions for copying and exporting tree data.
  */
 
@@ -140,4 +140,4 @@ export function generateAllLines(nodes: BestLineNode[]): string {
 
   console.log(`Total lines generated: ${lineCount}`);
   return result;
-} 
+}

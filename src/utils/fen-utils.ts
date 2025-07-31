@@ -1,12 +1,8 @@
-import {
-  ChessPosition,
-  Square,
-  PlayerColor,
-} from "../types.js";
+import { ChessPosition, Square, PlayerColor } from "../types.js";
 
 /**
  * FEN Utility Functions
- * 
+ *
  * Provides functions for parsing and manipulating FEN (Forsyth-Edwards Notation) strings,
  * coordinate conversion between chess squares and array indices, and square validation.
  */
@@ -127,4 +123,4 @@ export function isValidSquare(square: string): square is Square {
   const file = square[0];
   const rank = square[1];
   return file >= "a" && file <= "h" && rank >= "1" && rank <= "8";
-} 
+}

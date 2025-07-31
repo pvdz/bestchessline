@@ -5,20 +5,10 @@ import {
   ChessMove,
   PLAYER_COLORS,
 } from "./types.js";
-import {
-  showToast,
-} from "./utils/ui-utils.js";
-import {
-  compareAnalysisMoves,
-} from "./utils/analysis-utils.js";
-import {
-  parseFEN,
-  squareToCoords,
-} from "./utils/fen-utils.js";
-import {
-  log,
-  logError,
-} from "./utils/logging.js";
+import { showToast } from "./utils/ui-utils.js";
+import { compareAnalysisMoves } from "./utils/analysis-utils.js";
+import { parseFEN, squareToCoords } from "./utils/fen-utils.js";
+import { log, logError } from "./utils/logging.js";
 import {
   querySelectorHTMLElement,
   querySelectorButton,
@@ -476,7 +466,7 @@ const parseInfoMessage = (message: string): void => {
     }),
   );
 
-      // Dispatch PV line update event for tree digger tracking (for backward compatibility)
+  // Dispatch PV line update event for tree digger tracking (for backward compatibility)
   if (pv.length > 0) {
     window.dispatchEvent(
       new CustomEvent("stockfish-pv-line", {
@@ -740,4 +730,4 @@ export const stopAnalysis = (): void => {
  * Check if currently analyzing
  */
 export const isAnalyzingPosition = (): boolean => stockfishState.isAnalyzing;
-  stockfishState.currentAnalysis;
+stockfishState.currentAnalysis;

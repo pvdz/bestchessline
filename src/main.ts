@@ -6,32 +6,14 @@ import {
   TreeDiggerAnalysis,
   PLAYER_COLORS,
 } from "./types.js";
-import {
-  setGlobalCurrentMoveIndex,
-} from "./utils.js";
-import {
-  showToast,
-  updateTreeFontSize,
-} from "./utils/ui-utils.js";
-import {
-  formatScoreWithMateIn,
-} from "./utils/formatting-utils.js";
-import {
-  compareAnalysisMoves,
-} from "./utils/analysis-utils.js";
-import {
-  applyMoveToFEN,
-} from "./utils/fen-manipulation.js";
-import {
-  moveToNotation,
-} from "./utils/notation-utils.js";
-import {
-  parseFEN,
-} from "./utils/fen-utils.js";
-import {
-  log,
-  logError,
-} from "./utils/logging.js";
+import { setGlobalCurrentMoveIndex } from "./utils.js";
+import { showToast, updateTreeFontSize } from "./utils/ui-utils.js";
+import { formatScoreWithMateIn } from "./utils/formatting-utils.js";
+import { compareAnalysisMoves } from "./utils/analysis-utils.js";
+import { applyMoveToFEN } from "./utils/fen-manipulation.js";
+import { moveToNotation } from "./utils/notation-utils.js";
+import { parseFEN } from "./utils/fen-utils.js";
+import { log, logError } from "./utils/logging.js";
 import {
   getInputElement,
   getTextAreaElement,
@@ -39,28 +21,13 @@ import {
   getCheckedRadioByName,
 } from "./utils/dom-helpers.js";
 
-import {
-  formatNodeScore,
-} from "./utils/node-utils.js";
-import {
-  highlightLastMove,
-} from "./utils/board-utils.js";
-import {
-  clearTreeNodeDOMMap,
-} from "./utils/debug-utils.js";
-import {
-  initializeCopyButton,
-} from "./utils/copy-utils.js";
-import {
-  getLineCompletion,
-} from "./utils/line-analysis.js";
-import {
-  formatPVWithEffects,
-  updateResultsPanel,
-} from "./utils/pv-utils.js";
-import {
-  updateStatus,
-} from "./utils/status-utils.js";
+import { formatNodeScore } from "./utils/node-utils.js";
+import { highlightLastMove } from "./utils/board-utils.js";
+import { clearTreeNodeDOMMap } from "./utils/debug-utils.js";
+import { initializeCopyButton } from "./utils/copy-utils.js";
+import { getLineCompletion } from "./utils/line-analysis.js";
+import { formatPVWithEffects, updateResultsPanel } from "./utils/pv-utils.js";
+import { updateStatus } from "./utils/status-utils.js";
 import {
   updateFENInput,
   updateControlsFromPosition,
@@ -73,12 +40,8 @@ import {
   navigateToMove,
   applyMovesUpToIndex,
 } from "./utils/navigation-utils.js";
-import {
-  updateNavigationButtons,
-} from "./utils/button-utils.js";
-import {
-  handleTreeNodeClick,
-} from "./utils/tree-debug-utils.js";
+import { updateNavigationButtons } from "./utils/button-utils.js";
+import { handleTreeNodeClick } from "./utils/tree-debug-utils.js";
 import {
   updateThreadsInputForFallbackMode,
   updateTreeDiggerThreadsForFallbackMode,
@@ -91,9 +54,7 @@ import {
   updateTreeDiggerStatus,
   updateAnalysisStatus,
 } from "./utils/status-management.js";
-import {
-  updateTreeDiggerResults,
-} from "./utils/tree-digger-results.js";
+import { updateTreeDiggerResults } from "./utils/tree-digger-results.js";
 import {
   addMove,
   importGame,
@@ -121,12 +82,14 @@ import {
   renderTreeDiggerNode,
 } from "./utils/tree-digger-manager.js";
 
-import { buildShadowTree, findNodeById, UITreeNode } from "./utils/tree-building.js";
-
-
+import {
+  buildShadowTree,
+  findNodeById,
+  UITreeNode,
+} from "./utils/tree-building.js";
 
 import * as Board from "./chess-board.js";
-import {clearLastMoveHighlight, makeMove } from "./chess-board.js";
+import { clearLastMoveHighlight, makeMove } from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
 import * as BestLines from "./tree-digger.js";
@@ -272,7 +235,6 @@ export const initializeApp = (): void => {
 
   log("Application initialized successfully");
 };
-
 
 // ============================================================================
 // EVENT LISTENERS
@@ -600,14 +562,14 @@ const initializeEventListeners = (): void => {
       eventTrackingState.lastEventTime = now;
 
       // Update immediately
-          updateTreeDiggerStatus();
-    updateTreeDiggerResults();
-    updateTreeDiggerButtonStates();
+      updateTreeDiggerStatus();
+      updateTreeDiggerResults();
+      updateTreeDiggerButtonStates();
     }, 200);
   };
 
   // Listen for Stockfish events to trigger UI updates
-    window.addEventListener("stockfish-pv-update", debouncedTreeDiggerUpdate);
+  window.addEventListener("stockfish-pv-update", debouncedTreeDiggerUpdate);
   window.addEventListener("stockfish-pv-line", debouncedTreeDiggerUpdate);
   window.addEventListener("stockfish-info-update", debouncedTreeDiggerUpdate);
   window.addEventListener(
@@ -686,24 +648,9 @@ const initializePositionControls = (): void => {
 // ANALYSIS FUNCTIONS
 // ============================================================================
 
-
-
 // ============================================================================
 // TREE DIGGER ANALYSIS FUNCTIONS
 // ============================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ============================================================================
 // RESULTS MANAGEMENT
@@ -913,8 +860,6 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
   addPVClickListeners();
 };
 
-
-
 // ============================================================================
 // MOVE HOVER EVENTS
 // ============================================================================
@@ -1021,5 +966,3 @@ window.addEventListener("move-parse-warning", (event: Event) => {
     }
   }
 });
-
-

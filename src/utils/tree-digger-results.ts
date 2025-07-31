@@ -1,11 +1,11 @@
 import * as BestLines from "../tree-digger.js";
 import { getStartingPlayer } from "../utils.js";
-import { 
-  getThreadCount, 
-  getDepthScaler, 
-  getFirstReplyOverride, 
+import {
+  getThreadCount,
+  getDepthScaler,
+  getFirstReplyOverride,
   getSecondReplyOverride,
-  getResponderMovesCount
+  getResponderMovesCount,
 } from "./ui-getters.js";
 import { TreeDiggerAnalysis } from "../types.js";
 import { getEventTrackingState } from "../main.js";
@@ -14,7 +14,7 @@ import { renderProgressBoard } from "./board-rendering.js";
 
 /**
  * Tree Digger Results Management Utility Functions
- * 
+ *
  * Provides functions for managing tree digger results display and progress.
  */
 
@@ -62,16 +62,17 @@ export function updateTreeDiggerProgress(
     analysis,
   );
   const eventTrackingState = getEventTrackingState();
-  
+
   // Calculate events per second from recent data
   const now = Date.now();
   const timeSinceRecentStart = now - eventTrackingState.recentStartTime;
   const timeWindow = Math.min(timeSinceRecentStart, 1000);
-  const eventsPerSecond = !isAnalyzing || analysis?.isComplete
-    ? 0
-    : timeWindow > 0
-      ? Math.round(eventTrackingState.recentCount / (timeWindow / 1000))
-      : 0;
+  const eventsPerSecond =
+    !isAnalyzing || analysis?.isComplete
+      ? 0
+      : timeWindow > 0
+        ? Math.round(eventTrackingState.recentCount / (timeWindow / 1000))
+        : 0;
 
   // Get configuration values
   const depthScaler = getDepthScaler();
@@ -85,16 +86,19 @@ export function updateTreeDiggerProgress(
 
   if (firstReplyOverride > 0 || secondReplyOverride > 0) {
     // Recalculate with overrides
-    const firstReply = firstReplyOverride > 0 ? firstReplyOverride : responderMovesCount;
-    const secondReply = secondReplyOverride > 0 ? secondReplyOverride : responderMovesCount;
-    
-    totalPositionsWithOverrides = 1 + 2 * firstReply + 2 * Math.pow(secondReply, 2);
-    
+    const firstReply =
+      firstReplyOverride > 0 ? firstReplyOverride : responderMovesCount;
+    const secondReply =
+      secondReplyOverride > 0 ? secondReplyOverride : responderMovesCount;
+
+    totalPositionsWithOverrides =
+      1 + 2 * firstReply + 2 * Math.pow(secondReply, 2);
+
     // Add remaining terms
     for (let n = 3; n <= Math.floor(depthScaler / 2); n++) {
       totalPositionsWithOverrides += 2 * Math.pow(responderMovesCount, n);
     }
-    
+
     overrideExplanation = ` (with overrides: 1st reply=${firstReply}, 2nd reply=${secondReply})`;
   }
 
@@ -199,8 +203,10 @@ export function updateTreeDiggerProgress(
   progressSection.innerHTML = html;
 
   // Render the progress board
-  const progressBoardElement = progressSection.querySelector("#progress-board") as HTMLElement;
+  const progressBoardElement = progressSection.querySelector(
+    "#progress-board",
+  ) as HTMLElement;
   if (progressBoardElement) {
     renderProgressBoard(progressBoardElement, analysis.rootFen);
   }
-} 
+}

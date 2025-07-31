@@ -12,7 +12,7 @@ import { toFEN } from "./fen-utils.js";
 
 /**
  * Position Control Utility Functions
- * 
+ *
  * Provides functions for managing FEN input and position controls.
  */
 
@@ -271,14 +271,14 @@ export const updatePositionEvaluationDisplay = (): void => {
   } else {
     // Convert centipawns to pawns and format
     const scoreInPawns = score / 100;
-    displayText = score > 0
-      ? `+${scoreInPawns.toFixed(1)}`
-      : `${scoreInPawns.toFixed(1)}`;
-    className = score > 0
-      ? "evaluation-button positive"
-      : score < 0
-      ? "evaluation-button negative"
-      : "evaluation-button neutral";
+    displayText =
+      score > 0 ? `+${scoreInPawns.toFixed(1)}` : `${scoreInPawns.toFixed(1)}`;
+    className =
+      score > 0
+        ? "evaluation-button positive"
+        : score < 0
+          ? "evaluation-button negative"
+          : "evaluation-button neutral";
   }
 
   evaluationButton.textContent = displayText;

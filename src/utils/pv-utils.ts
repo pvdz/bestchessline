@@ -13,7 +13,7 @@ import { getAppState, actuallyUpdateResultsPanel } from "../main.js";
 
 /**
  * Principal Variation Utility Functions
- * 
+ *
  * Provides functions for formatting and handling principal variations.
  */
 
@@ -125,9 +125,7 @@ let queuedMoves: AnalysisMove[] = [];
  * Update results panel with debouncing
  * @param moves Array of analysis moves to display
  */
-export function updateResultsPanel(
-  moves: AnalysisMove[],
-): void {
+export function updateResultsPanel(moves: AnalysisMove[]): void {
   queuedMoves = moves;
   if (analysisUpdateTimeout) {
     return;
@@ -139,4 +137,4 @@ export function updateResultsPanel(
     analysisUpdateTimeout = null;
     queuedMoves = [];
   }, 100);
-} 
+}

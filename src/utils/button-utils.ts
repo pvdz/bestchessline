@@ -3,7 +3,7 @@ import { getAppState } from "../main.js";
 
 /**
  * Button Utility Functions
- * 
+ *
  * Provides functions for managing button states and interactions.
  */
 
@@ -21,4 +21,4 @@ export function updateNavigationButtons(): void {
   if (nextBtn) {
     nextBtn.disabled = appState.currentMoveIndex >= appState.moves.length - 1;
   }
-} 
+}

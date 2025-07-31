@@ -1,6 +1,6 @@
 /**
  * Formatting Utility Functions
- * 
+ *
  * Provides functions for formatting scores, times, and other display-related
  * utilities for the chess application.
  */

@@ -10,10 +10,7 @@ import {
   getColorFromNotation,
   PLAYER_COLORS,
 } from "./types.js";
-import {
-  getPieceColor,
-  getPieceType,
-} from "./utils.js";
+import { getPieceColor, getPieceType } from "./utils.js";
 import {
   parseFEN,
   squareToCoords,
@@ -143,7 +140,6 @@ function createEmptyEffect(): MoveEffect {
     isEnPassant: false,
   };
 }
-
 
 /**
  * Checks if a move is legal for the piece type (basic rules only)

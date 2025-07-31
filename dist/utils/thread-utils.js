@@ -1,4 +1,4 @@
-import { getInputElement, querySelectorHTMLElementBySelector } from "./dom-helpers.js";
+import { getInputElement, querySelectorHTMLElementBySelector, } from "./dom-helpers.js";
 import * as Stockfish from "../stockfish-client.js";
 /**
  * Thread Management Utility Functions

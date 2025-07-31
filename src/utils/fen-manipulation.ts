@@ -1,14 +1,15 @@
+import { ChessPosition, ChessMove, PLAYER_COLORS } from "../types.js";
 import {
-  ChessPosition,
-  ChessMove,
-  PLAYER_COLORS,
-} from "../types.js";
-import { parseFEN, toFEN, squareToCoords, coordsToSquare } from "./fen-utils.js";
+  parseFEN,
+  toFEN,
+  squareToCoords,
+  coordsToSquare,
+} from "./fen-utils.js";
 import { PIECE_TYPES } from "./notation-utils.js";
 
 /**
  * FEN Manipulation Functions
- * 
+ *
  * Provides functions for manipulating FEN strings, including applying moves
  * and updating position state.
  */
@@ -87,4 +88,4 @@ export function applyMoveToFEN(fen: string, move: ChessMove): string {
   };
 
   return toFEN(newPosition);
-} 
+}

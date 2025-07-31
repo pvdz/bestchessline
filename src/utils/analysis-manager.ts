@@ -1,4 +1,10 @@
-import { AnalysisResult, AnalysisMove, ChessMove, PLAYER_COLORS, PieceFormat } from "../types.js";
+import {
+  AnalysisResult,
+  AnalysisMove,
+  ChessMove,
+  PLAYER_COLORS,
+  PieceFormat,
+} from "../types.js";
 import { getAppState, updateAppState } from "../main.js";
 import { parseFEN } from "./fen-utils.js";
 import { validateMove } from "../move-validator.js";
@@ -13,7 +19,11 @@ import { updateResultsPanel, formatPVWithEffects } from "./pv-utils.js";
 import { updatePositionEvaluationDisplay } from "./position-controls.js";
 import { addMove, updateMoveList } from "./game-navigation.js";
 import { updateNavigationButtons } from "./button-utils.js";
-import { updateFENInput, updateControlsFromPosition, resetPositionEvaluation } from "./position-controls.js";
+import {
+  updateFENInput,
+  updateControlsFromPosition,
+  resetPositionEvaluation,
+} from "./position-controls.js";
 import { createBranch } from "../main.js";
 import * as Board from "../chess-board.js";
 import * as Stockfish from "../stockfish-client.js";
@@ -24,7 +34,7 @@ import { clearLastMoveHighlight } from "../chess-board.js";
 
 /**
  * Analysis Management Utility Functions
- * 
+ *
  * Provides functions for managing Stockfish analysis, results display, and move interactions.
  */
 
@@ -55,17 +65,19 @@ export function startAnalysis(): Promise<void> {
       updateResults(analysisResult);
       updateButtonStates();
     },
-  ).then((result) => {
-    updateAppState({
-      currentResults: result,
-      isAnalyzing: false,
+  )
+    .then((result) => {
+      updateAppState({
+        currentResults: result,
+        isAnalyzing: false,
+      });
+      updateButtonStates();
+    })
+    .catch((error) => {
+      logError("Analysis failed:", error);
+      updateAppState({ isAnalyzing: false });
+      updateButtonStates();
     });
-    updateButtonStates();
-  }).catch((error) => {
-    logError("Analysis failed:", error);
-    updateAppState({ isAnalyzing: false });
-    updateButtonStates();
-  });
 }
 
 /**
@@ -113,7 +125,8 @@ export function actuallyUpdateResultsPanel(moves: AnalysisMove[]): void {
 
   // Convert format values to match moveToNotation parameters
   const notationType = notationFormat === "algebraic-short" ? "short" : "long";
-  const pieceType: PieceFormat = pieceFormat === "symbols" ? "unicode" : "english";
+  const pieceType: PieceFormat =
+    pieceFormat === "symbols" ? "unicode" : "english";
 
   // Filter moves based on analysis criteria
   const appState = getAppState();
@@ -378,9 +391,7 @@ function handlePVClick(e: Event): void {
       }
 
       if (!matchingResult) {
-        logError(
-          "Could not find matching analysis result for clicked move",
-        );
+        logError("Could not find matching analysis result for clicked move");
         return;
       }
 
@@ -470,4 +481,4 @@ export function handleMakeEngineMove(move: AnalysisMove): void {
     updateControlsFromPosition();
     highlightLastMove(move.move);
   }
-} 
+}

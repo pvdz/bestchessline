@@ -1,6 +1,6 @@
 /**
  * Analysis Utility Functions
- * 
+ *
  * Provides functions for analyzing chess moves, comparing scores,
  * and calculating position counts for tree analysis.
  */
@@ -70,4 +70,4 @@ export function calculateTotalPositionsWithOverrides(
   }
 
   return total;
-} 
+}

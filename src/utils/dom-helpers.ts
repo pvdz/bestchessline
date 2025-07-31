@@ -1,6 +1,6 @@
 /**
  * DOM Element Helper Functions
- * 
+ *
  * Provides type-safe ways to get DOM elements with proper type checking.
  * These functions replace unsafe type casts and provide better error handling.
  */
@@ -45,9 +45,7 @@ export function getCheckedRadio(
 /**
  * Safely get all radio buttons by name
  */
-function getAllRadios(
-  name: string,
-): NodeListOf<HTMLInputElement> | null {
+function getAllRadios(name: string): NodeListOf<HTMLInputElement> | null {
   const elements = document.querySelectorAll(`input[name="${name}"]`);
   return elements.length > 0
     ? (elements as NodeListOf<HTMLInputElement>)
@@ -91,9 +89,7 @@ function getElementById<T extends Element>(id: string): T | null {
 /**
  * Check if an element is an HTMLElement
  */
-function isHTMLElement(
-  element: EventTarget | null,
-): element is HTMLElement {
+function isHTMLElement(element: EventTarget | null): element is HTMLElement {
   return element instanceof HTMLElement;
 }
 
@@ -163,4 +159,4 @@ export function querySelectorHTMLElementBySelector(
 ): HTMLElement | null {
   const element = document.querySelector(selector);
   return element instanceof HTMLElement ? element : null;
-} 
+}

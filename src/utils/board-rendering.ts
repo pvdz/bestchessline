@@ -3,14 +3,17 @@ import { createPieceNotation, getColorFromNotation } from "../types.js";
 
 /**
  * Board Rendering Utility Functions
- * 
+ *
  * Provides functions for rendering chess boards in various contexts.
  */
 
 /**
  * Render a small board for the progress panel
  */
-export function renderProgressBoard(boardElement: HTMLElement, fen: string): void {
+export function renderProgressBoard(
+  boardElement: HTMLElement,
+  fen: string,
+): void {
   try {
     const position = parseFEN(fen);
     let html = "";
@@ -40,4 +43,4 @@ export function renderProgressBoard(boardElement: HTMLElement, fen: string): voi
     boardElement.innerHTML =
       '<div style="padding: 20px; text-align: center; color: #666;">Invalid position</div>';
   }
-} 
+}

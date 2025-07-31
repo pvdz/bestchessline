@@ -7,12 +7,8 @@ import {
   createPieceNotation,
   PLAYER_COLORS,
 } from "./types.js";
-import {
-  formatScoreWithMateIn,
-} from "./utils/formatting-utils.js";
-import {
-  getPieceSymbol,
-} from "./utils/notation-utils.js";
+import { formatScoreWithMateIn } from "./utils/formatting-utils.js";
+import { getPieceSymbol } from "./utils/notation-utils.js";
 import {
   parseFEN,
   toFEN,
@@ -25,7 +21,6 @@ import {
   positionArrow,
   getArrowElements,
 } from "./utils/arrow-utils.js";
-
 
 // ============================================================================
 // BOARD STATE MANAGEMENT
@@ -101,7 +96,10 @@ const updateDragState = (updates: Partial<DragState>): void => {
 /**
  * Initialize chess board
  */
-export const initializeBoard = (element: HTMLElement, initialFEN?: string): void => {
+export const initializeBoard = (
+  element: HTMLElement,
+  initialFEN?: string,
+): void => {
   const fen =
     initialFEN || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   updateBoardState({

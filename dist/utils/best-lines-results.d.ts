@@ -11,4 +11,7 @@ export declare function updateBestLinesResults(): void;
 /**
  * Update progress section
  */
-export declare function updateBestLinesProgress(resultsElement: HTMLElement, analysis: BestLinesAnalysis): void;
+export declare function updateBestLinesProgress(
+  resultsElement: HTMLElement,
+  analysis: BestLinesAnalysis,
+): void;

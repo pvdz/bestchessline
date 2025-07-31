@@ -32,9 +32,7 @@ import {
   canKingMoveTo,
   selectCorrectMove,
 } from "./utils/move-parser.js";
-import {
-  PIECE_TYPES,
-} from "./utils/notation-utils.js";
+import { PIECE_TYPES } from "./utils/notation-utils.js";
 
 export function getPieceColor(piece: PieceNotation): ColorNotation {
   return piece === piece.toUpperCase()

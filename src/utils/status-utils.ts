@@ -1,6 +1,6 @@
 /**
  * Status and Event Utility Functions
- * 
+ *
  * Provides functions for updating status messages and managing events.
  */
 
@@ -14,5 +14,3 @@ export function updateStatus(message: string): void {
     statusElement.textContent = message;
   }
 }
-
- 

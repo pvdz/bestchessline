@@ -1,6 +1,6 @@
 import * as BestLines from "../tree-digger.js";
 import { getStartingPlayer } from "../utils.js";
-import { getThreadCount, getDepthScaler, getFirstReplyOverride, getSecondReplyOverride, getResponderMovesCount } from "./ui-getters.js";
+import { getThreadCount, getDepthScaler, getFirstReplyOverride, getSecondReplyOverride, getResponderMovesCount, } from "./ui-getters.js";
 import { getEventTrackingState } from "../main.js";
 import { updateTreeDiggerTreeIncrementally } from "./tree-digger-manager.js";
 import { renderProgressBoard } from "./board-rendering.js";
@@ -62,7 +62,8 @@ export function updateTreeDiggerProgress(resultsElement, analysis) {
         // Recalculate with overrides
         const firstReply = firstReplyOverride > 0 ? firstReplyOverride : responderMovesCount;
         const secondReply = secondReplyOverride > 0 ? secondReplyOverride : responderMovesCount;
-        totalPositionsWithOverrides = 1 + 2 * firstReply + 2 * Math.pow(secondReply, 2);
+        totalPositionsWithOverrides =
+            1 + 2 * firstReply + 2 * Math.pow(secondReply, 2);
         // Add remaining terms
         for (let n = 3; n <= Math.floor(depthScaler / 2); n++) {
             totalPositionsWithOverrides += 2 * Math.pow(responderMovesCount, n);

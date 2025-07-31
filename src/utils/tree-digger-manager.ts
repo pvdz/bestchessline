@@ -16,7 +16,7 @@ import * as BestLines from "../tree-digger.js";
 
 /**
  * Tree Digger Analysis Management Utility Functions
- * 
+ *
  * Provides functions for managing tree digger analysis, UI updates, and tree rendering.
  */
 
@@ -141,8 +141,10 @@ export const updateTreeNodeElement = (
   const isTransposition =
     node.children.length === 0 &&
     analysis.analyzedPositions.has(positionAfterMove);
-  
-  const transpositionIndicator = element.querySelector(".transposition-indicator") as HTMLElement;
+
+  const transpositionIndicator = element.querySelector(
+    ".transposition-indicator",
+  ) as HTMLElement;
   if (transpositionIndicator) {
     if (isTransposition) {
       transpositionIndicator.textContent = "🔄";
@@ -247,7 +249,7 @@ export const updateTreeDiggerTreeIncrementally = (
     treeSection = document.createElement("div");
     treeSection.className = "tree-digger-tree";
     resultsElement.appendChild(treeSection);
-    
+
     // Apply current font size to newly created tree section
     const treeFontSizeInput = document.getElementById(
       "tree-font-size",
@@ -268,7 +270,9 @@ export const updateTreeDiggerTreeIncrementally = (
   }
 
   // Remove empty message if it exists
-  const emptyMessage = treeSection.querySelector("#tree-digger-tree-empty-message");
+  const emptyMessage = treeSection.querySelector(
+    "#tree-digger-tree-empty-message",
+  );
   if (emptyMessage) {
     emptyMessage.remove();
   }
@@ -402,4 +406,4 @@ export const renderTreeDiggerNode = (node: BestLineNode): string => {
 
   html += "</div>";
   return html;
-}; 
+};

@@ -17,18 +17,10 @@ import {
   compareAnalysisMoves,
   calculateTotalPositionsWithOverrides,
 } from "./utils/analysis-utils.js";
-import {
-  applyMoveToFEN,
-} from "./utils/fen-manipulation.js";
-import {
-  moveToNotation,
-} from "./utils/notation-utils.js";
-import {
-  parseSimpleMove,
-} from "./utils/move-parser.js";
-import {
-  parseFEN,
-} from "./utils/fen-utils.js";
+import { applyMoveToFEN } from "./utils/fen-manipulation.js";
+import { moveToNotation } from "./utils/notation-utils.js";
+import { parseSimpleMove } from "./utils/move-parser.js";
+import { parseFEN } from "./utils/fen-utils.js";
 import {
   getDepthScaler,
   getResponderMovesCount,
@@ -37,10 +29,7 @@ import {
   getFirstReplyOverride,
   getSecondReplyOverride,
 } from "./utils/ui-getters.js";
-import {
-  log,
-  logError,
-} from "./utils/logging.js";
+import { log, logError } from "./utils/logging.js";
 import * as Stockfish from "./stockfish-client.js";
 import * as Board from "./chess-board.js";
 

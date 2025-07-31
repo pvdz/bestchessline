@@ -3,7 +3,7 @@ import { clearLastMoveHighlight } from "../chess-board.js";
 
 /**
  * Board Utility Functions
- * 
+ *
  * Provides functions for board-related operations like highlighting moves.
  */
 

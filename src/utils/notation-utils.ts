@@ -12,7 +12,7 @@ import { parseFEN } from "./fen-utils.js";
 
 /**
  * Chess Notation Utility Functions
- * 
+ *
  * Provides functions for converting chess moves to various notation formats,
  * handling piece symbols, and formatting principal variations (PV).
  */
@@ -189,5 +189,7 @@ function getPieceType(piece: PieceNotation): PieceTypeNotation {
  * Helper function to get piece color from notation
  */
 function getPieceColor(piece: PieceNotation): ColorNotation {
-  return piece === piece.toUpperCase() ? createColorNotation("w") : createColorNotation("b");
-} 
+  return piece === piece.toUpperCase()
+    ? createColorNotation("w")
+    : createColorNotation("b");
+}

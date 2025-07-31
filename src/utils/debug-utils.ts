@@ -6,7 +6,7 @@ import * as BestLines from "../tree-digger.js";
 
 /**
  * Debug Utility Functions
- * 
+ *
  * Provides functions for debugging and logging tree structures.
  */
 
@@ -25,7 +25,10 @@ export function clearTreeNodeDOMMap(): void {
  * @param nodes Array of nodes to log
  * @param depth Current depth in the tree (default: 0)
  */
-export function logTreeStructure(nodes: BestLineNode[], depth: number = 0): void {
+export function logTreeStructure(
+  nodes: BestLineNode[],
+  depth: number = 0,
+): void {
   for (const node of nodes) {
     const indent = "  ".repeat(depth);
     const moveText = moveToNotation(node.move);
@@ -80,4 +83,4 @@ export function debugTreeDiggerStart(): void {
     console.log("No current analysis found");
   }
   console.log("=== End Debug Info ===");
-} 
+}

@@ -4,7 +4,7 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
 
 /**
  * Node Utility Functions
- * 
+ *
  * Provides functions for formatting and manipulating tree nodes.
  */
 
@@ -71,4 +71,4 @@ export function formatNodeScore(node: BestLineNode): string {
   }
 
   return ` (${currentScore}${deltaText})`;
-} 
+}

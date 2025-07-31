@@ -1,6 +1,6 @@
 /**
  * UI Getter Functions
- * 
+ *
  * Provides functions to retrieve values from UI elements and controls.
  * These functions handle both input values and display span values with fallbacks.
  */
@@ -133,4 +133,4 @@ export function getSecondReplyOverride(): number {
 
   // Fall back to input value
   return overrideInput ? parseInt(overrideInput.value) : 0;
-} 
+}

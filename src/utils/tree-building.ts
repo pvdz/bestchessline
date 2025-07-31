@@ -5,7 +5,7 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
 
 /**
  * Tree Building Utility Functions
- * 
+ *
  * Provides functions for building and managing tree structures.
  */
 
@@ -142,4 +142,4 @@ function createTreeNodeElement(
   element.appendChild(moveInfo);
 
   return element;
-} 
+}

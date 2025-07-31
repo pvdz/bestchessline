@@ -1,15 +1,15 @@
-import {
-  ChessMove,
-  PieceNotation,
-  PLAYER_COLORS,
-} from "../types.js";
+import { ChessMove, PieceNotation, PLAYER_COLORS } from "../types.js";
 import { parseFEN, squareToCoords, coordsToSquare } from "./fen-utils.js";
-import { getPieceTypeFromNotation, getColorFromNotation, createPieceNotation } from "../types.js";
+import {
+  getPieceTypeFromNotation,
+  getColorFromNotation,
+  createPieceNotation,
+} from "../types.js";
 import { logError } from "./logging.js";
 
 /**
  * Move Parser and Validation Functions
- * 
+ *
  * Provides functions for parsing chess moves from notation and validating
  * whether pieces can move from one square to another.
  */
@@ -558,4 +558,4 @@ export function selectCorrectMove(
  */
 function getPieceColor(piece: PieceNotation): "w" | "b" {
   return piece === piece.toUpperCase() ? "w" : "b";
-} 
+}

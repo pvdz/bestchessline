@@ -1,17 +1,16 @@
-import {
-  ChessMove,
-  PLAYER_COLORS,
-  createPieceNotation,
-} from "../types.js";
+import { ChessMove, PLAYER_COLORS, createPieceNotation } from "../types.js";
 import { parseFEN } from "./fen-utils.js";
-import { findFromSquare, findFromSquareWithDisambiguation } from "./move-parser.js";
+import {
+  findFromSquare,
+  findFromSquareWithDisambiguation,
+} from "./move-parser.js";
 import { validateMove, PIECES } from "../move-validator.js";
 import { log } from "./logging.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 
 /**
  * Move Parsing Utility Functions
- * 
+ *
  * Provides functions for parsing chess notation, importing games,
  * and converting between different move formats.
  */
@@ -19,7 +18,10 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
 /**
  * Parse individual move from algebraic notation
  */
-export function parseMove(moveText: string, currentFEN: string): ChessMove | null {
+export function parseMove(
+  moveText: string,
+  currentFEN: string,
+): ChessMove | null {
   log("Parsing move:", moveText, "from FEN:", currentFEN);
 
   const position = parseFEN(currentFEN);
@@ -121,7 +123,10 @@ export function parseMove(moveText: string, currentFEN: string): ChessMove | nul
 /**
  * Parse game notation into moves
  */
-export function parseGameNotation(notation: string, initialFEN: string): ChessMove[] {
+export function parseGameNotation(
+  notation: string,
+  initialFEN: string,
+): ChessMove[] {
   // Clean the notation
   let cleanNotation = notation
     .replace(/\{[^}]*\}/g, "") // Remove comments
@@ -174,4 +179,4 @@ export function parseGameNotation(notation: string, initialFEN: string): ChessMo
   }
 
   return moves;
-} 
+}

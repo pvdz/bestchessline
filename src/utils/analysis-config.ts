@@ -5,7 +5,7 @@ import { AnalysisOptions } from "../types.js";
 
 /**
  * Analysis Configuration Utility Functions
- * 
+ *
  * Provides functions for managing analysis configuration and button states.
  */
 
@@ -43,4 +43,4 @@ export function updateButtonStates(): void {
 
   if (startBtn) startBtn.disabled = isStockfishBusy;
   if (stopBtn) stopBtn.disabled = !appState.isAnalyzing;
-} 
+}

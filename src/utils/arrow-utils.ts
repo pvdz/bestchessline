@@ -1,6 +1,6 @@
 /**
  * Arrow Utility Functions
- * 
+ *
  * Provides functions for managing move arrows on the chess board.
  */
 
@@ -47,7 +47,11 @@ export function hideMoveArrow(arrowId?: string): void {
  * @param from The starting square
  * @param to The ending square
  */
-export function positionArrow(arrow: HTMLElement, from: string, to: string): void {
+export function positionArrow(
+  arrow: HTMLElement,
+  from: string,
+  to: string,
+): void {
   const fromElement = document.querySelector(`[data-square="${from}"]`);
   const toElement = document.querySelector(`[data-square="${to}"]`);
   const boardContainer = document.querySelector(
@@ -101,4 +105,4 @@ export function getArrowElements(): Map<string, HTMLElement> {
  */
 export function setArrowElements(elements: Map<string, HTMLElement>): void {
   arrowElements = elements;
-} 
+}

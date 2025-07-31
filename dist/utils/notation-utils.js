@@ -155,6 +155,8 @@ function getPieceType(piece) {
  * Helper function to get piece color from notation
  */
 function getPieceColor(piece) {
-    return piece === piece.toUpperCase() ? createColorNotation("w") : createColorNotation("b");
+    return piece === piece.toUpperCase()
+        ? createColorNotation("w")
+        : createColorNotation("b");
 }
 //# sourceMappingURL=notation-utils.js.map

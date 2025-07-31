@@ -1,5 +1,5 @@
-import { PLAYER_COLORS, } from "../types.js";
-import { parseFEN, toFEN, squareToCoords, coordsToSquare } from "./fen-utils.js";
+import { PLAYER_COLORS } from "../types.js";
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, } from "./fen-utils.js";
 import { PIECE_TYPES } from "./notation-utils.js";
 /**
  * FEN Manipulation Functions

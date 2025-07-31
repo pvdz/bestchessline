@@ -8,7 +8,7 @@ import { getCheckedRadioByName } from "./dom-helpers.js";
 import { log } from "./logging.js";
 import { navigateToMove, applyMovesUpToIndex } from "./navigation-utils.js";
 import { updateNavigationButtons } from "./button-utils.js";
-import { updateFENInput, updateControlsFromPosition, resetPositionEvaluation } from "./position-controls.js";
+import { updateFENInput, updateControlsFromPosition, resetPositionEvaluation, } from "./position-controls.js";
 import * as Board from "../chess-board.js";
 import { highlightLastMove } from "./board-utils.js";
 /**

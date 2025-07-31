@@ -1,6 +1,6 @@
 /**
  * UI Utility Functions
- * 
+ *
  * Provides functions for UI interactions, notifications, and utility
  * functions for user interface management.
  */
@@ -83,4 +83,4 @@ export function updateTreeFontSize(fontSize: number): void {
   if (treeFontSizeInput) {
     treeFontSizeInput.value = fontSize.toString();
   }
-} 
+}

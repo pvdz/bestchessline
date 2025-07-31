@@ -5,7 +5,7 @@ import { log } from "./logging.js";
 
 /**
  * Tree Debug Utility Functions
- * 
+ *
  * Provides functions for debugging tree structures and DOM verification.
  */
 
@@ -77,4 +77,4 @@ export function handleTreeNodeClick(
     applyMovesToBoard(path);
     log(`Applied ${path.length} moves to board from tree click`);
   }
-} 
+}

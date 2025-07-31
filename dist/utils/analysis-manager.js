@@ -1,4 +1,4 @@
-import { PLAYER_COLORS } from "../types.js";
+import { PLAYER_COLORS, } from "../types.js";
 import { getAppState, updateAppState } from "../main.js";
 import { parseFEN } from "./fen-utils.js";
 import { validateMove } from "../move-validator.js";
@@ -13,7 +13,7 @@ import { updateResultsPanel, formatPVWithEffects } from "./pv-utils.js";
 import { updatePositionEvaluationDisplay } from "./position-controls.js";
 import { addMove, updateMoveList } from "./game-navigation.js";
 import { updateNavigationButtons } from "./button-utils.js";
-import { updateFENInput, updateControlsFromPosition, resetPositionEvaluation } from "./position-controls.js";
+import { updateFENInput, updateControlsFromPosition, resetPositionEvaluation, } from "./position-controls.js";
 import { createBranch } from "../main.js";
 import * as Board from "../chess-board.js";
 import * as Stockfish from "../stockfish-client.js";
@@ -47,13 +47,15 @@ export function startAnalysis() {
         });
         updateResults(analysisResult);
         updateButtonStates();
-    }).then((result) => {
+    })
+        .then((result) => {
         updateAppState({
             currentResults: result,
             isAnalyzing: false,
         });
         updateButtonStates();
-    }).catch((error) => {
+    })
+        .catch((error) => {
         logError("Analysis failed:", error);
         updateAppState({ isAnalyzing: false });
         updateButtonStates();
