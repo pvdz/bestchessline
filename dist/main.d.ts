@@ -51,8 +51,4 @@ export declare const actuallyUpdateResultsPanel: (moves: AnalysisMove[]) => void
  * Clear the current branch
  */
 export declare const clearBranch: () => void;
-/**
- * Update move list display
- */
-export declare const updateMoveList: () => void;
 export {};

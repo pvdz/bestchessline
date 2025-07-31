@@ -8,7 +8,8 @@ import { highlightLastMove } from "./board-utils.js";
 import { updateStatus } from "./status-utils.js";
 import { updateNavigationButtons } from "./button-utils.js";
 import * as Board from "../chess-board.js";
-import { getAppState, clearBranch, updateAppState, updateMoveList } from "../main.js";
+import { getAppState, clearBranch, updateAppState } from "../main.js";
+import { updateMoveList } from "./game-navigation.js";
 
 /**
  * Navigation Utility Functions
