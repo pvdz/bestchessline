@@ -1025,8 +1025,8 @@ export function compareAnalysisMoves(a, b) {
   if (aIsMate && !bIsMate) return -1; // a is mate, b is not
   if (!aIsMate && bIsMate) return 1; // b is mate, a is not
   if (aIsMate && bIsMate) {
-    // Both are mate moves, prefer shorter mates (lower absolute score)
-    return a.depth - b.depth;
+    // Both are mate moves, prefer shorter mates (lower mateIn value)
+    return a.mateIn - b.mateIn;
   }
   // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.
   if (a.depth !== b.depth) return b.depth - a.depth;

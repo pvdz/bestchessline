@@ -310,10 +310,12 @@ export declare function compareAnalysisMoves(
   a: {
     score: number;
     depth: number;
+    mateIn: number;
   },
   b: {
     score: number;
     depth: number;
+    mateIn: number;
   },
 ): number;
 /**

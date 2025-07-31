@@ -148,6 +148,7 @@ const createNode = (
   isWhiteMove,
   moveNumber,
   parent,
+  mateIn,
 ) => {
   return {
     fen,
@@ -158,6 +159,7 @@ const createNode = (
     isWhiteMove,
     moveNumber,
     parent,
+    mateIn,
   };
 };
 /**
@@ -267,6 +269,8 @@ const processInitiatorMoves = async (fen, analysis) => {
       bestMove.depth,
       true,
       moveNumber,
+      undefined, // parent
+      bestMove.mateIn,
     );
     node.analysisResult = analysisResult;
     analysis.nodes.push(node);
@@ -300,6 +304,8 @@ const processResponderMoves = async (fen, analysis) => {
       analysisMove.depth,
       false,
       moveNumber,
+      undefined, // parent
+      analysisMove.mateIn,
     );
     node.analysisResult = analysisResult;
     analysis.nodes.push(node);
@@ -577,6 +583,7 @@ const processInitiatorMoveInTree = async (fen, analysis, parentNode, depth) => {
     true,
     moveNumber, // Use calculated move number
     parentNode || undefined,
+    bestMove.mateIn,
   );
   log(
     `Created analyzed white node with move number: ${node.moveNumber}, move: ${moveToNotation(node.move)}`,
@@ -734,6 +741,7 @@ const processResponderMovesInTree = async (
       false,
       moveNumber,
       parentNode || undefined,
+      analysisMove.mateIn,
     );
     log(
       `Created responder node with move number: ${node.moveNumber}, move: ${moveToNotation(node.move)}`,

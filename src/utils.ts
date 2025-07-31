@@ -1266,8 +1266,8 @@ export function getStartingPlayer(fen: string): PlayerColor {
  * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
  */
 export function compareAnalysisMoves(
-  a: { score: number; depth: number },
-  b: { score: number; depth: number },
+  a: { score: number; depth: number; mateIn: number },
+  b: { score: number; depth: number; mateIn: number },
 ): number {
   // Determine if moves are mate moves (score > 9000 indicates mate)
   const aIsMate = a.score > 9000;
@@ -1277,8 +1277,8 @@ export function compareAnalysisMoves(
   if (aIsMate && !bIsMate) return -1; // a is mate, b is not
   if (!aIsMate && bIsMate) return 1; // b is mate, a is not
   if (aIsMate && bIsMate) {
-    // Both are mate moves, prefer shorter mates (lower absolute score)
-    return a.depth - b.depth;
+    // Both are mate moves, prefer shorter mates (lower mateIn value)
+    return a.mateIn - b.mateIn;
   }
 
   // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.

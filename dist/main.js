@@ -337,12 +337,19 @@ const initializeEventListeners = () => {
     nextMoveBtn.addEventListener("click", () => nextMove());
   }
   // Load mate-in-4 position
-  const loadMateIn4Btn = document.getElementById("load-mate-in-4");
-  if (loadMateIn4Btn) {
-    loadMateIn4Btn.addEventListener("click", () => {
-      loadFENPosition("r4r1k/2p3R1/5pQ1/pp1b4/8/3P4/1q3PPP/5RK1 b - - 0 2");
+  document.getElementById("load-mate-in-4")?.addEventListener("click", () => {
+    loadFENPosition("r4r1k/2p3R1/5pQ1/pp1b4/8/3P4/1q3PPP/5RK1 b - - 0 2");
+  });
+  document
+    .getElementById("load-mate-in-1-black")
+    ?.addEventListener("click", () => {
+      loadFENPosition("r4rbk/2p3R1/5p1Q/pp6/8/3P4/5RPP/6K1 b - - 2 4");
     });
-  }
+  document
+    .getElementById("load-mate-in-1-white")
+    ?.addEventListener("click", () => {
+      loadFENPosition("r4r1k/2p3Rb/5p1Q/pp6/8/3P4/5RPP/6K1 w - - 3 5");
+    });
   // Analysis controls
   const startBtn = document.getElementById("start-analysis");
   const pauseBtn = document.getElementById("pause-analysis");
@@ -1702,8 +1709,8 @@ const actuallyUpdateResultsPanel = (moves) => {
   // First, separate mate lines from non-mate lines
   const mateLines = moves.filter((move) => Math.abs(move.score) >= 10000);
   const nonMateLines = moves.filter((move) => Math.abs(move.score) < 10000);
-  // Sort mate lines by score (best mate first)
-  mateLines.sort((a, b) => b.score - a.score);
+  // Sort mate lines using the updated comparison function that considers mateIn
+  mateLines.sort((a, b) => compareAnalysisMoves(a, b));
   // Sort non-mate lines by depth (descending), then by score (descending), then by multipv
   nonMateLines.sort((a, b) => {
     // For score comparison, use shared logic
@@ -1746,7 +1753,7 @@ const actuallyUpdateResultsPanel = (moves) => {
         ...visibleNonMatingMoves.map((move) => move.depth),
       );
     } else if (visibleMatingMoves.length > 0) {
-      lowestDepth = Math.max(...visibleMatingMoves.map((move) => move.depth));
+      lowestDepth = Math.max(...visibleMatingMoves.map((move) => move.mateIn));
     }
     // Check if we're in fallback mode
     const isFallback = Stockfish.isFallbackMode();
@@ -1799,7 +1806,7 @@ const actuallyUpdateResultsPanel = (moves) => {
     // Create JSON representation of the move for the tooltip (trimmed to first move only)
     const trimmedMove = {
       ...move,
-      pv: move.pv.length > 0 ? [move.pv[0], "(...)"] : [],
+      pv: move.pv.length > 0 ? [move.pv[0], `(... ${move.pv.length}x)`] : [],
     };
     const moveJson = JSON.stringify(trimmedMove, null, 2)
       .replace(/"/g, "&quot;")

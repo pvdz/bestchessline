@@ -414,6 +414,8 @@ const parseInfoMessage = (message) => {
         move.move.to === firstMove.to &&
         move.move.piece === firstMove.piece,
     );
+    // Calculate mateIn for mate moves (actual moves required, not depth)
+    const mateIn = score >= 10000 ? pv.length : 0;
     const analysisMove = {
       move: firstMove,
       score,
@@ -422,6 +424,7 @@ const parseInfoMessage = (message) => {
       nodes,
       time,
       multipv, // Add multipv to track which variation this is
+      mateIn, // Actual number of moves required for mate
     };
     if (existingMoveIndex >= 0) {
       // Update existing move with new depth and score

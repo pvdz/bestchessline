@@ -35,6 +35,7 @@ export interface AnalysisMove {
   nodes: number;
   time: number;
   multipv?: number; // Track which principal variation this move belongs to
+  mateIn: number; // Actual number of moves required for mate (different from depth). 0 when the line is not a guaranteed mate
 }
 
 export interface AnalysisResult {
@@ -292,6 +293,7 @@ export interface BestLineNode {
   moveNumber: number;
   parent?: BestLineNode;
   analysisResult?: AnalysisResult;
+  mateIn?: number; // Actual number of moves required for mate (different from depth)
 }
 
 export interface BestLinesAnalysis {

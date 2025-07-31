@@ -179,6 +179,7 @@ const createNode = (
   isWhiteMove: boolean,
   moveNumber: number,
   parent?: BestLineNode,
+  mateIn?: number,
 ): BestLineNode => {
   return {
     fen,
@@ -189,6 +190,7 @@ const createNode = (
     isWhiteMove,
     moveNumber,
     parent,
+    mateIn,
   };
 };
 
@@ -329,6 +331,8 @@ const processInitiatorMoves = async (
       bestMove.depth,
       true,
       moveNumber,
+      undefined, // parent
+      bestMove.mateIn, // mateIn
     );
 
     node.analysisResult = analysisResult;
@@ -373,6 +377,8 @@ const processResponderMoves = async (
       analysisMove.depth,
       false,
       moveNumber,
+      undefined, // parent
+      analysisMove.mateIn, // mateIn
     );
 
     node.analysisResult = analysisResult;
@@ -710,6 +716,7 @@ const processInitiatorMoveInTree = async (
     true,
     moveNumber, // Use calculated move number
     parentNode || undefined,
+    bestMove.mateIn, // mateIn
   );
 
   log(
@@ -894,6 +901,7 @@ const processResponderMovesInTree = async (
       false,
       moveNumber,
       parentNode || undefined,
+      analysisMove.mateIn, // mateIn
     );
 
     log(

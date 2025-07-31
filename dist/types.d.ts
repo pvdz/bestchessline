@@ -33,6 +33,7 @@ export interface AnalysisMove {
   nodes: number;
   time: number;
   multipv?: number;
+  mateIn: number;
 }
 export interface AnalysisResult {
   moves: AnalysisMove[];
@@ -228,6 +229,7 @@ export interface BestLineNode {
   moveNumber: number;
   parent?: BestLineNode;
   analysisResult?: AnalysisResult;
+  mateIn?: number;
 }
 export interface BestLinesAnalysis {
   rootFen: string;
