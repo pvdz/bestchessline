@@ -16,8 +16,10 @@ import {
   setGlobalCurrentMoveIndex,
   getGlobalCurrentMoveIndex,
   getStartingPlayer,
-  showToast,
 } from "./utils.js";
+import {
+  showToast,
+} from "./utils/ui-utils.js";
 import {
   formatScoreWithMateIn,
 } from "./utils/formatting-utils.js";
@@ -59,6 +61,7 @@ import {
   getCheckedRadioByName,
   querySelectorHTMLElementBySelector,
 } from "./utils/dom-helpers.js";
+
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
@@ -1398,19 +1401,18 @@ const createTreeNodeElement = (
     const transpositionSpan = document.createElement("span");
     transpositionSpan.className = "transposition-indicator";
     transpositionSpan.textContent = "🔄";
+    transpositionSpan.title = "Transposition - position already analyzed";
     moveInfo.appendChild(transpositionSpan);
   }
 
   element.appendChild(moveInfo);
 
-  if (node.children.length === 0) {
-    const lineCompletion = document.createElement("div");
-    lineCompletion.className = "line-completion";
-    lineCompletion.innerHTML = getLineCompletion(node, analysis);
-    element.appendChild(lineCompletion);
+  // Add children container
+  if (node.children.length > 0) {
+    const childrenContainer = document.createElement("div");
+    childrenContainer.className = "tree-children";
+    element.appendChild(childrenContainer);
   }
-
-  // Click functionality is handled by event delegation in updateBestLinesTreeIncrementally
 
   return element;
 };

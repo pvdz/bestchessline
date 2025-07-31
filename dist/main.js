@@ -1,5 +1,6 @@
 import { createPieceNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
-import { getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, getStartingPlayer, showToast, } from "./utils.js";
+import { getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, getStartingPlayer, } from "./utils.js";
+import { showToast, } from "./utils/ui-utils.js";
 import { formatScoreWithMateIn, } from "./utils/formatting-utils.js";
 import { compareAnalysisMoves, calculateTotalPositionsWithOverrides, } from "./utils/analysis-utils.js";
 import { applyMoveToFEN, } from "./utils/fen-manipulation.js";
@@ -1080,16 +1081,16 @@ const createTreeNodeElement = (node, depth, analysis) => {
         const transpositionSpan = document.createElement("span");
         transpositionSpan.className = "transposition-indicator";
         transpositionSpan.textContent = "🔄";
+        transpositionSpan.title = "Transposition - position already analyzed";
         moveInfo.appendChild(transpositionSpan);
     }
     element.appendChild(moveInfo);
-    if (node.children.length === 0) {
-        const lineCompletion = document.createElement("div");
-        lineCompletion.className = "line-completion";
-        lineCompletion.innerHTML = getLineCompletion(node, analysis);
-        element.appendChild(lineCompletion);
+    // Add children container
+    if (node.children.length > 0) {
+        const childrenContainer = document.createElement("div");
+        childrenContainer.className = "tree-children";
+        element.appendChild(childrenContainer);
     }
-    // Click functionality is handled by event delegation in updateBestLinesTreeIncrementally
     return element;
 };
 /**

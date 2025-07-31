@@ -7,7 +7,7 @@ import {
 } from "./types.js";
 import {
   showToast,
-} from "./utils.js";
+} from "./utils/ui-utils.js";
 import {
   compareAnalysisMoves,
 } from "./utils/analysis-utils.js";
