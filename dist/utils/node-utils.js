@@ -1,9 +1,32 @@
 import { formatScoreWithMateIn } from "./formatting-utils.js";
+import { applyMoveToFEN } from "./fen-manipulation.js";
 /**
  * Node Utility Functions
  *
  * Provides functions for formatting and manipulating tree nodes.
  */
+/**
+ * Generate a unique ID for a tree node based on its position and move
+ * @param node The node to generate an ID for
+ * @returns A unique string identifier for the node
+ */
+export function generateNodeId(node) {
+    const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+    const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
+    return `node-${cleanFen}-${node.move.from}-${node.move.to}`;
+}
+/**
+ * Count nodes recursively in a tree structure
+ * @param nodes Array of nodes to count
+ * @returns Total number of nodes including all children
+ */
+export function countNodesRecursive(nodes) {
+    let count = 0;
+    for (const node of nodes) {
+        count += 1 + countNodesRecursive(node.children);
+    }
+    return count;
+}
 /**
  * Format a node's score with delta information
  * @param node The node to format the score for

@@ -10,7 +10,7 @@ import { getDepthScaler, getResponderMovesCount, getThreadCount, getFirstReplyOv
 import { log, logError, } from "./utils/logging.js";
 import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadio, getCheckedRadioByName, querySelectorHTMLElementBySelector, } from "./utils/dom-helpers.js";
 import { parseGameNotation, } from "./utils/move-parsing.js";
-import { formatNodeScore, } from "./utils/node-utils.js";
+import { formatNodeScore, generateNodeId, } from "./utils/node-utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
@@ -1028,14 +1028,6 @@ const renderProgressBoard = (boardElement, fen) => {
  */
 let shadowTree = null;
 /**
- * Generate a unique ID for a tree node
- */
-const generateNodeId = (node) => {
-    const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-    const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
-    return `node-${cleanFen}-${node.move.from}-${node.move.to}`;
-};
-/**
  * Create a DOM element for a tree node
  */
 const createTreeNodeElement = (node, depth, analysis) => {
@@ -1338,13 +1330,6 @@ const updateBestLinesTreeIncrementally = (resultsElement, analysis) => {
 /**
  * Count nodes recursively for comparison
  */
-const countNodesRecursive = (nodes) => {
-    let count = 0;
-    for (const node of nodes) {
-        count += 1 + countNodesRecursive(node.children);
-    }
-    return count;
-};
 /**
  * Render a tree node recursively
  */

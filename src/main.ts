@@ -70,6 +70,8 @@ import {
 } from "./utils/toast-utils.js";
 import {
   formatNodeScore,
+  generateNodeId,
+  countNodesRecursive,
 } from "./utils/node-utils.js";
 
 
@@ -1349,14 +1351,7 @@ interface UITreeNode {
  */
 let shadowTree: UITreeNode | null = null;
 
-/**
- * Generate a unique ID for a tree node
- */
-const generateNodeId = (node: BestLineNode): string => {
-  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-  const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
-  return `node-${cleanFen}-${node.move.from}-${node.move.to}`;
-};
+
 
 /**
  * Create a DOM element for a tree node
@@ -1738,13 +1733,7 @@ const updateBestLinesTreeIncrementally = (
 /**
  * Count nodes recursively for comparison
  */
-const countNodesRecursive = (nodes: BestLineNode[]): number => {
-  let count = 0;
-  for (const node of nodes) {
-    count += 1 + countNodesRecursive(node.children);
-  }
-  return count;
-};
+
 
 /**
  * Render a tree node recursively
