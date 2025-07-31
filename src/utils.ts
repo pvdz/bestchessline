@@ -1270,14 +1270,15 @@ export function getStartingPlayer(fen: string): PlayerColor {
  * from the same position, maybe even the same piece (with different targets).
  * Mate is always the best move. When two moves mate or have same score, use consistent ordering.
  *
- * @param a First analysis move. Score should be >= 0 and would be 100.0 for a mate
- * @param b Second analysis move. Score should be >= 0 and would be 100.0 for a mate
+ * @param a First analysis move. Score is negative if in favor of black, otherwise in favor of white
+ * @param b Second analysis move. Score is negative if in favor of black, otherwise in favor of white
  * @param currentPlayer The player whose turn it is ("w" for white, "b" for black)
  * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
  */
 export function compareAnalysisMoves(
   a: { score: number; depth: number; mateIn: number },
   b: { score: number; depth: number; mateIn: number },
+  direction: "asc" | "desc" = "desc",
 ): number {
   // Determine if moves are mate moves (|score| > 9000 indicates mate)
   const aIsMate = Math.abs(a.score) > 9000;
@@ -1294,9 +1295,14 @@ export function compareAnalysisMoves(
   // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.
   if (a.depth !== b.depth) return b.depth - a.depth;
 
-  // Both are non-mate moves, always sort by higher scores first
-  // Always descending order (higher scores first)
-  return b.score - a.score;
+  // Both are non-mate moves, sort by score based on direction
+  if (direction === "asc") {
+    // Ascending order: low to high scores (good for black's turn)
+    return a.score - b.score;
+  } else {
+    // Descending order: high to low scores (good for white's turn)
+    return b.score - a.score;
+  }
 }
 
 /**

@@ -115,6 +115,8 @@ const initializeBestLinesAnalysis = () => {
       firstReplyOverride,
       secondReplyOverride,
     },
+    // Store the initial position evaluation
+    initialPositionScore: undefined,
   };
 };
 /**
@@ -209,6 +211,8 @@ const processPosition = async (fen, analysis) => {
     await processResponderMoves(fen, analysis);
   }
   analysis.analyzedPositions.add(fen);
+  // Update any nodes that need evaluation with the new analysis results
+  updateNodesNeedingEvaluation(fen, analysis);
 };
 /**
  * Process initiator moves (analyze for best moves)
@@ -230,20 +234,99 @@ const processInitiatorMoves = async (fen, analysis) => {
     const result = parseAndApplyMove(moveText, fen);
     if (result) {
       const { move, newFen } = result;
-      // Create node for this move
+      // Evaluate the predefined move specifically
+      const options = getAnalysisOptions(analysis);
+      // Increase depth to ensure we get a good evaluation
+      const evaluationOptions = {
+        ...options,
+        depth: Math.max(options.depth || 20, 20),
+      };
+      let score = 0;
+      let depth = 0;
+      let mateIn = undefined;
+      let analysisResult = null;
+      // For the first move, we need to establish the baseline from the initial position
+      if (moveNumber === 1 && analysis.initialPositionScore === undefined) {
+        try {
+          const initialAnalysis = await Stockfish.analyzePosition(
+            fen,
+            evaluationOptions,
+          );
+          if (initialAnalysis && initialAnalysis.moves.length > 0) {
+            // Use the best move's score as the baseline for the initial position
+            analysis.initialPositionScore = initialAnalysis.moves[0].score;
+          }
+        } catch (error) {
+          logError(
+            `[FIRST_MOVE_DEBUG] Failed to evaluate initial position:`,
+            error,
+          );
+        }
+      }
+      try {
+        // Evaluate the position AFTER the move is made (newFen), not the initial position
+        analysisResult = await Stockfish.analyzePosition(
+          newFen,
+          evaluationOptions,
+        );
+        if (analysisResult && analysisResult.moves.length > 0) {
+          // Find the predefined move in the analysis results
+          const matchingMove = analysisResult.moves.find(
+            (analysisMove) =>
+              analysisMove.move.from === move.from &&
+              analysisMove.move.to === move.to &&
+              analysisMove.move.piece === move.piece,
+          );
+          if (matchingMove) {
+            score = matchingMove.score;
+            depth = matchingMove.depth;
+            mateIn = matchingMove.mateIn;
+          } else {
+            // If the move isn't in the top moves, we need to evaluate it specifically
+            // For now, we'll use the best move's score as an approximation
+            // This is a limitation - we'd need to modify Stockfish to evaluate specific moves
+            const bestMove = analysisResult.moves[0];
+            score = bestMove.score;
+            depth = bestMove.depth;
+            mateIn = bestMove.mateIn;
+          }
+        }
+      } catch (error) {
+        logError(
+          `[FIRST_MOVE_DEBUG] Failed to evaluate predefined move ${moveText}:`,
+          error,
+        );
+        // Fallback to default values
+        score = 0;
+        depth = 0;
+        mateIn = undefined;
+      }
+      // Create node for this move with evaluated score
       const node = createNode(
         fen,
         move,
-        0, // UI moves don't have scores from analysis
-        0,
+        score,
+        depth,
         true,
         moveNumber,
+        undefined, // parent
+        mateIn,
       );
+      node.analysisResult = analysisResult || undefined;
       analysis.nodes.push(node);
       analysis.analysisQueue.push(newFen);
       log(
         `Applied initiator move from predefined config: ${moveText} -> ${newFen}`,
       );
+      // Only mark as needing evaluation if we truly don't have a score
+      // A score of 0 is valid (equal position), so we only mark as needing evaluation
+      // if we don't have an analysis result at all
+      if (!analysisResult) {
+        // Mark this node for later evaluation
+        node.needsEvaluation = true;
+        // Schedule this move for evaluation
+        scheduleMoveForEvaluation(node, analysis);
+      }
     } else {
       logError(
         `Failed to parse initiator move from predefined config: ${moveText}`,
@@ -278,6 +361,42 @@ const processInitiatorMoves = async (fen, analysis) => {
     log(
       `Applied initiator move from analysis: ${moveToNotation(bestMove.move)} (score: ${bestMove.score}) -> ${newFen}`,
     );
+  }
+};
+/**
+ * Schedule a move for later evaluation
+ */
+const scheduleMoveForEvaluation = (node, analysis) => {
+  // Add the position to the analysis queue for later evaluation
+  if (!analysis.analyzedPositions.has(node.fen)) {
+    analysis.analysisQueue.push(node.fen);
+    log(`Scheduled position for evaluation: ${node.fen}`);
+  }
+};
+/**
+ * Update nodes that need evaluation with new analysis results
+ */
+const updateNodesNeedingEvaluation = (fen, analysis) => {
+  // Find all nodes that need evaluation for this position
+  const findNodesNeedingEvaluation = (nodes) => {
+    const result = [];
+    for (const node of nodes) {
+      if (node.needsEvaluation && node.fen === fen) {
+        result.push(node);
+      }
+      if (node.children.length > 0) {
+        result.push(...findNodesNeedingEvaluation(node.children));
+      }
+    }
+    return result;
+  };
+  const nodesToUpdate = findNodesNeedingEvaluation(analysis.nodes);
+  if (nodesToUpdate.length > 0) {
+    // For now, we'll just remove the needsEvaluation flag
+    // In a more sophisticated implementation, we'd update with actual scores
+    for (const node of nodesToUpdate) {
+      node.needsEvaluation = false;
+    }
   }
 };
 /**
@@ -499,19 +618,79 @@ const processInitiatorMoveInTree = async (fen, analysis, parentNode, depth) => {
     const result = parseAndApplyMove(moveText, fen);
     if (result) {
       const { move, newFen } = result;
-      // Create node for this move
+      // Evaluate the predefined move specifically
+      const options = getAnalysisOptions(analysis);
+      // Increase depth to ensure we get a good evaluation
+      const evaluationOptions = {
+        ...options,
+        depth: Math.max(options.depth || 20, 20),
+      };
+      let score = 0;
+      let analysisDepth = 0;
+      let mateIn = undefined;
+      let analysisResult = null;
+      // For the first move, we need to establish the baseline from the initial position
+      if (moveNumber === 1 && analysis.initialPositionScore === undefined) {
+        try {
+          const initialAnalysis = await Stockfish.analyzePosition(
+            fen,
+            evaluationOptions,
+          );
+          if (initialAnalysis && initialAnalysis.moves.length > 0) {
+            // Use the best move's score as the baseline for the initial position
+            analysis.initialPositionScore = initialAnalysis.moves[0].score;
+          }
+        } catch (error) {
+          logError(`Failed to evaluate initial position:`, error);
+        }
+      }
+      try {
+        // Evaluate the position AFTER the move is made (newFen), not the initial position
+        analysisResult = await Stockfish.analyzePosition(
+          newFen,
+          evaluationOptions,
+        );
+        if (analysisResult && analysisResult.moves.length > 0) {
+          // Find the predefined move in the analysis results
+          const matchingMove = analysisResult.moves.find(
+            (analysisMove) =>
+              analysisMove.move.from === move.from &&
+              analysisMove.move.to === move.to &&
+              analysisMove.move.piece === move.piece,
+          );
+          if (matchingMove) {
+            score = matchingMove.score;
+            analysisDepth = matchingMove.depth;
+            mateIn = matchingMove.mateIn;
+          } else {
+            // If the move isn't in the top moves, we need to evaluate it specifically
+            // For now, we'll use the best move's score as an approximation
+            // This is a limitation - we'd need to modify Stockfish to evaluate specific moves
+            const bestMove = analysisResult.moves[0];
+            score = bestMove.score;
+            analysisDepth = bestMove.depth;
+            mateIn = bestMove.mateIn;
+          }
+        }
+      } catch (error) {
+        logError(`Failed to evaluate predefined move ${moveText}:`, error);
+        // Fallback to default values
+        score = 0;
+        analysisDepth = 0;
+        mateIn = undefined;
+      }
+      // Create node for this move with evaluated score
       const node = createNode(
         fen,
         move,
-        0, // UI moves don't have scores from analysis
-        0,
+        score,
+        analysisDepth,
         true,
-        moveNumber, // Use calculated move number
+        moveNumber,
         parentNode || undefined,
+        mateIn,
       );
-      log(
-        `Created initiator node with move number: ${node.moveNumber}, move: ${moveToNotation(node.move)}`,
-      );
+      node.analysisResult = analysisResult || undefined;
       // Add to parent's children if it exists, otherwise add to root nodes
       if (parentNode) {
         parentNode.children.push(node);
@@ -568,8 +747,9 @@ const processInitiatorMoveInTree = async (fen, analysis, parentNode, depth) => {
     return;
   }
   // Sort by quality: mate moves first, then by score
+  const direction = rootPosition.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
   const sortedMoves = fullyAnalyzedMoves.sort((a, b) =>
-    compareAnalysisMoves(a, b),
+    compareAnalysisMoves(a, b, direction),
   );
   // Take the best move
   const bestMove = sortedMoves[0];
@@ -692,8 +872,9 @@ const processResponderMovesInTree = async (
     return;
   }
   // Sort by quality: mate moves first, then by score
+  const direction = rootPosition.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
   const sortedMoves = fullyAnalyzedMoves.sort((a, b) =>
-    compareAnalysisMoves(a, b),
+    compareAnalysisMoves(a, b, direction),
   );
   // Determine how many responder responses to analyze based on depth and overrides
   let responderMovesToAnalyze = analysis.config.responderMovesCount;

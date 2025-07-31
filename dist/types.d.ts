@@ -230,6 +230,7 @@ export interface BestLineNode {
   parent?: BestLineNode;
   analysisResult?: AnalysisResult;
   mateIn?: number;
+  needsEvaluation?: boolean;
 }
 export interface BestLinesAnalysis {
   rootFen: string;
@@ -241,6 +242,7 @@ export interface BestLinesAnalysis {
   analysisQueue: string[];
   analyzedPositions: Set<string>;
   totalPositions: number;
+  initialPositionScore?: number;
   config: {
     depthScaler: number;
     responderMovesCount: number;

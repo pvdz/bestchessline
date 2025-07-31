@@ -3,12 +3,11 @@ import {
   AnalysisResult,
   StockfishOptions,
   ChessMove,
+  PLAYER_COLORS,
 } from "./types.js";
 import {
   parseFEN,
-  toFEN,
   squareToCoords,
-  coordsToSquare,
   log,
   logError,
   querySelectorHTMLElement,
@@ -446,10 +445,9 @@ const parseInfoMessage = (message: string): void => {
   // Normalize score to always be from white's perspective
   // When it's black's turn, Stockfish returns scores from black's perspective
   const fen = stockfishState.currentAnalysis?.position || "";
-  if (fen) {
-    const fenParts = fen.split(" ");
-    const turn = fenParts[1]; // "w" or "b"
-    if (turn === "b") {
+  const position = fen && parseFEN(fen);
+  if (position) {
+    if (position.turn === PLAYER_COLORS.BLACK) {
       // Invert the score when it's black's turn
       score = -score;
     }
@@ -553,8 +551,13 @@ const parseInfoMessage = (message: string): void => {
       stockfishState.currentAnalysis.moves.push(analysisMove);
     }
 
+    // Determine direction based on whose turn it is
+    const direction =
+      position && position.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
+
+    // Sort moves based on direction
     stockfishState.currentAnalysis.moves.sort((a, b) => {
-      return compareAnalysisMoves(a, b);
+      return compareAnalysisMoves(a, b, direction);
     });
 
     // Notify callbacks

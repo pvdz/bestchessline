@@ -294,6 +294,7 @@ export interface BestLineNode {
   parent?: BestLineNode;
   analysisResult?: AnalysisResult;
   mateIn?: number; // Actual number of moves required for mate (different from depth)
+  needsEvaluation?: boolean; // Flag for predefined moves that need evaluation
 }
 
 export interface BestLinesAnalysis {
@@ -306,6 +307,7 @@ export interface BestLinesAnalysis {
   analysisQueue: string[]; // FEN positions to analyze
   analyzedPositions: Set<string>; // For deduplication
   totalPositions: number; // Total positions to analyze
+  initialPositionScore?: number; // Score of the initial position
   // Configuration captured at startup
   config: {
     depthScaler: number;

@@ -1107,10 +1107,7 @@ const generateNodeId = (node) => {
  */
 const createTreeNodeElement = (node, depth, analysis) => {
   const moveText = moveToNotation(node.move);
-  const scoreText =
-    node.score !== 0
-      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
-      : "";
+  const scoreText = formatNodeScore(node);
   const moveClass = node.isWhiteMove ? "white-move" : "black-move";
   const moveNumber = node.moveNumber;
   let moveNumberText = "";
@@ -1130,7 +1127,9 @@ const createTreeNodeElement = (node, depth, analysis) => {
   element.className = `tree-node ${moveClass} ${depthClass} ${transpositionClass}`;
   element.setAttribute("data-node-id", nodeId);
   const moveInfo = document.createElement("div");
-  moveInfo.className = "move-info";
+  moveInfo.className = "move-info clickable";
+  moveInfo.style.cursor = "pointer";
+  moveInfo.title = "Click to view this position on the board";
   const moveNumberSpan = document.createElement("span");
   moveNumberSpan.className = "move-number";
   moveNumberSpan.textContent = moveNumberText;
@@ -1145,12 +1144,6 @@ const createTreeNodeElement = (node, depth, analysis) => {
     scoreSpan.textContent = scoreText;
     moveInfo.appendChild(scoreSpan);
   }
-  if (node.children.length > 0) {
-    const childrenSpan = document.createElement("span");
-    childrenSpan.className = "move-children";
-    childrenSpan.textContent = `(${node.children.length})`;
-    moveInfo.appendChild(childrenSpan);
-  }
   if (isTransposition) {
     const transpositionSpan = document.createElement("span");
     transpositionSpan.className = "transposition-indicator";
@@ -1164,17 +1157,16 @@ const createTreeNodeElement = (node, depth, analysis) => {
     lineCompletion.innerHTML = getLineCompletion(node, analysis);
     element.appendChild(lineCompletion);
   }
+  // Click functionality is handled by event delegation in updateBestLinesTreeIncrementally
   return element;
 };
 /**
  * Update an existing DOM element for a tree node
  */
 const updateTreeNodeElement = (element, node, analysis) => {
+  const moveInfo = element.querySelector(".move-info");
   const moveText = moveToNotation(node.move);
-  const scoreText =
-    node.score !== 0
-      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
-      : "";
+  const scoreText = formatNodeScore(node);
   // Update move text
   const moveTextSpan = element.querySelector(".move-text");
   if (moveTextSpan) {
@@ -1186,29 +1178,13 @@ const updateTreeNodeElement = (element, node, analysis) => {
     if (!scoreSpan) {
       scoreSpan = document.createElement("span");
       scoreSpan.className = "move-score";
-      const moveInfo = element.querySelector(".move-info");
       if (moveInfo) {
         moveInfo.appendChild(scoreSpan);
       }
     }
-    scoreSpan.textContent = scoreText;
+    scoreSpan.innerHTML = scoreText;
   } else if (scoreSpan) {
     scoreSpan.remove();
-  }
-  // Update children count
-  let childrenSpan = element.querySelector(".move-children");
-  if (node.children.length > 0) {
-    if (!childrenSpan) {
-      childrenSpan = document.createElement("span");
-      childrenSpan.className = "move-children";
-      const moveInfo = element.querySelector(".move-info");
-      if (moveInfo) {
-        moveInfo.appendChild(childrenSpan);
-      }
-    }
-    childrenSpan.textContent = `(${node.children.length})`;
-  } else if (childrenSpan) {
-    childrenSpan.remove();
   }
   // Update transposition indicator
   const positionAfterMove = applyMoveToFEN(node.fen, node.move);
@@ -1221,7 +1197,6 @@ const updateTreeNodeElement = (element, node, analysis) => {
       transpositionSpan = document.createElement("span");
       transpositionSpan.className = "transposition-indicator";
       transpositionSpan.textContent = "🔄";
-      const moveInfo = element.querySelector(".move-info");
       if (moveInfo) {
         moveInfo.appendChild(transpositionSpan);
       }
@@ -1250,6 +1225,12 @@ const updateTreeNodeElement = (element, node, analysis) => {
     element.classList.add("transposition");
   } else {
     element.classList.remove("transposition");
+  }
+  // Ensure clickable class and styles are applied
+  if (moveInfo) {
+    moveInfo.classList.add("clickable");
+    moveInfo.style.cursor = "pointer";
+    moveInfo.title = "Click to view this position on the board";
   }
 };
 /**
@@ -1386,6 +1367,40 @@ const updateBestLinesTreeIncrementally = (resultsElement, analysis) => {
     const currentFontSize = parseInt(treeFontSizeInput.value);
     updateTreeFontSize(currentFontSize);
   }
+  // Add click event delegation to the tree section for better performance
+  // Only add the listener if it doesn't already exist
+  if (!treeSection.hasAttribute("data-tree-digger-clicks-enabled")) {
+    treeSection.setAttribute("data-tree-digger-clicks-enabled", "true");
+    treeSection.addEventListener("click", (e) => {
+      const target = e.target;
+      const moveInfo = target.closest(".move-info.clickable");
+      if (moveInfo) {
+        const treeNode = moveInfo.closest(".tree-node");
+        if (treeNode) {
+          const nodeId = treeNode.getAttribute("data-node-id");
+          if (nodeId) {
+            // Find the node in the analysis
+            const findNodeById = (nodes) => {
+              for (const node of nodes) {
+                if (generateNodeId(node) === nodeId) {
+                  return node;
+                }
+                if (node.children.length > 0) {
+                  const found = findNodeById(node.children);
+                  if (found) return found;
+                }
+              }
+              return null;
+            };
+            const node = findNodeById(analysis.nodes);
+            if (node) {
+              handleTreeNodeClick(node, analysis);
+            }
+          }
+        }
+      }
+    });
+  }
 };
 /**
  * Count nodes recursively for comparison
@@ -1402,10 +1417,7 @@ const countNodesRecursive = (nodes) => {
  */
 const renderTreeNode = (node, depth, analysis) => {
   const moveText = moveToNotation(node.move);
-  const scoreText =
-    node.score !== 0
-      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
-      : "";
+  const scoreText = formatNodeScore(node);
   const moveClass = node.isWhiteMove ? "white-move" : "black-move";
   // Use the move number from the node itself (calculated based on game position)
   const moveNumber = node.moveNumber;
@@ -1431,7 +1443,7 @@ const renderTreeNode = (node, depth, analysis) => {
         <span class="move-number">${moveNumberText}</span>
         <span class="move-text">${moveText}</span>
         ${scoreText ? `<span class="move-score">${scoreText}</span>` : ""}
-        ${node.children.length > 0 ? `<span class="move-children">(${node.children.length})</span>` : ""}
+
         ${isTransposition ? `<span class="transposition-indicator">🔄</span>` : ""}
       </div>
       ${node.children.length === 0 ? `<div class="line-completion">${getLineCompletion(node, analysis)}</div>` : ""}
@@ -1555,10 +1567,7 @@ const updateTreeFontSize = (fontSize) => {
  */
 const renderBestLineNode = (node) => {
   const moveText = moveToNotation(node.move);
-  const scoreText =
-    node.score !== 0
-      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
-      : "";
+  const scoreText = formatNodeScore(node);
   const depthText = node.depth > 0 ? ` [depth: ${node.depth}]` : "";
   const moveClass = node.isWhiteMove ? "white-move" : "black-move";
   const playerText = node.isWhiteMove ? "White" : "Black";
@@ -1708,11 +1717,15 @@ const actuallyUpdateResultsPanel = (moves) => {
   const mateLines = moves.filter((move) => Math.abs(move.score) >= 10000);
   const nonMateLines = moves.filter((move) => Math.abs(move.score) < 10000);
   // Sort mate lines using the updated comparison function that considers mateIn
-  mateLines.sort((a, b) => compareAnalysisMoves(a, b));
+  const currentFEN = Board.getFEN();
+  const position = currentFEN ? parseFEN(currentFEN) : null;
+  const direction =
+    position && position.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
+  mateLines.sort((a, b) => compareAnalysisMoves(a, b, direction));
   // Sort non-mate lines by depth (descending), then by score (descending), then by multipv
   nonMateLines.sort((a, b) => {
     // For score comparison, use shared logic
-    const scoreComparison = compareAnalysisMoves(a, b);
+    const scoreComparison = compareAnalysisMoves(a, b, direction);
     if (scoreComparison !== 0) return scoreComparison;
     return (a.multipv || 1) - (b.multipv || 1);
   });
@@ -2951,4 +2964,96 @@ window.addEventListener("move-parse-warning", (event) => {
     }
   }
 });
+/**
+ * Format a node's score with delta information
+ */
+const formatNodeScore = (node) => {
+  if (node.needsEvaluation) {
+    return " (?)";
+  }
+  if (node.score === undefined || node.score === null) {
+    return "";
+  }
+  const currentScore = formatScoreWithMateIn(node.score, node.mateIn ?? 0);
+  // Calculate delta from parent position
+  let deltaText = "";
+  if (node.parent) {
+    const parentScore = node.parent.score;
+    if (parentScore !== undefined && parentScore !== null) {
+      const delta = node.score - parentScore;
+      if (Math.abs(delta) < 0.01) {
+        // Equal position (within 0.01 centipawns)
+        deltaText = " <span class='delta-equal'>(≈)</span>";
+      } else if (delta > 0) {
+        // Improved position
+        const deltaFormatted = formatScoreWithMateIn(delta, 0);
+        deltaText = ` <span class='delta-improved'>(▲${deltaFormatted})</span>`;
+      } else {
+        // Regressed position
+        const deltaFormatted = formatScoreWithMateIn(Math.abs(delta), 0);
+        deltaText = ` <span class='delta-regressed'>(▼${deltaFormatted})</span>`;
+      }
+    }
+  }
+  return ` (${currentScore}${deltaText})`;
+};
+/**
+ * Get the path from root to a specific node
+ */
+const getPathToNode = (targetNode, rootNodes) => {
+  const findPath = (nodes, path = []) => {
+    for (const node of nodes) {
+      const currentPath = [...path, node];
+      if (node === targetNode) {
+        return currentPath;
+      }
+      if (node.children.length > 0) {
+        const result = findPath(node.children, currentPath);
+        if (result) {
+          return result;
+        }
+      }
+    }
+    return null;
+  };
+  return findPath(rootNodes) || [];
+};
+/**
+ * Apply a sequence of moves to the board, replacing the current game
+ */
+const applyMovesToBoard = (moves) => {
+  // Clear any existing branch
+  clearBranch();
+  // Convert BestLineNode moves to ChessMove array
+  const chessMoves = moves.map((node) => node.move);
+  // Get the initial FEN from the first node, or use current board FEN
+  const initialFEN = moves.length > 0 ? moves[0].fen : Board.getFEN();
+  // Replace the entire game with these moves
+  updateAppState({
+    moves: chessMoves,
+    initialFEN: initialFEN,
+    currentMoveIndex: chessMoves.length - 1, // Set to last move
+    isInBranch: false,
+    branchMoves: [],
+    branchStartIndex: -1,
+  });
+  // Update the board to show the final position
+  if (moves.length > 0) {
+    const lastNode = moves[moves.length - 1];
+    const finalFen = applyMoveToFEN(lastNode.fen, lastNode.move);
+    Board.setPosition(finalFen);
+  }
+  // Update the UI
+  updateMoveList();
+};
+/**
+ * Handle click on tree node
+ */
+const handleTreeNodeClick = (node, analysis) => {
+  const path = getPathToNode(node, analysis.nodes);
+  if (path.length > 0) {
+    applyMovesToBoard(path);
+    log(`Applied ${path.length} moves to board from tree click`);
+  }
+};
 //# sourceMappingURL=main.js.map
