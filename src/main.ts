@@ -1125,11 +1125,6 @@ const updateAnalysisStatus = (message?: string): void => {
   }
 };
 
-
-
-
-
-
 /**
  * Update best lines results display
  */
@@ -1366,13 +1361,6 @@ interface UITreeNode {
   children: UITreeNode[];
   parent: UITreeNode | null;
 }
-
-/**
- * Shadow tree to track what should be in the UI
- */
-let shadowTree: UITreeNode | null = null;
-
-
 
 /**
  * Create a DOM element for a tree node
@@ -1693,7 +1681,6 @@ const updateBestLinesTreeIncrementally = (
   if (analysis.nodes.length === 0) {
     treeSection.innerHTML =
       "<p id='tree-digger-tree-empty-message'>No analysis results yet. Starting analysis...</p>";
-    shadowTree = null;
     return;
   }
 
@@ -1750,11 +1737,6 @@ const updateBestLinesTreeIncrementally = (
     });
   }
 };
-
-/**
- * Count nodes recursively for comparison
- */
-
 
 /**
  * Render a tree node recursively
@@ -1928,8 +1910,6 @@ const getCompleteLine = (node: BestLineNode): string => {
 
   return formattedLine;
 };
-
-
 
 /**
  * Render a best line node
@@ -2792,10 +2772,6 @@ const importGame = (notation: string): void => {
   resetPositionEvaluation();
 };
 
-
-
-
-
 /**
  * Navigate to previous move
  */
@@ -2879,11 +2855,6 @@ const applyMovesUpToIndex = (index: number): void => {
     clearLastMoveHighlight();
   }
 };
-
-/**
- * Highlight the last move on the board
- */
-
 
 /**
  * Update move list display
@@ -3152,11 +3123,6 @@ interface TreeNodeDOM {
 const treeNodeDOMMap = new Map<string, TreeNodeDOM>();
 
 /**
- * Clear all tracked DOM elements
- */
-
-
-/**
  * Debug function to verify DOM structure matches data structure
  */
 const verifyDOMStructure = (
@@ -3207,25 +3173,6 @@ const verifyDOMStructure = (
   }
 };
 
-
-
-
-
-
-
-
-
-/**
- * Clear initiator move inputs when board changes
- */
-
-
-/**
- * Update FEN input with current board position
- */
-
-
-
 window.addEventListener("move-parse-warning", (event: Event) => {
   const detail = (event as CustomEvent).detail;
   if (detail && detail.message) {
@@ -3267,12 +3214,6 @@ window.addEventListener("move-parse-warning", (event: Event) => {
     }
   }
 });
-
-
-
-
-
-
 
 /**
  * Handle click on tree node

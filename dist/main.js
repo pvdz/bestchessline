@@ -1028,10 +1028,6 @@ const renderProgressBoard = (boardElement, fen) => {
     }
 };
 /**
- * Shadow tree to track what should be in the UI
- */
-let shadowTree = null;
-/**
  * Create a DOM element for a tree node
  */
 const createTreeNodeElement = (node, depth, analysis) => {
@@ -1282,7 +1278,6 @@ const updateBestLinesTreeIncrementally = (resultsElement, analysis) => {
     if (analysis.nodes.length === 0) {
         treeSection.innerHTML =
             "<p id='tree-digger-tree-empty-message'>No analysis results yet. Starting analysis...</p>";
-        shadowTree = null;
         return;
     }
     // Build the new shadow tree
@@ -1331,9 +1326,6 @@ const updateBestLinesTreeIncrementally = (resultsElement, analysis) => {
         });
     }
 };
-/**
- * Count nodes recursively for comparison
- */
 /**
  * Render a tree node recursively
  */
@@ -2235,9 +2227,6 @@ const applyMovesUpToIndex = (index) => {
     }
 };
 /**
- * Highlight the last move on the board
- */
-/**
  * Update move list display
  */
 const updateMoveList = () => {
@@ -2424,9 +2413,6 @@ highlightLastMove, clearLastMoveHighlight, };
  */
 const treeNodeDOMMap = new Map();
 /**
- * Clear all tracked DOM elements
- */
-/**
  * Debug function to verify DOM structure matches data structure
  */
 const verifyDOMStructure = (container, nodes, depth = 0) => {
@@ -2458,12 +2444,6 @@ const verifyDOMStructure = (container, nodes, depth = 0) => {
         }
     }
 };
-/**
- * Clear initiator move inputs when board changes
- */
-/**
- * Update FEN input with current board position
- */
 window.addEventListener("move-parse-warning", (event) => {
     const detail = event.detail;
     if (detail && detail.message) {

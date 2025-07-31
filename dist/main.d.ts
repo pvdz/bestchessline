@@ -64,9 +64,6 @@ declare const previousMove: () => void;
  */
 declare const nextMove: () => void;
 /**
- * Highlight the last move on the board
- */
-/**
  * Update move list display
  */
 declare const updateMoveList: () => void;
