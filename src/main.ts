@@ -19,6 +19,9 @@ import {
 } from "./utils.js";
 import {
   showToast,
+  debounce,
+  clearInitiatorMoveInputs,
+  updateTreeFontSize,
 } from "./utils/ui-utils.js";
 import {
   formatScoreWithMateIn,
@@ -73,6 +76,14 @@ import {
   generateNodeId,
   countNodesRecursive,
 } from "./utils/node-utils.js";
+import {
+  highlightLastMove,
+  clearLastMoveHighlight,
+} from "./utils/board-utils.js";
+import {
+  clearTreeNodeDOMMap,
+  logTreeStructure,
+} from "./utils/debug-utils.js";
 
 
 
@@ -1908,23 +1919,7 @@ const getCompleteLine = (node: BestLineNode): string => {
   return formattedLine;
 };
 
-/**
- * Update tree font size
- */
-const updateTreeFontSize = (fontSize: number): void => {
-  const treeSection = document.querySelector(".tree-digger-tree");
-  if (treeSection) {
-    (treeSection as HTMLElement).style.fontSize = `${fontSize}px`;
-  }
 
-  // Also update the initial font size when the control is first loaded
-  const treeFontSizeInput = document.getElementById(
-    "tree-font-size",
-  ) as HTMLInputElement;
-  if (treeFontSizeInput) {
-    treeFontSizeInput.value = fontSize.toString();
-  }
-};
 
 /**
  * Render a best line node
@@ -2878,28 +2873,7 @@ const applyMovesUpToIndex = (index: number): void => {
 /**
  * Highlight the last move on the board
  */
-const highlightLastMove = (move: ChessMove): void => {
-  // Clear previous highlights
-  clearLastMoveHighlight();
 
-  // Add highlights for the last move
-  const fromSquare = document.querySelector(`[data-square="${move.from}"]`);
-  const toSquare = document.querySelector(`[data-square="${move.to}"]`);
-
-  if (fromSquare) {
-    fromSquare.classList.add("last-move-from");
-  }
-  if (toSquare) {
-    toSquare.classList.add("last-move-to");
-  }
-};
-
-/**
- * Clear last move highlight
- */
-const clearLastMoveHighlight = (): void => {
-  Board.clearLastMoveHighlight();
-};
 
 /**
  * Update move list display
@@ -3170,29 +3144,7 @@ const treeNodeDOMMap = new Map<string, TreeNodeDOM>();
 /**
  * Clear all tracked DOM elements
  */
-const clearTreeNodeDOMMap = (): void => {
-  treeNodeDOMMap.clear();
-};
 
-/**
- * Debug function to log tree structure
- */
-const logTreeStructure = (nodes: BestLineNode[], depth: number = 0): void => {
-  for (const node of nodes) {
-    const indent = "  ".repeat(depth);
-    const moveText = moveToNotation(node.move);
-    const parentText = node.parent
-      ? ` (parent: ${moveToNotation(node.parent.move)})`
-      : " (root)";
-    console.log(
-      `${indent}${moveText}${parentText} [${node.children.length} children]`,
-    );
-
-    if (node.children.length > 0) {
-      logTreeStructure(node.children, depth + 1);
-    }
-  }
-};
 
 /**
  * Debug function to verify DOM structure matches data structure
@@ -3378,17 +3330,7 @@ function generateAllLines(nodes: BestLineNode[]): string {
 /**
  * Clear initiator move inputs when board changes
  */
-const clearInitiatorMoveInputs = (): void => {
-  const initiatorMove1Input = document.getElementById(
-    "tree-digger-initiator-move-1",
-  ) as HTMLInputElement;
-  const initiatorMove2Input = document.getElementById(
-    "tree-digger-initiator-move-2",
-  ) as HTMLInputElement;
 
-  if (initiatorMove1Input) initiatorMove1Input.value = "";
-  if (initiatorMove2Input) initiatorMove2Input.value = "";
-};
 
 /**
  * Update FEN input with current board position

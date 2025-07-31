@@ -19,3 +19,12 @@ export declare function showToast(message: string, background?: string, duration
  * @returns A debounced version of the function
  */
 export declare function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void;
+/**
+ * Clear the initiator move input fields
+ */
+export declare function clearInitiatorMoveInputs(): void;
+/**
+ * Update tree font size
+ * @param fontSize The font size in pixels
+ */
+export declare function updateTreeFontSize(fontSize: number): void;

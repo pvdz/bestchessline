@@ -1,6 +1,6 @@
 import { createPieceNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
 import { getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, getStartingPlayer, } from "./utils.js";
-import { showToast, } from "./utils/ui-utils.js";
+import { showToast, clearInitiatorMoveInputs, updateTreeFontSize, } from "./utils/ui-utils.js";
 import { formatScoreWithMateIn, } from "./utils/formatting-utils.js";
 import { compareAnalysisMoves, calculateTotalPositionsWithOverrides, } from "./utils/analysis-utils.js";
 import { applyMoveToFEN, } from "./utils/fen-manipulation.js";
@@ -11,6 +11,8 @@ import { log, logError, } from "./utils/logging.js";
 import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadio, getCheckedRadioByName, querySelectorHTMLElementBySelector, } from "./utils/dom-helpers.js";
 import { parseGameNotation, } from "./utils/move-parsing.js";
 import { formatNodeScore, generateNodeId, } from "./utils/node-utils.js";
+import { highlightLastMove, clearLastMoveHighlight, } from "./utils/board-utils.js";
+import { clearTreeNodeDOMMap, } from "./utils/debug-utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
@@ -1473,20 +1475,6 @@ const getCompleteLine = (node) => {
     return formattedLine;
 };
 /**
- * Update tree font size
- */
-const updateTreeFontSize = (fontSize) => {
-    const treeSection = document.querySelector(".tree-digger-tree");
-    if (treeSection) {
-        treeSection.style.fontSize = `${fontSize}px`;
-    }
-    // Also update the initial font size when the control is first loaded
-    const treeFontSizeInput = document.getElementById("tree-font-size");
-    if (treeFontSizeInput) {
-        treeFontSizeInput.value = fontSize.toString();
-    }
-};
-/**
  * Render a best line node
  */
 const renderBestLineNode = (node) => {
@@ -2247,25 +2235,6 @@ const applyMovesUpToIndex = (index) => {
 /**
  * Highlight the last move on the board
  */
-const highlightLastMove = (move) => {
-    // Clear previous highlights
-    clearLastMoveHighlight();
-    // Add highlights for the last move
-    const fromSquare = document.querySelector(`[data-square="${move.from}"]`);
-    const toSquare = document.querySelector(`[data-square="${move.to}"]`);
-    if (fromSquare) {
-        fromSquare.classList.add("last-move-from");
-    }
-    if (toSquare) {
-        toSquare.classList.add("last-move-to");
-    }
-};
-/**
- * Clear last move highlight
- */
-const clearLastMoveHighlight = () => {
-    Board.clearLastMoveHighlight();
-};
 /**
  * Update move list display
  */
@@ -2455,25 +2424,6 @@ const treeNodeDOMMap = new Map();
 /**
  * Clear all tracked DOM elements
  */
-const clearTreeNodeDOMMap = () => {
-    treeNodeDOMMap.clear();
-};
-/**
- * Debug function to log tree structure
- */
-const logTreeStructure = (nodes, depth = 0) => {
-    for (const node of nodes) {
-        const indent = "  ".repeat(depth);
-        const moveText = moveToNotation(node.move);
-        const parentText = node.parent
-            ? ` (parent: ${moveToNotation(node.parent.move)})`
-            : " (root)";
-        console.log(`${indent}${moveText}${parentText} [${node.children.length} children]`);
-        if (node.children.length > 0) {
-            logTreeStructure(node.children, depth + 1);
-        }
-    }
-};
 /**
  * Debug function to verify DOM structure matches data structure
  */
@@ -2627,14 +2577,6 @@ function generateAllLines(nodes) {
 /**
  * Clear initiator move inputs when board changes
  */
-const clearInitiatorMoveInputs = () => {
-    const initiatorMove1Input = document.getElementById("tree-digger-initiator-move-1");
-    const initiatorMove2Input = document.getElementById("tree-digger-initiator-move-2");
-    if (initiatorMove1Input)
-        initiatorMove1Input.value = "";
-    if (initiatorMove2Input)
-        initiatorMove2Input.value = "";
-};
 /**
  * Update FEN input with current board position
  */

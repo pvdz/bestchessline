@@ -1,4 +1,5 @@
 import { ChessMove, AnalysisResult } from "./types.js";
+import { highlightLastMove, clearLastMoveHighlight } from "./utils/board-utils.js";
 /**
  * Application state interface
  */
@@ -65,11 +66,6 @@ declare const nextMove: () => void;
 /**
  * Highlight the last move on the board
  */
-declare const highlightLastMove: (move: ChessMove) => void;
-/**
- * Clear last move highlight
- */
-declare const clearLastMoveHighlight: () => void;
 /**
  * Update move list display
  */
