@@ -1,8 +1,6 @@
 import {
   ChessMove,
-  Square,
   PieceNotation,
-  PlayerColor,
   PLAYER_COLORS,
 } from "../types.js";
 import { parseFEN, squareToCoords, coordsToSquare } from "./fen-utils.js";

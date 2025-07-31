@@ -871,7 +871,7 @@ npm run serve        # Start development server (human runs this)
 
 ### Development Guidelines
 
-Do not use classes, keep flat simple concepts, prefer module exports, do not pass on exported functions as parameters, keep it simple and maintainable, use greppable obvious names. Import and export things explicitly.
+Do not use classes, keep flat simple concepts, prefer module exports, do not pass on exported functions as parameters, keep it simple and maintainable, use greppable obvious names. Import and export things explicitly, don't star export/import. Name imported/exported things in a sort-of-namespace way when possible. Import types with the `import type` keyword and don't mix them with value imports.
 
 #### Adding Features
 

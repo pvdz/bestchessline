@@ -30,14 +30,6 @@ export function getButtonElement(id: string): HTMLButtonElement | null {
 }
 
 /**
- * Safely get an HTML select element by ID
- */
-function getSelectElement(id: string): HTMLSelectElement | null {
-  const element = document.getElementById(id);
-  return element instanceof HTMLSelectElement ? element : null;
-}
-
-/**
  * Safely get a checked radio button by name and value
  */
 export function getCheckedRadio(

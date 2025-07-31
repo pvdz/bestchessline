@@ -9,18 +9,6 @@
 // ============================================================================
 let loggingEnabled = false;
 /**
- * Enable or disable logging
- */
-function setLoggingEnabled(enabled) {
-    loggingEnabled = enabled;
-}
-/**
- * Get current logging state
- */
-function isLoggingEnabled() {
-    return loggingEnabled;
-}
-/**
  * Logging utility function
  * @param args - Arguments to pass to console.log
  */

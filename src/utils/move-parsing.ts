@@ -8,7 +8,6 @@ import { findFromSquare, findFromSquareWithDisambiguation } from "./move-parser.
 import { validateMove, PIECES } from "../move-validator.js";
 import { log } from "./logging.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
-import * as Board from "../chess-board.js";
 
 /**
  * Move Parsing Utility Functions

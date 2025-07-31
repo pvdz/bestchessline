@@ -1,7 +1,6 @@
 import { BestLineNode, ChessMove } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import * as Board from "../chess-board.js";
-import { log } from "./logging.js";
 import { clearBranch, updateAppState, updateMoveList } from "../main.js";
 
 /**

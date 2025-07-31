@@ -2,6 +2,7 @@ import * as BestLines from "../best-lines.js";
 import { getStartingPlayer } from "../utils.js";
 import { getThreadCount, getDepthScaler, getFirstReplyOverride, getSecondReplyOverride, getResponderMovesCount } from "./ui-getters.js";
 import { updateBestLinesTreeIncrementally, getEventTrackingState } from "../main.js";
+import { renderProgressBoard } from "./board-rendering.js";
 /**
  * Best Lines Results Management Utility Functions
  *
@@ -162,5 +163,10 @@ export function updateBestLinesProgress(resultsElement, analysis) {
     </div>
   `;
     progressSection.innerHTML = html;
+    // Render the progress board
+    const progressBoardElement = progressSection.querySelector("#progress-board");
+    if (progressBoardElement) {
+        renderProgressBoard(progressBoardElement, analysis.rootFen);
+    }
 }
 //# sourceMappingURL=best-lines-results.js.map

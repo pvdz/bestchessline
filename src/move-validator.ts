@@ -1,14 +1,10 @@
 import {
   ChessPosition,
   ChessMove,
-  PieceType,
   Color,
   Square,
-  PieceTypeNotation,
-  ColorNotation,
   PieceNotation,
   createPieceTypeNotation,
-  createColorNotation,
   createPieceNotation,
   getPieceTypeFromNotation,
   getColorFromNotation,
@@ -20,7 +16,6 @@ import {
 } from "./utils.js";
 import {
   parseFEN,
-  toFEN,
   squareToCoords,
   coordsToSquare,
   isValidSquare,

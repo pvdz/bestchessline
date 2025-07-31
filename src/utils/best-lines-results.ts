@@ -3,13 +3,13 @@ import { getStartingPlayer } from "../utils.js";
 import { 
   getThreadCount, 
   getDepthScaler, 
-  getInitiatorMoves, 
   getFirstReplyOverride, 
   getSecondReplyOverride,
   getResponderMovesCount
 } from "./ui-getters.js";
 import { BestLinesAnalysis } from "../types.js";
 import { updateBestLinesTreeIncrementally, getEventTrackingState } from "../main.js";
+import { renderProgressBoard } from "./board-rendering.js";
 
 /**
  * Best Lines Results Management Utility Functions
@@ -196,4 +196,10 @@ export function updateBestLinesProgress(
   `;
 
   progressSection.innerHTML = html;
+
+  // Render the progress board
+  const progressBoardElement = progressSection.querySelector("#progress-board") as HTMLElement;
+  if (progressBoardElement) {
+    renderProgressBoard(progressBoardElement, analysis.rootFen);
+  }
 } 

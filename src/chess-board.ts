@@ -19,12 +19,11 @@ import {
   squareToCoords,
   coordsToSquare,
 } from "./utils/fen-utils.js";
-import { PIECES, PIECE_TYPES } from "./move-validator.js";
+import { PIECE_TYPES } from "./move-validator.js";
 import {
   hideMoveArrow,
   positionArrow,
   getArrowElements,
-  setArrowElements,
 } from "./utils/arrow-utils.js";
 
 

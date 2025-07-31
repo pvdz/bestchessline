@@ -40,10 +40,6 @@ export declare const getAppState: () => AppState;
  */
 export declare const initializeApp: () => void;
 /**
- * Reset position evaluation to initial state
- */
-export declare const resetPositionEvaluation: () => void;
-/**
  * Update the tree UI incrementally
  */
 export declare const updateBestLinesTreeIncrementally: (resultsElement: HTMLElement, analysis: BestLinesAnalysis) => void;

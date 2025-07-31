@@ -36,21 +36,15 @@ import {
   PIECE_TYPES,
 } from "./utils/notation-utils.js";
 
-
-
 export function getPieceColor(piece: PieceNotation): ColorNotation {
   return piece === piece.toUpperCase()
     ? createColorNotation("w")
     : createColorNotation("b");
 }
 
-
-
 export function getPieceType(piece: PieceNotation): PieceTypeNotation {
   return createPieceTypeNotation(piece.toUpperCase());
 }
-
-
 
 // Global variable to store current move index
 let globalCurrentMoveIndex = -1;
@@ -94,36 +88,6 @@ export function getFENWithCorrectMoveCounter(
   return toFEN(correctedPosition);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Get the starting player from a FEN string
  */
@@ -131,11 +95,3 @@ export function getStartingPlayer(fen: string): PlayerColor {
   const position = parseFEN(fen);
   return position.turn;
 }
-
-
-
-
-
-
-
-

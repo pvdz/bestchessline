@@ -78,10 +78,6 @@ const updateStockfishState = (updates) => {
     stockfishState = { ...stockfishState, ...updates };
 };
 /**
- * Get current Stockfish state
- */
-const getStockfishState = () => ({ ...stockfishState });
-/**
  * Check if running in fallback mode
  */
 export const isFallbackMode = () => stockfishState.fallbackMode;
@@ -583,30 +579,5 @@ export const stopAnalysis = () => {
  * Check if currently analyzing
  */
 export const isAnalyzingPosition = () => stockfishState.isAnalyzing;
-/**
- * Get current analysis result
- */
-const getCurrentAnalysis = () => stockfishState.currentAnalysis;
-/**
- * Destroy Stockfish client
- */
-const destroy = () => {
-    stopAnalysis();
-    if (stockfishState.worker) {
-        stockfishState.worker.terminate();
-        updateStockfishState({ worker: null });
-    }
-    updateStockfishState({
-        isReady: false,
-        isAnalyzing: false,
-        currentAnalysis: null,
-        analysisCallbacks: [],
-        engineStatus: { engineLoaded: false, engineReady: false },
-        waitingForReady: false,
-        pendingAnalysis: null,
-    });
-};
-// ============================================================================
-// EXPORT FUNCTIONS
-// ============================================================================
+stockfishState.currentAnalysis;
 //# sourceMappingURL=stockfish-client.js.map

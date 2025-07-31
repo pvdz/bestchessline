@@ -128,11 +128,6 @@ const updateStockfishState = (updates: Partial<StockfishState>): void => {
 };
 
 /**
- * Get current Stockfish state
- */
-const getStockfishState = (): StockfishState => ({ ...stockfishState });
-
-/**
  * Check if running in fallback mode
  */
 export const isFallbackMode = (): boolean => stockfishState.fallbackMode;
@@ -745,33 +740,4 @@ export const stopAnalysis = (): void => {
  * Check if currently analyzing
  */
 export const isAnalyzingPosition = (): boolean => stockfishState.isAnalyzing;
-
-/**
- * Get current analysis result
- */
-const getCurrentAnalysis = (): AnalysisResult | null =>
   stockfishState.currentAnalysis;
-
-/**
- * Destroy Stockfish client
- */
-const destroy = (): void => {
-  stopAnalysis();
-  if (stockfishState.worker) {
-    stockfishState.worker.terminate();
-    updateStockfishState({ worker: null });
-  }
-  updateStockfishState({
-    isReady: false,
-    isAnalyzing: false,
-    currentAnalysis: null,
-    analysisCallbacks: [],
-    engineStatus: { engineLoaded: false, engineReady: false },
-    waitingForReady: false,
-    pendingAnalysis: null,
-  });
-};
-
-// ============================================================================
-// EXPORT FUNCTIONS
-// ============================================================================

@@ -1,4 +1,4 @@
-import { ChessPosition, ChessMove, PieceTypeNotation, PieceNotation } from "./types.js";
+import { ChessPosition, ChessMove, PieceNotation } from "./types.js";
 export declare const PIECES: {
     readonly WHITE_KING: PieceNotation;
     readonly WHITE_QUEEN: PieceNotation;
@@ -14,12 +14,12 @@ export declare const PIECES: {
     readonly BLACK_PAWN: PieceNotation;
 };
 export declare const PIECE_TYPES: {
-    readonly KING: PieceTypeNotation;
-    readonly QUEEN: PieceTypeNotation;
-    readonly ROOK: PieceTypeNotation;
-    readonly BISHOP: PieceTypeNotation;
-    readonly KNIGHT: PieceTypeNotation;
-    readonly PAWN: PieceTypeNotation;
+    readonly KING: import("./types.js").PieceTypeNotation;
+    readonly QUEEN: import("./types.js").PieceTypeNotation;
+    readonly ROOK: import("./types.js").PieceTypeNotation;
+    readonly BISHOP: import("./types.js").PieceTypeNotation;
+    readonly KNIGHT: import("./types.js").PieceTypeNotation;
+    readonly PAWN: import("./types.js").PieceTypeNotation;
 };
 export interface MoveEffect {
     isCapture: boolean;

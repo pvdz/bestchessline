@@ -1,10 +1,10 @@
 import { applyMoveToFEN } from "./fen-manipulation.js";
-import { updateFENInput, updateControlsFromPosition } from "./position-controls.js";
+import { updateFENInput, updateControlsFromPosition, resetPositionEvaluation, } from "./position-controls.js";
 import { highlightLastMove } from "./board-utils.js";
 import { updateStatus } from "./status-utils.js";
 import { updateNavigationButtons } from "./button-utils.js";
 import * as Board from "../chess-board.js";
-import { getAppState, clearBranch, updateAppState, updateMoveList, resetPositionEvaluation } from "../main.js";
+import { getAppState, clearBranch, updateAppState, updateMoveList } from "../main.js";
 /**
  * Navigation Utility Functions
  *

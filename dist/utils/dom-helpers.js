@@ -26,13 +26,6 @@ export function getButtonElement(id) {
     return element instanceof HTMLButtonElement ? element : null;
 }
 /**
- * Safely get an HTML select element by ID
- */
-function getSelectElement(id) {
-    const element = document.getElementById(id);
-    return element instanceof HTMLSelectElement ? element : null;
-}
-/**
  * Safely get a checked radio button by name and value
  */
 export function getCheckedRadio(name, value) {

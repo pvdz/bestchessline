@@ -1,26 +1,16 @@
 import {
   ChessMove,
   AnalysisResult,
-  AnalysisOptions,
   AnalysisMove,
-  NotationFormat,
-  PieceFormat,
   BestLineNode,
   BestLinesAnalysis,
-  createPieceNotation,
-  getColorFromNotation,
   PLAYER_COLORS,
 } from "./types.js";
 import {
-  getFENWithCorrectMoveCounter,
   setGlobalCurrentMoveIndex,
-  getGlobalCurrentMoveIndex,
-  getStartingPlayer,
 } from "./utils.js";
 import {
   showToast,
-  debounce,
-  clearInitiatorMoveInputs,
   updateTreeFontSize,
 } from "./utils/ui-utils.js";
 import {
@@ -28,7 +18,6 @@ import {
 } from "./utils/formatting-utils.js";
 import {
   compareAnalysisMoves,
-  calculateTotalPositionsWithOverrides,
 } from "./utils/analysis-utils.js";
 import {
   applyMoveToFEN,
@@ -37,21 +26,8 @@ import {
   moveToNotation,
 } from "./utils/notation-utils.js";
 import {
-  findFromSquare,
-  findFromSquareWithDisambiguation,
-} from "./utils/move-parser.js";
-import {
   parseFEN,
-  toFEN,
-  coordsToSquare,
 } from "./utils/fen-utils.js";
-import {
-  getDepthScaler,
-  getResponderMovesCount,
-  getThreadCount,
-  getFirstReplyOverride,
-  getSecondReplyOverride,
-} from "./utils/ui-getters.js";
 import {
   log,
   logError,
@@ -60,43 +36,25 @@ import {
   getInputElement,
   getTextAreaElement,
   getButtonElement,
-  getCheckedRadio,
   getCheckedRadioByName,
-  querySelectorHTMLElementBySelector,
 } from "./utils/dom-helpers.js";
 import {
-  parseMove,
   parseGameNotation,
 } from "./utils/move-parsing.js";
 import {
-  showMoveParseWarningToast,
-} from "./utils/toast-utils.js";
-import {
   formatNodeScore,
-  generateNodeId,
-  countNodesRecursive,
 } from "./utils/node-utils.js";
 import {
   highlightLastMove,
 } from "./utils/board-utils.js";
 import {
   clearTreeNodeDOMMap,
-  logTreeStructure,
-  countTotalNodes,
-  debugTreeDiggerStart,
 } from "./utils/debug-utils.js";
 import {
-  getPathToNode,
-  applyMovesToBoard,
-} from "./utils/tree-navigation.js";
-import {
   initializeCopyButton,
-  generateAllLines,
 } from "./utils/copy-utils.js";
 import {
   getLineCompletion,
-  findExistingLine,
-  getCompleteLine,
 } from "./utils/line-analysis.js";
 import {
   formatPVWithEffects,
@@ -109,6 +67,9 @@ import {
   updateFENInput,
   updateControlsFromPosition,
   updatePositionFromControls,
+  resetPositionEvaluation,
+  initializePositionEvaluationButton,
+  updatePositionEvaluationDisplay,
 } from "./utils/position-controls.js";
 import {
   navigateToMove,
@@ -118,7 +79,6 @@ import {
   updateNavigationButtons,
 } from "./utils/button-utils.js";
 import {
-  verifyDOMStructure,
   handleTreeNodeClick,
 } from "./utils/tree-debug-utils.js";
 import {
@@ -135,7 +95,6 @@ import {
 } from "./utils/status-management.js";
 import {
   updateBestLinesResults,
-  updateBestLinesProgress,
 } from "./utils/best-lines-results.js";
 
 import { buildShadowTree, findNodeById, UITreeNode } from "./utils/tree-building.js";
@@ -293,175 +252,6 @@ export const initializeApp = (): void => {
 // ============================================================================
 // POSITION EVALUATION
 // ============================================================================
-
-/**
- * Reset position evaluation to initial state
- */
-export const resetPositionEvaluation = (): void => {
-  updateAppState({
-    positionEvaluation: {
-      score: null,
-      isMate: false,
-      mateIn: null,
-      isAnalyzing: false,
-    },
-  });
-  updatePositionEvaluationDisplay();
-  updateButtonStates();
-};
-
-/**
- * Initialize position evaluation button
- */
-const initializePositionEvaluationButton = (): void => {
-  const evaluationButton = document.getElementById(
-    "position-evaluation-btn",
-  ) as HTMLButtonElement;
-  if (evaluationButton) {
-    evaluationButton.addEventListener("click", () => {
-      evaluateCurrentPosition();
-    });
-  }
-};
-
-/**
- * Evaluate the current board position using Stockfish
- */
-const evaluateCurrentPosition = async (): Promise<void> => {
-  const currentFEN = Board.getFEN();
-  if (!currentFEN) {
-    log("No position available for evaluation");
-    return;
-  }
-
-  log(`Evaluating position: ${currentFEN}`);
-
-  // Don't evaluate if main analysis is running
-  if (appState.isAnalyzing) {
-    log("Skipping position evaluation - main analysis is running");
-    return;
-  }
-
-  // Update state to show we're analyzing
-  updateAppState({
-    positionEvaluation: {
-      ...appState.positionEvaluation,
-      isAnalyzing: true,
-    },
-  });
-  updatePositionEvaluationDisplay();
-  updateButtonStates();
-
-  try {
-    // Get a proper evaluation with adequate depth and timeout
-    const result = await Promise.race([
-      Stockfish.analyzePosition(currentFEN, {
-        depth: 20,
-        threads: 1,
-        multiPV: 1,
-      }),
-      new Promise<AnalysisResult>((_, reject) =>
-        setTimeout(() => reject(new Error("Analysis timeout")), 10000),
-      ),
-    ]);
-
-    if (result.moves.length > 0) {
-      const bestMove = result.moves[0];
-      const score = bestMove.score;
-
-      // Log the evaluation for debugging
-      log(`Position evaluation: ${score} centipawns (${score / 100} pawns)`);
-
-      // Determine if it's a mate
-      const isMate = Math.abs(score) >= 10000;
-      const mateIn = isMate ? Math.ceil((10000 - Math.abs(score)) / 2) : null;
-
-      updateAppState({
-        positionEvaluation: {
-          score,
-          isMate,
-          mateIn,
-          isAnalyzing: false,
-        },
-      });
-    } else {
-      log("No moves found in analysis result");
-      updateAppState({
-        positionEvaluation: {
-          score: null,
-          isMate: false,
-          mateIn: null,
-          isAnalyzing: false,
-        },
-      });
-    }
-  } catch (error) {
-    logError("Error evaluating position:", error);
-    updateAppState({
-      positionEvaluation: {
-        score: null,
-        isMate: false,
-        mateIn: null,
-        isAnalyzing: false,
-      },
-    });
-  }
-
-  updatePositionEvaluationDisplay();
-  updateButtonStates();
-};
-
-/**
- * Update the position evaluation display
- */
-const updatePositionEvaluationDisplay = (): void => {
-  const evaluationButton = document.getElementById(
-    "position-evaluation-btn",
-  ) as HTMLButtonElement;
-  if (!evaluationButton) {
-    return;
-  }
-
-  const { score, isMate, mateIn, isAnalyzing } = appState.positionEvaluation;
-
-  if (isAnalyzing) {
-    evaluationButton.textContent = "...";
-    evaluationButton.className = "evaluation-button neutral";
-    evaluationButton.disabled = true;
-    return;
-  }
-
-  if (score === null) {
-    evaluationButton.textContent = "??";
-    evaluationButton.className = "evaluation-button neutral";
-    evaluationButton.disabled = false;
-    return;
-  }
-
-  let displayText: string;
-  let className: string;
-
-  if (isMate) {
-    // Use the new formatter for mate scores
-    displayText = formatScoreWithMateIn(score, mateIn ?? 0);
-    className = "evaluation-button mate";
-  } else {
-    // Convert centipawns to pawns and format
-    const scoreInPawns = score / 100;
-    displayText = score > 0
-      ? `+${scoreInPawns.toFixed(1)}`
-      : `${scoreInPawns.toFixed(1)}`;
-    className = score > 0
-      ? "evaluation-button positive"
-      : score < 0
-      ? "evaluation-button negative"
-      : "evaluation-button neutral";
-  }
-
-  evaluationButton.textContent = displayText;
-  evaluationButton.className = className;
-  evaluationButton.disabled = false;
-};
 
 // ============================================================================
 // EVENT LISTENERS
@@ -1347,7 +1137,6 @@ const updateResults = (result: AnalysisResult): void => {
 
 // Debounce mechanism for analysis updates
 let analysisUpdateTimeout: number | null = null;
-let queuedMoves: AnalysisMove[] = [];
 
 /**
  * Update results panel

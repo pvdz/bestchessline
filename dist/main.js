@@ -16,7 +16,7 @@ import { initializeCopyButton, } from "./utils/copy-utils.js";
 import { getLineCompletion, } from "./utils/line-analysis.js";
 import { formatPVWithEffects, updateResultsPanel, } from "./utils/pv-utils.js";
 import { updateStatus, } from "./utils/status-utils.js";
-import { updateFENInput, updateControlsFromPosition, updatePositionFromControls, } from "./utils/position-controls.js";
+import { updateFENInput, updateControlsFromPosition, updatePositionFromControls, resetPositionEvaluation, initializePositionEvaluationButton, updatePositionEvaluationDisplay, } from "./utils/position-controls.js";
 import { navigateToMove, applyMovesUpToIndex, } from "./utils/navigation-utils.js";
 import { updateNavigationButtons, } from "./utils/button-utils.js";
 import { handleTreeNodeClick, } from "./utils/tree-debug-utils.js";
@@ -118,153 +118,6 @@ export const initializeApp = () => {
 // ============================================================================
 // POSITION EVALUATION
 // ============================================================================
-/**
- * Reset position evaluation to initial state
- */
-export const resetPositionEvaluation = () => {
-    updateAppState({
-        positionEvaluation: {
-            score: null,
-            isMate: false,
-            mateIn: null,
-            isAnalyzing: false,
-        },
-    });
-    updatePositionEvaluationDisplay();
-    updateButtonStates();
-};
-/**
- * Initialize position evaluation button
- */
-const initializePositionEvaluationButton = () => {
-    const evaluationButton = document.getElementById("position-evaluation-btn");
-    if (evaluationButton) {
-        evaluationButton.addEventListener("click", () => {
-            evaluateCurrentPosition();
-        });
-    }
-};
-/**
- * Evaluate the current board position using Stockfish
- */
-const evaluateCurrentPosition = async () => {
-    const currentFEN = Board.getFEN();
-    if (!currentFEN) {
-        log("No position available for evaluation");
-        return;
-    }
-    log(`Evaluating position: ${currentFEN}`);
-    // Don't evaluate if main analysis is running
-    if (appState.isAnalyzing) {
-        log("Skipping position evaluation - main analysis is running");
-        return;
-    }
-    // Update state to show we're analyzing
-    updateAppState({
-        positionEvaluation: {
-            ...appState.positionEvaluation,
-            isAnalyzing: true,
-        },
-    });
-    updatePositionEvaluationDisplay();
-    updateButtonStates();
-    try {
-        // Get a proper evaluation with adequate depth and timeout
-        const result = await Promise.race([
-            Stockfish.analyzePosition(currentFEN, {
-                depth: 20,
-                threads: 1,
-                multiPV: 1,
-            }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Analysis timeout")), 10000)),
-        ]);
-        if (result.moves.length > 0) {
-            const bestMove = result.moves[0];
-            const score = bestMove.score;
-            // Log the evaluation for debugging
-            log(`Position evaluation: ${score} centipawns (${score / 100} pawns)`);
-            // Determine if it's a mate
-            const isMate = Math.abs(score) >= 10000;
-            const mateIn = isMate ? Math.ceil((10000 - Math.abs(score)) / 2) : null;
-            updateAppState({
-                positionEvaluation: {
-                    score,
-                    isMate,
-                    mateIn,
-                    isAnalyzing: false,
-                },
-            });
-        }
-        else {
-            log("No moves found in analysis result");
-            updateAppState({
-                positionEvaluation: {
-                    score: null,
-                    isMate: false,
-                    mateIn: null,
-                    isAnalyzing: false,
-                },
-            });
-        }
-    }
-    catch (error) {
-        logError("Error evaluating position:", error);
-        updateAppState({
-            positionEvaluation: {
-                score: null,
-                isMate: false,
-                mateIn: null,
-                isAnalyzing: false,
-            },
-        });
-    }
-    updatePositionEvaluationDisplay();
-    updateButtonStates();
-};
-/**
- * Update the position evaluation display
- */
-const updatePositionEvaluationDisplay = () => {
-    const evaluationButton = document.getElementById("position-evaluation-btn");
-    if (!evaluationButton) {
-        return;
-    }
-    const { score, isMate, mateIn, isAnalyzing } = appState.positionEvaluation;
-    if (isAnalyzing) {
-        evaluationButton.textContent = "...";
-        evaluationButton.className = "evaluation-button neutral";
-        evaluationButton.disabled = true;
-        return;
-    }
-    if (score === null) {
-        evaluationButton.textContent = "??";
-        evaluationButton.className = "evaluation-button neutral";
-        evaluationButton.disabled = false;
-        return;
-    }
-    let displayText;
-    let className;
-    if (isMate) {
-        // Use the new formatter for mate scores
-        displayText = formatScoreWithMateIn(score, mateIn ?? 0);
-        className = "evaluation-button mate";
-    }
-    else {
-        // Convert centipawns to pawns and format
-        const scoreInPawns = score / 100;
-        displayText = score > 0
-            ? `+${scoreInPawns.toFixed(1)}`
-            : `${scoreInPawns.toFixed(1)}`;
-        className = score > 0
-            ? "evaluation-button positive"
-            : score < 0
-                ? "evaluation-button negative"
-                : "evaluation-button neutral";
-    }
-    evaluationButton.textContent = displayText;
-    evaluationButton.className = className;
-    evaluationButton.disabled = false;
-};
 // ============================================================================
 // EVENT LISTENERS
 // ============================================================================
@@ -985,7 +838,6 @@ const updateResults = (result) => {
 };
 // Debounce mechanism for analysis updates
 let analysisUpdateTimeout = null;
-let queuedMoves = [];
 /**
  * Update results panel
  */
