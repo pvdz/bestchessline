@@ -1,5 +1,6 @@
 import { getPieceTypeFromNotation, getColorFromNotation, createPieceNotation, PLAYER_COLORS, } from "./types.js";
-import { parseFEN, toFEN, squareToCoords, coordsToSquare, getPieceSymbol, formatScoreWithMateIn, } from "./utils.js";
+import { getPieceSymbol, formatScoreWithMateIn, } from "./utils.js";
+import { parseFEN, toFEN, squareToCoords, coordsToSquare, } from "./utils/fen-utils.js";
 import { PIECE_TYPES } from "./move-validator.js";
 /**
  * Board state instance

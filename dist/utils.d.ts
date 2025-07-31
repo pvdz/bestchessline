@@ -1,9 +1,4 @@
-import { ChessPosition, ChessMove, Square, NotationFormat, PieceFormat, PieceTypeNotation, ColorNotation, PieceNotation, PlayerColor } from "./types.js";
-export declare function parseFEN(fen: string): ChessPosition;
-export declare function toFEN(position: ChessPosition): string;
-export declare function squareToCoords(square: Square): [number, number];
-export declare function coordsToSquare(rank: number, file: number): Square;
-export declare function isValidSquare(square: string): square is Square;
+import { ChessMove, NotationFormat, PieceFormat, PieceTypeNotation, ColorNotation, PieceNotation, PlayerColor } from "./types.js";
 export declare function getPieceColor(piece: PieceNotation): ColorNotation;
 export declare const PIECE_TYPES: {
     readonly KING: PieceTypeNotation;

@@ -1,5 +1,6 @@
 import { createPieceTypeNotation, createPieceNotation, getPieceTypeFromNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
-import { parseFEN, squareToCoords, coordsToSquare, getPieceColor, getPieceType, } from "./utils.js";
+import { getPieceColor, getPieceType, } from "./utils.js";
+import { parseFEN, squareToCoords, coordsToSquare, isValidSquare, } from "./utils/fen-utils.js";
 // Constants for piece types
 export const PIECES = {
     WHITE_KING: createPieceNotation("K"),
@@ -96,13 +97,6 @@ function createEmptyEffect() {
 /**
  * Checks if a square coordinate is valid
  */
-function isValidSquare(square) {
-    if (square.length !== 2)
-        return false;
-    const file = square[0];
-    const rank = square[1];
-    return file >= "a" && file <= "h" && rank >= "1" && rank <= "8";
-}
 /**
  * Checks if a move is legal for the piece type (basic rules only)
  */

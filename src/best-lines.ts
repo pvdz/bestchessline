@@ -9,7 +9,6 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import {
-  parseFEN,
   moveToNotation,
   compareAnalysisMoves,
   getFENWithCorrectMoveCounter,
@@ -19,6 +18,9 @@ import {
   calculateTotalPositionsWithOverrides,
   getStartingPlayer,
 } from "./utils.js";
+import {
+  parseFEN,
+} from "./utils/fen-utils.js";
 import {
   getDepthScaler,
   getResponderMovesCount,

@@ -8,13 +8,15 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import {
+  getPieceSymbol,
+  formatScoreWithMateIn,
+} from "./utils.js";
+import {
   parseFEN,
   toFEN,
   squareToCoords,
   coordsToSquare,
-  getPieceSymbol,
-  formatScoreWithMateIn,
-} from "./utils.js";
+} from "./utils/fen-utils.js";
 import { PIECES, PIECE_TYPES } from "./move-validator.js";
 
 // ============================================================================

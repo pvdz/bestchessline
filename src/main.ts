@@ -13,9 +13,6 @@ import {
 } from "./types.js";
 import {
   moveToNotation,
-  parseFEN,
-  toFEN,
-  coordsToSquare,
   getFENWithCorrectMoveCounter,
   setGlobalCurrentMoveIndex,
   getGlobalCurrentMoveIndex,
@@ -28,6 +25,11 @@ import {
   compareAnalysisMoves,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  parseFEN,
+  toFEN,
+  coordsToSquare,
+} from "./utils/fen-utils.js";
 import {
   getDepthScaler,
   getResponderMovesCount,

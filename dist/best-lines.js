@@ -1,5 +1,6 @@
 import { PLAYER_COLORS, } from "./types.js";
-import { parseFEN, moveToNotation, compareAnalysisMoves, getFENWithCorrectMoveCounter, getGlobalCurrentMoveIndex, applyMoveToFEN, parseSimpleMove, calculateTotalPositionsWithOverrides, getStartingPlayer, } from "./utils.js";
+import { moveToNotation, compareAnalysisMoves, getFENWithCorrectMoveCounter, getGlobalCurrentMoveIndex, applyMoveToFEN, parseSimpleMove, calculateTotalPositionsWithOverrides, getStartingPlayer, } from "./utils.js";
+import { parseFEN, } from "./utils/fen-utils.js";
 import { getDepthScaler, getResponderMovesCount, getThreadCount, getInitiatorMoves, getFirstReplyOverride, getSecondReplyOverride, } from "./utils/ui-getters.js";
 import { log, logError, } from "./utils/logging.js";
 import * as Stockfish from "./stockfish-client.js";

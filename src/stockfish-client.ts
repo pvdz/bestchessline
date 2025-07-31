@@ -6,11 +6,13 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import {
-  parseFEN,
-  squareToCoords,
   showToast,
   compareAnalysisMoves,
 } from "./utils.js";
+import {
+  parseFEN,
+  squareToCoords,
+} from "./utils/fen-utils.js";
 import {
   log,
   logError,

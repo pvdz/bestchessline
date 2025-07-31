@@ -15,13 +15,16 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import {
+  getPieceColor,
+  getPieceType,
+} from "./utils.js";
+import {
   parseFEN,
   toFEN,
   squareToCoords,
   coordsToSquare,
-  getPieceColor,
-  getPieceType,
-} from "./utils.js";
+  isValidSquare,
+} from "./utils/fen-utils.js";
 
 // Constants for piece types
 export const PIECES = {
@@ -149,12 +152,7 @@ function createEmptyEffect(): MoveEffect {
 /**
  * Checks if a square coordinate is valid
  */
-function isValidSquare(square: string): square is Square {
-  if (square.length !== 2) return false;
-  const file = square[0];
-  const rank = square[1];
-  return file >= "a" && file <= "h" && rank >= "1" && rank <= "8";
-}
+
 
 /**
  * Checks if a move is legal for the piece type (basic rules only)
