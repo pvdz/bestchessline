@@ -1,5 +1,6 @@
 import { PLAYER_COLORS, } from "./types.js";
-import { showToast, compareAnalysisMoves, } from "./utils.js";
+import { showToast, } from "./utils.js";
+import { compareAnalysisMoves, } from "./utils/analysis-utils.js";
 import { parseFEN, squareToCoords, } from "./utils/fen-utils.js";
 import { log, logError, } from "./utils/logging.js";
 import { querySelectorHTMLElement, querySelectorButton, } from "./utils/dom-helpers.js";

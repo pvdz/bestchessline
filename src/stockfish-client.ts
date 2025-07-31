@@ -7,8 +7,10 @@ import {
 } from "./types.js";
 import {
   showToast,
-  compareAnalysisMoves,
 } from "./utils.js";
+import {
+  compareAnalysisMoves,
+} from "./utils/analysis-utils.js";
 import {
   parseFEN,
   squareToCoords,

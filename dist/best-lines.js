@@ -1,5 +1,6 @@
 import { PLAYER_COLORS, } from "./types.js";
-import { compareAnalysisMoves, getFENWithCorrectMoveCounter, getGlobalCurrentMoveIndex, calculateTotalPositionsWithOverrides, getStartingPlayer, } from "./utils.js";
+import { getFENWithCorrectMoveCounter, getGlobalCurrentMoveIndex, getStartingPlayer, } from "./utils.js";
+import { compareAnalysisMoves, calculateTotalPositionsWithOverrides, } from "./utils/analysis-utils.js";
 import { applyMoveToFEN, } from "./utils/fen-manipulation.js";
 import { moveToNotation, } from "./utils/notation-utils.js";
 import { parseSimpleMove, } from "./utils/move-parser.js";

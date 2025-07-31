@@ -15,12 +15,14 @@ import {
   getFENWithCorrectMoveCounter,
   setGlobalCurrentMoveIndex,
   getGlobalCurrentMoveIndex,
-  calculateTotalPositionsWithOverrides,
   getStartingPlayer,
   showToast,
-  compareAnalysisMoves,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  compareAnalysisMoves,
+  calculateTotalPositionsWithOverrides,
+} from "./utils/analysis-utils.js";
 import {
   applyMoveToFEN,
 } from "./utils/fen-manipulation.js";

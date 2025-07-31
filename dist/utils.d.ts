@@ -27,29 +27,6 @@ export declare function debounce<T extends (...args: unknown[]) => unknown>(func
  */
 export declare function getStartingPlayer(fen: string): PlayerColor;
 /**
- * Compare two analysis moves for sorting. The moves should always be for the same player
- * from the same position, maybe even the same piece (with different targets).
- * Mate is always the best move. When two moves mate or have same score, use consistent ordering.
- *
- * @param a First analysis move. Score is negative if in favor of black, otherwise in favor of white
- * @param b Second analysis move. Score is negative if in favor of black, otherwise in favor of white
- * @param currentPlayer The player whose turn it is ("w" for white, "b" for black)
- * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
- */
-export declare function compareAnalysisMoves(a: {
-    score: number;
-    depth: number;
-    mateIn: number;
-}, b: {
-    score: number;
-    depth: number;
-    mateIn: number;
-}, direction?: "asc" | "desc"): number;
-/**
- * Calculate total positions with overrides
- */
-export declare function calculateTotalPositionsWithOverrides(maxDepth: number, responderResponses: number, firstReplyOverride?: number, secondReplyOverride?: number): number;
-/**
  * Show a toast notification
  * @param message The message to display
  * @param background The background color (default: #333)
