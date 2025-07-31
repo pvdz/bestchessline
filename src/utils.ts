@@ -139,16 +139,26 @@ export function getPieceType(piece: PieceNotation): PieceTypeNotation {
   return createPieceTypeNotation(piece.toUpperCase());
 }
 
-export function formatScore(score: number): string {
-  if (Math.abs(score) < 100) {
-    return `${score >= 0 ? "+" : ""}${score}`;
+/**
+ * Format a score with proper mate notation using mateIn
+ * @param score The score in centipawns
+ * @param mateIn The number of moves required for mate (0 if not a mate)
+ * @returns Formatted score string
+ */
+export function formatScoreWithMateIn(score: number, mateIn: number): string {
+  if (mateIn > 0) {
+    // Mate in X moves
+    return score > 0 ? `+M${mateIn}` : `-M${mateIn}`;
+  } else if (Math.abs(score) >= 10000) {
+    // Mate but mateIn is 0 (shouldn't happen, but fallback. or maybe that's just the current board state? #)
+    return score > 0 ? `+#` : `-#`;
+  } else {
+    // Regular score in pawns
+    const scoreInPawns = score / 100;
+    return score > 0
+      ? `+${scoreInPawns.toFixed(1)}`
+      : `${scoreInPawns.toFixed(1)}`;
   }
-  const mate = Math.abs(score) > 9000;
-  if (mate) {
-    const mateMoves = Math.ceil((10000 - Math.abs(score)) / 2);
-    return score > 0 ? `M${mateMoves}` : `-M${mateMoves}`;
-  }
-  return `${score >= 0 ? "+" : ""}${(score / 100).toFixed(1)}`;
 }
 
 export function formatTime(ms: number): string {
@@ -1269,9 +1279,9 @@ export function compareAnalysisMoves(
   a: { score: number; depth: number; mateIn: number },
   b: { score: number; depth: number; mateIn: number },
 ): number {
-  // Determine if moves are mate moves (score > 9000 indicates mate)
-  const aIsMate = a.score > 9000;
-  const bIsMate = b.score > 9000;
+  // Determine if moves are mate moves (|score| > 9000 indicates mate)
+  const aIsMate = Math.abs(a.score) > 9000;
+  const bIsMate = Math.abs(b.score) > 9000;
 
   // Handle mate moves with highest priority
   if (aIsMate && !bIsMate) return -1; // a is mate, b is not

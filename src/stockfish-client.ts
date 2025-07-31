@@ -443,6 +443,18 @@ const parseInfoMessage = (message: string): void => {
     }
   }
 
+  // Normalize score to always be from white's perspective
+  // When it's black's turn, Stockfish returns scores from black's perspective
+  const fen = stockfishState.currentAnalysis?.position || "";
+  if (fen) {
+    const fenParts = fen.split(" ");
+    const turn = fenParts[1]; // "w" or "b"
+    if (turn === "b") {
+      // Invert the score when it's black's turn
+      score = -score;
+    }
+  }
+
   // Log the parsed info for debugging
   log(
     `Info: depth=${depth}, multipv=${multipv}, score=${score}, nodes=${nodes}, time=${time}, pv=${pv.join(" ")}`,
@@ -499,8 +511,8 @@ const parseInfoMessage = (message: string): void => {
         move.move.piece === firstMove.piece,
     );
 
-    // Calculate mateIn for mate moves (actual moves required, not depth)
-    const mateIn = score >= 10000 ? pv.length : 0;
+    // Calculate mateIn for mate moves (actual moves required, not depth). THIS IS MOVE LENGTH RELATED LEAVE ALONE.
+    const mateIn = Math.abs(score) >= 10000 ? Math.ceil(pv.length / 2) : 0;
 
     const analysisMove: AnalysisMove = {
       move: firstMove,

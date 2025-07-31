@@ -39,6 +39,7 @@ import {
   getStartingPlayer,
   showToast,
   compareAnalysisMoves,
+  formatScoreWithMateIn,
 } from "./utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
@@ -334,11 +335,8 @@ const updatePositionEvaluationDisplay = (): void => {
   let className: string;
 
   if (isMate) {
-    if (mateIn === 0) {
-      displayText = "M";
-    } else {
-      displayText = score > 0 ? `+M${mateIn}` : `-M${mateIn}`;
-    }
+    // Use the new formatter for mate scores
+    displayText = formatScoreWithMateIn(score, mateIn ?? 0);
     className = "evaluation-button mate";
   } else {
     // Convert centipawns to pawns and format
@@ -1333,7 +1331,7 @@ const createTreeNodeElement = (
   const moveText = moveToNotation(node.move);
   const scoreText =
     node.score !== 0
-      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
       : "";
   const moveClass = node.isWhiteMove ? "white-move" : "black-move";
 
@@ -1416,7 +1414,7 @@ const updateTreeNodeElement = (
   const moveText = moveToNotation(node.move);
   const scoreText =
     node.score !== 0
-      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
       : "";
 
   // Update move text
@@ -1702,7 +1700,7 @@ const renderTreeNode = (
   const moveText = moveToNotation(node.move);
   const scoreText =
     node.score !== 0
-      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
       : "";
   const moveClass = node.isWhiteMove ? "white-move" : "black-move";
 
@@ -1892,7 +1890,7 @@ const renderBestLineNode = (node: BestLineNode): string => {
   const moveText = moveToNotation(node.move);
   const scoreText =
     node.score !== 0
-      ? ` (${node.score > 0 ? "+" : ""}${(node.score / 100).toFixed(2)})`
+      ? ` (${formatScoreWithMateIn(node.score, node.mateIn ?? 0)})`
       : "";
   const depthText = node.depth > 0 ? ` [depth: ${node.depth}]` : "";
   const moveClass = node.isWhiteMove ? "white-move" : "black-move";
@@ -2186,8 +2184,7 @@ const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
       pieceType,
       Board.getFEN(),
     );
-    const score =
-      move.score > 0 ? `+${move.score / 100}` : `${move.score / 100}`;
+    const score = formatScoreWithMateIn(move.score, move.mateIn);
     const pv = formatPVWithEffects(
       move.pv,
       Board.getFEN(),
@@ -2244,6 +2241,7 @@ const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
         filteredMoves,
         index,
         arrowId, // Pass the unique arrow ID
+        move.mateIn, // Pass the mateIn value
       );
     }
   });

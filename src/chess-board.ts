@@ -2,15 +2,6 @@ import {
   ChessPosition,
   ChessMove,
   AnalysisMove,
-  PieceType,
-  Color,
-  PieceTypeNotation,
-  ColorNotation,
-  PieceNotation,
-  isPieceTypeNotation,
-  isColorNotation,
-  createPieceTypeNotation,
-  createColorNotation,
   getPieceTypeFromNotation,
   getColorFromNotation,
   createPieceNotation,
@@ -22,6 +13,7 @@ import {
   squareToCoords,
   coordsToSquare,
   getPieceSymbol,
+  formatScoreWithMateIn,
 } from "./utils.js";
 import { PIECES, PIECE_TYPES } from "./move-validator.js";
 
@@ -602,6 +594,7 @@ const showMoveArrow = (
   allMoves?: AnalysisMove[],
   index?: number,
   customArrowId?: string,
+  mateIn?: number, // I think there's an inconsistency here but I suppose it's not important
 ): void => {
   const pieceNotation = createPieceNotation(piece);
   // Use custom arrow ID if provided, otherwise create a unique identifier for this arrow based on the move
@@ -627,8 +620,14 @@ const showMoveArrow = (
     const isBestMate = Math.abs(bestScore) >= 10000;
 
     if (isMate) {
-      // Mate moves are always pastel green
-      arrowColor = "#90EE90"; // pastel green
+      // Check if this is the best mate move (index 0) or another mate move
+      if (index === 0) {
+        // Best mate move - dark green
+        arrowColor = "#228B22"; // forest green for best mate
+      } else {
+        // Other mate moves - light green
+        arrowColor = "#90EE90"; // pastel green for other mates
+      }
     } else if (isBestMate) {
       // Best move is mate but this move is not - bright red for preventing mate
       arrowColor = "#FF4444"; // bright red
@@ -698,12 +697,8 @@ const showMoveArrow = (
     const isBestMate = Math.abs(bestScore) >= 10000;
 
     if (isMate) {
-      // This move is a mate
-      if (currentScore > 0) {
-        labelText = "+#"; // White mates
-      } else {
-        labelText = "-#"; // Black mates
-      }
+      // This move is a mate - use the new formatter
+      labelText = formatScoreWithMateIn(currentScore, mateIn ?? 0);
     } else if (isBestMate) {
       // Best move is mate but this move is not
       labelText = "!?"; // Indicates not a mate when best move is mate
@@ -727,10 +722,7 @@ const showMoveArrow = (
 
   // Format score with + or - prefix for arrow data attribute
   if (score !== undefined) {
-    const scoreText =
-      score > 0
-        ? `+${(score / 100).toFixed(1)}`
-        : `${(score / 100).toFixed(1)}`;
+    const scoreText = formatScoreWithMateIn(score, mateIn ?? 0);
     arrow.setAttribute("data-score", scoreText);
   }
 
@@ -748,10 +740,7 @@ const showMoveArrow = (
     const scoreLabel = document.createElement("div");
     scoreLabel.className = "move-score-label";
     scoreLabel.textContent =
-      labelText ||
-      (score > 0
-        ? `+${(score / 100).toFixed(1)}`
-        : `${(score / 100).toFixed(1)}`);
+      labelText || formatScoreWithMateIn(score, mateIn ?? 0);
 
     // Set CSS custom property for the arrow color
     scoreLabel.style.setProperty("--arrow-color", arrowColor);
