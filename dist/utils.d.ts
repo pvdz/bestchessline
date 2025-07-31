@@ -87,18 +87,6 @@ export declare function canKingMoveTo(fromSquare: string, toSquare: string, boar
  */
 export declare function selectCorrectMove(candidates: string[], toSquare: string, piece: PieceNotation, board: string[][]): string;
 /**
- * Get depth scaler from UI (1-15)
- */
-export declare function getDepthScaler(): number;
-/**
- * Get black moves count from UI
- */
-export declare function getResponderMovesCount(): number;
-/**
- * Get thread count from UI
- */
-export declare function getThreadCount(): number;
-/**
  * Get the starting player from a FEN string
  */
 export declare function getStartingPlayer(fen: string): PlayerColor;
@@ -121,18 +109,6 @@ export declare function compareAnalysisMoves(a: {
     depth: number;
     mateIn: number;
 }, direction?: "asc" | "desc"): number;
-/**
- * Get initiator moves from UI inputs
- */
-export declare function getInitiatorMoves(): string[];
-/**
- * Get first reply override from UI (0 = use default)
- */
-export declare function getFirstReplyOverride(): number;
-/**
- * Get second reply override from UI (0 = use default)
- */
-export declare function getSecondReplyOverride(): number;
 /**
  * Calculate total positions with overrides
  */

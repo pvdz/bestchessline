@@ -22,17 +22,19 @@ import {
   applyMoveToFEN,
   findFromSquare,
   findFromSquareWithDisambiguation,
-  getDepthScaler,
-  getResponderMovesCount,
-  getThreadCount,
-  getFirstReplyOverride,
-  getSecondReplyOverride,
   calculateTotalPositionsWithOverrides,
   getStartingPlayer,
   showToast,
   compareAnalysisMoves,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  getDepthScaler,
+  getResponderMovesCount,
+  getThreadCount,
+  getFirstReplyOverride,
+  getSecondReplyOverride,
+} from "./utils/ui-getters.js";
 import {
   log,
   logError,

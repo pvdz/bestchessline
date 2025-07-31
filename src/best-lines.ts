@@ -16,15 +16,17 @@ import {
   getGlobalCurrentMoveIndex,
   applyMoveToFEN,
   parseSimpleMove,
+  calculateTotalPositionsWithOverrides,
+  getStartingPlayer,
+} from "./utils.js";
+import {
   getDepthScaler,
   getResponderMovesCount,
   getThreadCount,
   getInitiatorMoves,
   getFirstReplyOverride,
   getSecondReplyOverride,
-  calculateTotalPositionsWithOverrides,
-  getStartingPlayer,
-} from "./utils.js";
+} from "./utils/ui-getters.js";
 import {
   log,
   logError,
