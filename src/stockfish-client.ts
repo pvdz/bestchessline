@@ -10,11 +10,13 @@ import {
   squareToCoords,
   log,
   logError,
-  querySelectorHTMLElement,
-  querySelectorButton,
   showToast,
   compareAnalysisMoves,
 } from "./utils.js";
+import {
+  querySelectorHTMLElement,
+  querySelectorButton,
+} from "./utils/dom-helpers.js";
 
 /**
  * Show error toast notification

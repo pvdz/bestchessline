@@ -18,12 +18,6 @@ import {
   coordsToSquare,
   log,
   logError,
-  getInputElement,
-  getTextAreaElement,
-  getButtonElement,
-  getCheckedRadio,
-  getCheckedRadioByName,
-  querySelectorHTMLElementBySelector,
   getFENWithCorrectMoveCounter,
   setGlobalCurrentMoveIndex,
   getGlobalCurrentMoveIndex,
@@ -41,6 +35,14 @@ import {
   compareAnalysisMoves,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  getInputElement,
+  getTextAreaElement,
+  getButtonElement,
+  getCheckedRadio,
+  getCheckedRadioByName,
+  querySelectorHTMLElementBySelector,
+} from "./utils/dom-helpers.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
