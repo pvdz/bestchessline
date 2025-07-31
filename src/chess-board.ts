@@ -9,7 +9,7 @@ import {
 } from "./types.js";
 import {
   formatScoreWithMateIn,
-} from "./utils.js";
+} from "./utils/formatting-utils.js";
 import {
   getPieceSymbol,
 } from "./utils/notation-utils.js";

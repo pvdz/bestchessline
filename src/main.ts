@@ -17,8 +17,10 @@ import {
   getGlobalCurrentMoveIndex,
   getStartingPlayer,
   showToast,
-  formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  formatScoreWithMateIn,
+} from "./utils/formatting-utils.js";
 import {
   compareAnalysisMoves,
   calculateTotalPositionsWithOverrides,
