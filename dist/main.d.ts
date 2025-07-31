@@ -43,9 +43,6 @@ export declare const initializeApp: () => void;
  * Update the tree UI incrementally
  */
 export declare const updateBestLinesTreeIncrementally: (resultsElement: HTMLElement, analysis: BestLinesAnalysis) => void;
-/**
- * Update results panel
- */
 export declare const actuallyUpdateResultsPanel: (moves: AnalysisMove[]) => void;
 /**
  * Create a branch from the current position

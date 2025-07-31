@@ -6,11 +6,9 @@ import { compareAnalysisMoves, } from "./utils/analysis-utils.js";
 import { applyMoveToFEN, } from "./utils/fen-manipulation.js";
 import { moveToNotation, } from "./utils/notation-utils.js";
 import { parseFEN, } from "./utils/fen-utils.js";
-import { log, logError, } from "./utils/logging.js";
-import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName, } from "./utils/dom-helpers.js";
+import { log, } from "./utils/logging.js";
+import { getInputElement, getTextAreaElement, getCheckedRadioByName, } from "./utils/dom-helpers.js";
 import { formatNodeScore, } from "./utils/node-utils.js";
-import { highlightLastMove, } from "./utils/board-utils.js";
-import { clearTreeNodeDOMMap, } from "./utils/debug-utils.js";
 import { initializeCopyButton, } from "./utils/copy-utils.js";
 import { getLineCompletion, } from "./utils/line-analysis.js";
 import { formatPVWithEffects, updateResultsPanel, } from "./utils/pv-utils.js";
@@ -23,6 +21,7 @@ import { updateBestLinesStatus, updateAnalysisStatus, } from "./utils/status-man
 import { updateBestLinesResults, } from "./utils/best-lines-results.js";
 import { addMove, importGame, previousMove, nextMove, updateMoveList, } from "./utils/game-navigation.js";
 import { startAnalysis, stopAnalysis, addPVClickListeners, handleMakeEngineMove, } from "./utils/analysis-manager.js";
+import { startBestLinesAnalysis, stopBestLinesAnalysis, clearBestLinesAnalysis, updateBestLinesButtonStates, } from "./utils/best-lines-manager.js";
 import { buildShadowTree, findNodeById } from "./utils/tree-building.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
@@ -113,9 +112,6 @@ export const initializeApp = () => {
     initializePositionEvaluationButton();
     log("Application initialized successfully");
 };
-// ============================================================================
-// POSITION EVALUATION
-// ============================================================================
 // ============================================================================
 // EVENT LISTENERS
 // ============================================================================
@@ -435,84 +431,6 @@ const initializePositionControls = () => {
 // BEST LINES ANALYSIS FUNCTIONS
 // ============================================================================
 /**
- * Start best lines analysis
- */
-const startBestLinesAnalysis = async () => {
-    try {
-        // Clear any previous analysis results first
-        BestLines.clearBestLinesAnalysis();
-        await BestLines.startBestLinesAnalysis();
-        updateBestLinesButtonStates();
-        updateBestLinesStatus();
-        updateBestLinesResults();
-    }
-    catch (error) {
-        logError("Failed to start best lines analysis:", error);
-        updateBestLinesStatus("Error starting analysis");
-    }
-};
-/**
- * Stop best lines analysis
- */
-const stopBestLinesAnalysis = () => {
-    console.log("Stop button clicked - calling stopBestLinesAnalysis");
-    try {
-        BestLines.stopBestLinesAnalysis();
-        console.log("BestLines.stopBestLinesAnalysis() completed");
-        clearTreeNodeDOMMap(); // Clear tracked DOM elements
-        updateBestLinesButtonStates();
-        updateBestLinesStatus("Analysis stopped");
-        console.log("Stop analysis completed successfully");
-    }
-    catch (error) {
-        console.error("Failed to stop best lines analysis:", error);
-        logError("Failed to stop best lines analysis:", error);
-    }
-};
-/**
- * Clear best lines analysis
- */
-const clearBestLinesAnalysis = () => {
-    try {
-        BestLines.clearBestLinesAnalysis();
-        clearTreeNodeDOMMap(); // Clear tracked DOM elements
-        updateBestLinesButtonStates();
-        updateBestLinesStatus("Ready");
-        updateBestLinesResults();
-    }
-    catch (error) {
-        logError("Failed to clear best lines analysis:", error);
-    }
-};
-/**
- * Update best lines button states
- */
-const updateBestLinesButtonStates = () => {
-    const startBtn = getButtonElement("start-tree-digger");
-    const stopBtn = getButtonElement("stop-tree-digger");
-    const clearBtn = getButtonElement("clear-tree-digger");
-    const isAnalyzing = BestLines.isAnalyzing();
-    const isStockfishBusy = appState.isAnalyzing || appState.positionEvaluation.isAnalyzing;
-    if (startBtn) {
-        startBtn.disabled = isAnalyzing || isStockfishBusy;
-    }
-    else {
-        console.error("Start button not found!");
-    }
-    if (stopBtn) {
-        stopBtn.disabled = !isAnalyzing;
-    }
-    else {
-        console.error("Stop button not found!");
-    }
-    if (clearBtn) {
-        clearBtn.disabled = isAnalyzing;
-    }
-    else {
-        console.error("Clear button not found!");
-    }
-};
-/**
  * Update an existing DOM element for a tree node
  */
 const updateTreeNodeElement = (element, node, analysis) => {
@@ -779,13 +697,7 @@ const renderBestLineNode = (node) => {
 // ============================================================================
 // RESULTS MANAGEMENT
 // ============================================================================
-// Debounce mechanism for analysis updates
-let analysisUpdateTimeout = null;
-/**
- * Update results panel
- */
 export const actuallyUpdateResultsPanel = (moves) => {
-    analysisUpdateTimeout = null;
     const resultsPanel = document.getElementById("analysis-results");
     if (!resultsPanel)
         return;
@@ -977,117 +889,6 @@ export const clearBranch = () => {
     updateMoveList();
     // Evaluate the current position after clearing branch
     resetPositionEvaluation();
-};
-const handlePVClick = (e) => {
-    const target = e.target;
-    console.log("Event delegation caught click on:", target);
-    // Check if the clicked element is a PV move
-    if (!target.classList.contains("pv-move")) {
-        console.log("Not a PV move, ignoring");
-        return;
-    }
-    console.log("PV move clicked, processing...");
-    e.preventDefault();
-    e.stopPropagation(); // Prevent triggering the parent move-item click
-    e.stopImmediatePropagation(); // Prevent any other handlers from executing
-    const originalPosition = target.dataset.originalPosition;
-    const moveIndex = target.dataset.moveIndex;
-    console.log("PV click detected:", { originalPosition, moveIndex });
-    if (originalPosition && moveIndex !== undefined) {
-        // Get the PV moves from the current analysis results
-        const appState = getAppState();
-        console.log("Current appState before processing:", appState);
-        const currentResults = appState.currentResults;
-        if (currentResults && currentResults.moves.length > 0) {
-            // Find the analysis result that matches the clicked move
-            const clickedIndex = parseInt(moveIndex);
-            const clickedMoveFrom = target.dataset.moveFrom;
-            const clickedMoveTo = target.dataset.moveTo;
-            console.log("Looking for analysis result:", {
-                clickedIndex,
-                clickedMove: `${clickedMoveFrom}${clickedMoveTo}`,
-                totalResults: currentResults.moves.length,
-            });
-            // Find the analysis result that contains this specific move
-            let matchingResult = null;
-            for (let i = 0; i < currentResults.moves.length; i++) {
-                const result = currentResults.moves[i];
-                if (result.pv && result.pv.length > clickedIndex) {
-                    const pvMove = result.pv[clickedIndex];
-                    if (pvMove.from === clickedMoveFrom && pvMove.to === clickedMoveTo) {
-                        matchingResult = result;
-                        break;
-                    }
-                }
-            }
-            if (!matchingResult) {
-                console.error("Could not find matching analysis result for clicked move");
-                return;
-            }
-            // Use the PV moves from the matching result
-            const pvMoves = matchingResult.pv;
-            console.log("Found matching result:", {
-                resultIndex: currentResults.moves.indexOf(matchingResult),
-                pvLength: pvMoves.length,
-                clickedIndex,
-                pvMoves: pvMoves.map((m) => `${m.from}${m.to}`),
-            });
-            console.log("PV click processing:", {
-                clickedIndex,
-                isInBranch: appState.isInBranch,
-            });
-            console.log("PV moves check:", {
-                pvMoves: pvMoves ? pvMoves.length : null,
-                clickedIndex,
-                condition: pvMoves && clickedIndex < pvMoves.length,
-            });
-            // If clickedIndex is out of bounds, limit it to the available moves
-            const validClickedIndex = pvMoves
-                ? Math.min(clickedIndex, pvMoves.length - 1)
-                : 0;
-            console.log("Valid clicked index:", validClickedIndex);
-            if (pvMoves && validClickedIndex >= 0) {
-                const appState = getAppState();
-                // Always create or update a branch, regardless of position
-                const movesAfterCurrent = pvMoves.slice(0, validClickedIndex + 1);
-                console.log("Branch logic:", {
-                    isInBranch: appState.isInBranch,
-                    movesAfterCurrent,
-                });
-                if (appState.isInBranch) {
-                    // Update existing branch
-                    console.log("Updating existing branch");
-                    updateAppState({
-                        branchMoves: movesAfterCurrent,
-                    });
-                    updateMoveList();
-                }
-                else {
-                    // Create new branch with the original position
-                    console.log("Creating new branch");
-                    createBranch(movesAfterCurrent, originalPosition);
-                    console.log("createBranch completed, calling updateMoveList");
-                    updateMoveList();
-                }
-                console.log("After branch logic, appState:", getAppState());
-                // Apply all moves up to and including the clicked move
-                let currentFEN = originalPosition;
-                for (let i = 0; i <= validClickedIndex; i++) {
-                    const move = pvMoves[i];
-                    currentFEN = applyMoveToFEN(currentFEN, move);
-                }
-                // Set the board to this position
-                Board.setPosition(currentFEN);
-                // Update the FEN input
-                updateFENInput();
-                // Highlight the last move in the branch
-                if (validClickedIndex >= 0) {
-                    highlightLastMove(pvMoves[validClickedIndex]);
-                }
-                console.log("After all updates, final appState:", getAppState());
-            }
-        }
-    }
 };
 window.addEventListener("move-parse-warning", (event) => {
     const detail = event.detail;

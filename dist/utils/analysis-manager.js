@@ -248,7 +248,7 @@ export function addPVClickListeners() {
 /**
  * Handle click on PV move
  */
-export function handlePVClick(e) {
+function handlePVClick(e) {
     const target = e.target;
     log("Event delegation caught click on:", target);
     // Check if the clicked element is a PV move

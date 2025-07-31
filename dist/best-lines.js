@@ -32,10 +32,6 @@ let bestLinesState = {
 const updateBestLinesState = (updates) => {
     bestLinesState = { ...bestLinesState, ...updates };
 };
-/**
- * Get current best lines state
- */
-const getBestLinesState = () => ({ ...bestLinesState });
 // ============================================================================
 // ANALYSIS CONFIGURATION
 // ============================================================================
@@ -156,7 +152,7 @@ const analyzePosition = async (fen, analysis) => {
 /**
  * Start the best lines analysis
  */
-const startBestLinesAnalysis = async () => {
+export const startBestLinesAnalysis = async () => {
     log("Starting best lines analysis...");
     // Add debugging info
     console.log("=== Tree Digger Debug Info ===");
@@ -572,7 +568,7 @@ const processResponderMovesInTree = async (fen, analysis, parentNode, depth) => 
 /**
  * Stop the best lines analysis
  */
-const stopBestLinesAnalysis = () => {
+export const stopBestLinesAnalysis = () => {
     log("BestLines: Stopping best lines analysis...");
     log("Stopping best lines analysis...");
     updateBestLinesState({
@@ -583,7 +579,7 @@ const stopBestLinesAnalysis = () => {
 /**
  * Clear the best lines analysis
  */
-const clearBestLinesAnalysis = () => {
+export const clearBestLinesAnalysis = () => {
     log("Clearing best lines analysis...");
     updateBestLinesState({
         isAnalyzing: false,
@@ -600,19 +596,19 @@ const clearBestLinesAnalysis = () => {
 /**
  * Get the current analysis results
  */
-const getCurrentAnalysis = () => {
+export const getCurrentAnalysis = () => {
     return bestLinesState.currentAnalysis;
 };
 /**
  * Check if analysis is currently running
  */
-const isAnalyzing = () => {
+export const isAnalyzing = () => {
     return bestLinesState.isAnalyzing;
 };
 /**
  * Get current progress
  */
-const getProgress = () => {
+export const getProgress = () => {
     return bestLinesState.progress;
 };
 /**
@@ -629,7 +625,7 @@ const incrementPVLines = () => {
 /**
  * Calculate total leaf nodes in the tree
  */
-const calculateTotalLeafs = (nodes) => {
+export const calculateTotalLeafs = (nodes) => {
     let totalLeafs = 0;
     const countLeafsRecursive = (node) => {
         if (node.children.length === 0) {
@@ -649,11 +645,7 @@ const calculateTotalLeafs = (nodes) => {
 /**
  * Calculate number of unique positions analyzed
  */
-const calculateUniquePositions = (nodes, analysis) => {
+export const calculateUniquePositions = (nodes, analysis) => {
     return analysis.analyzedPositions.size;
 };
-// ============================================================================
-// EXPORTS
-// ============================================================================
-export { startBestLinesAnalysis, stopBestLinesAnalysis, clearBestLinesAnalysis, getCurrentAnalysis, isAnalyzing, getProgress, getBestLinesState, calculateTotalLeafs, calculateUniquePositions, };
 //# sourceMappingURL=best-lines.js.map

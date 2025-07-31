@@ -24,10 +24,6 @@ export declare function makeAnalysisMove(move: ChessMove): void;
  */
 export declare function addPVClickListeners(): void;
 /**
- * Handle click on PV move
- */
-export declare function handlePVClick(e: Event): void;
-/**
  * Handle click on main move notation in Engine Moves results
  */
 export declare function handleMakeEngineMove(move: AnalysisMove): void;

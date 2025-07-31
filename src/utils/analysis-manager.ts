@@ -14,7 +14,7 @@ import { updatePositionEvaluationDisplay } from "./position-controls.js";
 import { addMove, updateMoveList } from "./game-navigation.js";
 import { updateNavigationButtons } from "./button-utils.js";
 import { updateFENInput, updateControlsFromPosition, resetPositionEvaluation } from "./position-controls.js";
-import { clearBranch, createBranch } from "../main.js";
+import { createBranch } from "../main.js";
 import * as Board from "../chess-board.js";
 import * as Stockfish from "../stockfish-client.js";
 import { highlightLastMove } from "./board-utils.js";
@@ -324,7 +324,7 @@ export function addPVClickListeners(): void {
 /**
  * Handle click on PV move
  */
-export function handlePVClick(e: Event): void {
+function handlePVClick(e: Event): void {
   const target = e.target as HTMLElement;
 
   log("Event delegation caught click on:", target);

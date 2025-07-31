@@ -70,11 +70,6 @@ const updateBestLinesState = (updates: Partial<BestLinesState>): void => {
   bestLinesState = { ...bestLinesState, ...updates };
 };
 
-/**
- * Get current best lines state
- */
-const getBestLinesState = (): BestLinesState => ({ ...bestLinesState });
-
 // ============================================================================
 // ANALYSIS CONFIGURATION
 // ============================================================================
@@ -237,7 +232,7 @@ const analyzePosition = async (
 /**
  * Start the best lines analysis
  */
-const startBestLinesAnalysis = async (): Promise<void> => {
+export const startBestLinesAnalysis = async (): Promise<void> => {
   log("Starting best lines analysis...");
 
   // Add debugging info
@@ -849,7 +844,7 @@ const processResponderMovesInTree = async (
 /**
  * Stop the best lines analysis
  */
-const stopBestLinesAnalysis = (): void => {
+export const stopBestLinesAnalysis = (): void => {
   log("BestLines: Stopping best lines analysis...");
   log("Stopping best lines analysis...");
   updateBestLinesState({
@@ -861,7 +856,7 @@ const stopBestLinesAnalysis = (): void => {
 /**
  * Clear the best lines analysis
  */
-const clearBestLinesAnalysis = (): void => {
+export const clearBestLinesAnalysis = (): void => {
   log("Clearing best lines analysis...");
   updateBestLinesState({
     isAnalyzing: false,
@@ -879,21 +874,21 @@ const clearBestLinesAnalysis = (): void => {
 /**
  * Get the current analysis results
  */
-const getCurrentAnalysis = (): BestLinesAnalysis | null => {
+export const getCurrentAnalysis = (): BestLinesAnalysis | null => {
   return bestLinesState.currentAnalysis;
 };
 
 /**
  * Check if analysis is currently running
  */
-const isAnalyzing = (): boolean => {
+export const isAnalyzing = (): boolean => {
   return bestLinesState.isAnalyzing;
 };
 
 /**
  * Get current progress
  */
-const getProgress = (): BestLinesState["progress"] => {
+export const getProgress = (): BestLinesState["progress"] => {
   return bestLinesState.progress;
 };
 
@@ -914,7 +909,7 @@ const incrementPVLines = (): void => {
 /**
  * Calculate total leaf nodes in the tree
  */
-const calculateTotalLeafs = (nodes: BestLineNode[]): number => {
+export const calculateTotalLeafs = (nodes: BestLineNode[]): number => {
   let totalLeafs = 0;
 
   const countLeafsRecursive = (node: BestLineNode): void => {
@@ -939,25 +934,9 @@ const calculateTotalLeafs = (nodes: BestLineNode[]): number => {
 /**
  * Calculate number of unique positions analyzed
  */
-const calculateUniquePositions = (
+export const calculateUniquePositions = (
   nodes: BestLineNode[],
   analysis: BestLinesAnalysis,
 ): number => {
   return analysis.analyzedPositions.size;
-};
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export {
-  startBestLinesAnalysis,
-  stopBestLinesAnalysis,
-  clearBestLinesAnalysis,
-  getCurrentAnalysis,
-  isAnalyzing,
-  getProgress,
-  getBestLinesState,
-  calculateTotalLeafs,
-  calculateUniquePositions,
 };
