@@ -1,5 +1,6 @@
 import { createPieceNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
-import { moveToNotation, parseFEN, toFEN, coordsToSquare, log, logError, getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, applyMoveToFEN, findFromSquare, findFromSquareWithDisambiguation, getDepthScaler, getResponderMovesCount, getThreadCount, getFirstReplyOverride, getSecondReplyOverride, calculateTotalPositionsWithOverrides, getStartingPlayer, showToast, compareAnalysisMoves, formatScoreWithMateIn, } from "./utils.js";
+import { moveToNotation, parseFEN, toFEN, coordsToSquare, getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, applyMoveToFEN, findFromSquare, findFromSquareWithDisambiguation, getDepthScaler, getResponderMovesCount, getThreadCount, getFirstReplyOverride, getSecondReplyOverride, calculateTotalPositionsWithOverrides, getStartingPlayer, showToast, compareAnalysisMoves, formatScoreWithMateIn, } from "./utils.js";
+import { log, logError, } from "./utils/logging.js";
 import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadio, getCheckedRadioByName, querySelectorHTMLElementBySelector, } from "./utils/dom-helpers.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";

@@ -1,4 +1,5 @@
 import { createPieceTypeNotation, createColorNotation, createPieceNotation, getPieceTypeFromNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
+import { logError } from "./utils/logging.js";
 export function parseFEN(fen) {
     const parts = fen.split(" ");
     const boardPart = parts[0];
@@ -291,40 +292,6 @@ export function pvToNotation(pv, format = "short", pieceFormat = "unicode", fen)
             }
         }
         return result;
-    }
-}
-// ============================================================================
-// LOGGING CONFIGURATION
-// ============================================================================
-let loggingEnabled = false;
-/**
- * Enable or disable logging
- */
-export function setLoggingEnabled(enabled) {
-    loggingEnabled = enabled;
-}
-/**
- * Get current logging state
- */
-export function isLoggingEnabled() {
-    return loggingEnabled;
-}
-/**
- * Logging utility function
- * @param args - Arguments to pass to console.log
- */
-export function log(...args) {
-    if (loggingEnabled) {
-        console.log(...args);
-    }
-}
-/**
- * Error logging utility function
- * @param args - Arguments to pass to console.error
- */
-export function logError(...args) {
-    if (loggingEnabled) {
-        console.error(...args);
     }
 }
 /**

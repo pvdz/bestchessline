@@ -8,11 +8,13 @@ import {
 import {
   parseFEN,
   squareToCoords,
-  log,
-  logError,
   showToast,
   compareAnalysisMoves,
 } from "./utils.js";
+import {
+  log,
+  logError,
+} from "./utils/logging.js";
 import {
   querySelectorHTMLElement,
   querySelectorButton,

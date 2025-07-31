@@ -16,8 +16,6 @@ import {
   parseFEN,
   toFEN,
   coordsToSquare,
-  log,
-  logError,
   getFENWithCorrectMoveCounter,
   setGlobalCurrentMoveIndex,
   getGlobalCurrentMoveIndex,
@@ -35,6 +33,10 @@ import {
   compareAnalysisMoves,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  log,
+  logError,
+} from "./utils/logging.js";
 import {
   getInputElement,
   getTextAreaElement,

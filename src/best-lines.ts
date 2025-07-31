@@ -10,8 +10,6 @@ import {
 } from "./types.js";
 import {
   parseFEN,
-  log,
-  logError,
   moveToNotation,
   compareAnalysisMoves,
   getFENWithCorrectMoveCounter,
@@ -27,6 +25,10 @@ import {
   calculateTotalPositionsWithOverrides,
   getStartingPlayer,
 } from "./utils.js";
+import {
+  log,
+  logError,
+} from "./utils/logging.js";
 import * as Stockfish from "./stockfish-client.js";
 import * as Board from "./chess-board.js";
 

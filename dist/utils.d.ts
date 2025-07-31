@@ -39,24 +39,6 @@ export declare function moveToNotation(move: ChessMove, format?: NotationFormat,
 export declare function getPieceSymbol(type: PieceTypeNotation, color: ColorNotation, format?: PieceFormat): string;
 export declare function pvToNotation(pv: ChessMove[], format?: NotationFormat, pieceFormat?: PieceFormat, fen?: string): string;
 /**
- * Enable or disable logging
- */
-export declare function setLoggingEnabled(enabled: boolean): void;
-/**
- * Get current logging state
- */
-export declare function isLoggingEnabled(): boolean;
-/**
- * Logging utility function
- * @param args - Arguments to pass to console.log
- */
-export declare function log(...args: unknown[]): void;
-/**
- * Error logging utility function
- * @param args - Arguments to pass to console.error
- */
-export declare function logError(...args: unknown[]): void;
-/**
  * Apply a chess move to a FEN string and return the new FEN
  */
 export declare function applyMoveToFEN(fen: string, move: ChessMove): string;

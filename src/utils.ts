@@ -15,6 +15,7 @@ import {
   PLAYER_COLORS,
   PlayerColor,
 } from "./types.js";
+import { logError } from "./utils/logging.js";
 
 export function parseFEN(fen: string): ChessPosition {
   const parts = fen.split(" ");
@@ -363,45 +364,7 @@ export function pvToNotation(
   }
 }
 
-// ============================================================================
-// LOGGING CONFIGURATION
-// ============================================================================
 
-let loggingEnabled = false;
-
-/**
- * Enable or disable logging
- */
-export function setLoggingEnabled(enabled: boolean): void {
-  loggingEnabled = enabled;
-}
-
-/**
- * Get current logging state
- */
-export function isLoggingEnabled(): boolean {
-  return loggingEnabled;
-}
-
-/**
- * Logging utility function
- * @param args - Arguments to pass to console.log
- */
-export function log(...args: unknown[]): void {
-  if (loggingEnabled) {
-    console.log(...args);
-  }
-}
-
-/**
- * Error logging utility function
- * @param args - Arguments to pass to console.error
- */
-export function logError(...args: unknown[]): void {
-  if (loggingEnabled) {
-    console.error(...args);
-  }
-}
 
 
 
