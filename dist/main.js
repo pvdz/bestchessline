@@ -1,5 +1,6 @@
 import { createPieceNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
-import { moveToNotation, getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, applyMoveToFEN, findFromSquare, findFromSquareWithDisambiguation, calculateTotalPositionsWithOverrides, getStartingPlayer, showToast, compareAnalysisMoves, formatScoreWithMateIn, } from "./utils.js";
+import { moveToNotation, getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getGlobalCurrentMoveIndex, applyMoveToFEN, calculateTotalPositionsWithOverrides, getStartingPlayer, showToast, compareAnalysisMoves, formatScoreWithMateIn, } from "./utils.js";
+import { findFromSquare, findFromSquareWithDisambiguation, } from "./utils/move-parser.js";
 import { parseFEN, toFEN, coordsToSquare, } from "./utils/fen-utils.js";
 import { getDepthScaler, getResponderMovesCount, getThreadCount, getFirstReplyOverride, getSecondReplyOverride, } from "./utils/ui-getters.js";
 import { log, logError, } from "./utils/logging.js";

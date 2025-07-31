@@ -14,10 +14,12 @@ import {
   getFENWithCorrectMoveCounter,
   getGlobalCurrentMoveIndex,
   applyMoveToFEN,
-  parseSimpleMove,
   calculateTotalPositionsWithOverrides,
   getStartingPlayer,
 } from "./utils.js";
+import {
+  parseSimpleMove,
+} from "./utils/move-parser.js";
 import {
   parseFEN,
 } from "./utils/fen-utils.js";

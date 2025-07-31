@@ -1,5 +1,6 @@
 import { PLAYER_COLORS, } from "./types.js";
-import { moveToNotation, compareAnalysisMoves, getFENWithCorrectMoveCounter, getGlobalCurrentMoveIndex, applyMoveToFEN, parseSimpleMove, calculateTotalPositionsWithOverrides, getStartingPlayer, } from "./utils.js";
+import { moveToNotation, compareAnalysisMoves, getFENWithCorrectMoveCounter, getGlobalCurrentMoveIndex, applyMoveToFEN, calculateTotalPositionsWithOverrides, getStartingPlayer, } from "./utils.js";
+import { parseSimpleMove, } from "./utils/move-parser.js";
 import { parseFEN, } from "./utils/fen-utils.js";
 import { getDepthScaler, getResponderMovesCount, getThreadCount, getInitiatorMoves, getFirstReplyOverride, getSecondReplyOverride, } from "./utils/ui-getters.js";
 import { log, logError, } from "./utils/logging.js";

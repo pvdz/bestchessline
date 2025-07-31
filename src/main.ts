@@ -17,14 +17,16 @@ import {
   setGlobalCurrentMoveIndex,
   getGlobalCurrentMoveIndex,
   applyMoveToFEN,
-  findFromSquare,
-  findFromSquareWithDisambiguation,
   calculateTotalPositionsWithOverrides,
   getStartingPlayer,
   showToast,
   compareAnalysisMoves,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  findFromSquare,
+  findFromSquareWithDisambiguation,
+} from "./utils/move-parser.js";
 import {
   parseFEN,
   toFEN,
