@@ -627,13 +627,6 @@ const parseRawMove = (moveStr: string): ChessMove | null => {
   return { from, to, piece };
 };
 
-/**
- * Parse move string (for compatibility)
- */
-const parseMove = (moveStr: string): ChessMove | null => {
-  return parseRawMove(moveStr);
-};
-
 // ============================================================================
 // ANALYSIS FUNCTIONS
 // ============================================================================

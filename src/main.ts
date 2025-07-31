@@ -124,6 +124,24 @@ import {
   verifyDOMStructure,
   handleTreeNodeClick,
 } from "./utils/tree-debug-utils.js";
+import {
+  updateThreadsInputForFallbackMode,
+  updateTreeDiggerThreadsForFallbackMode,
+} from "./utils/thread-utils.js";
+import {
+  getAnalysisOptions,
+  updateButtonStates,
+} from "./utils/analysis-config.js";
+import {
+  updateBestLinesStatus,
+  updateAnalysisStatus,
+} from "./utils/status-management.js";
+import {
+  updateBestLinesResults,
+  updateBestLinesProgress,
+} from "./utils/best-lines-results.js";
+import { renderProgressBoard } from "./utils/board-rendering.js";
+import { buildShadowTree, findNodeById, UITreeNode } from "./utils/tree-building.js";
 
 
 
@@ -197,6 +215,11 @@ const eventTrackingState = {
   recentStartTime: Date.now(),
   lastEventTime: Date.now(),
 };
+
+/**
+ * Get event tracking state
+ */
+const getEventTrackingState = () => ({ ...eventTrackingState });
 
 /**
  * Update application state
@@ -823,84 +846,9 @@ const initializeEventListeners = (): void => {
   }
 };
 
-/**
- * Update threads input for fallback mode
- */
-const updateThreadsInputForFallbackMode = (): void => {
-  const threadsInput = getInputElement("threads");
-  const threadsLabel = querySelectorHTMLElementBySelector(
-    'label[for="threads"]',
-  );
 
-  if (Stockfish.isFallbackMode()) {
-    // In fallback mode, disable threads input and show it's forced to 1
-    if (threadsInput) {
-      threadsInput.disabled = true;
-      threadsInput.value = "1";
-      threadsInput.title = "Single-threaded mode - threads fixed at 1";
-    }
-    if (threadsLabel) {
-      threadsLabel.textContent = "Threads (Forced):";
-      threadsLabel.title =
-        "Single-threaded mode - multi-threading not available";
-    }
-  } else {
-    // In full mode, enable threads input
-    if (threadsInput) {
-      threadsInput.disabled = false;
-      threadsInput.title = "Number of CPU threads for analysis";
-    }
-    if (threadsLabel) {
-      threadsLabel.textContent = "Threads:";
-      threadsLabel.title = "Number of CPU threads for analysis";
-    }
-  }
-};
 
-/**
- * Update tree digger threads input for fallback mode
- */
-const updateTreeDiggerThreadsForFallbackMode = (): void => {
-  const treeDiggerThreadsInput = document.getElementById(
-    "tree-digger-threads",
-  ) as HTMLInputElement;
-  const treeDiggerThreadsValue = document.getElementById(
-    "tree-digger-threads-value",
-  );
-  const treeDiggerThreadsLabel = querySelectorHTMLElementBySelector(
-    'label[for="tree-digger-threads"]',
-  );
 
-  if (Stockfish.isFallbackMode()) {
-    // In fallback mode, disable tree digger threads input and show it's forced to 1
-    if (treeDiggerThreadsInput) {
-      treeDiggerThreadsInput.disabled = true;
-      treeDiggerThreadsInput.value = "1";
-      treeDiggerThreadsInput.title =
-        "Single-threaded mode - threads fixed at 1";
-    }
-    if (treeDiggerThreadsValue) {
-      treeDiggerThreadsValue.textContent = "1 (forced)";
-    }
-    if (treeDiggerThreadsLabel) {
-      treeDiggerThreadsLabel.textContent = "Threads:";
-      treeDiggerThreadsLabel.title =
-        "Single-threaded mode - multi-threading not available";
-    }
-  } else {
-    // In full mode, enable tree digger threads input
-    if (treeDiggerThreadsInput) {
-      treeDiggerThreadsInput.disabled = false;
-      treeDiggerThreadsInput.title =
-        "Number of CPU threads for tree digger analysis";
-    }
-    if (treeDiggerThreadsLabel) {
-      treeDiggerThreadsLabel.textContent = "Threads:";
-      treeDiggerThreadsLabel.title =
-        "Number of CPU threads for tree digger analysis";
-    }
-  }
-};
 
 /**
  * Initialize position controls
@@ -987,40 +935,9 @@ const stopAnalysis = (): void => {
       updateResultsPanel([]);
 };
 
-/**
- * Get analysis options from UI
- */
-const getAnalysisOptions = (): AnalysisOptions => {
-  const maxDepth = getInputElement("max-depth")?.value || "20";
-  const whiteMoves = getInputElement("white-moves")?.value || "5";
-  const responderMoves = getInputElement("responder-moves")?.value || "5";
 
-  // Force threads to 1 in fallback mode
-  const threads = Stockfish.isFallbackMode()
-    ? "1"
-    : getInputElement("threads")?.value || "1";
 
-  return {
-    depth: parseInt(maxDepth),
-    threads: parseInt(threads),
-    multiPV: Math.max(parseInt(whiteMoves), parseInt(responderMoves)),
-  };
-};
 
-/**
- * Update button states
- */
-const updateButtonStates = (): void => {
-  const startBtn = getButtonElement("start-analysis");
-  const stopBtn = getButtonElement("stop-analysis");
-
-  // Disable start button if main analysis is running OR position evaluation is running
-  const isStockfishBusy =
-    appState.isAnalyzing || appState.positionEvaluation.isAnalyzing;
-
-  if (startBtn) startBtn.disabled = isStockfishBusy;
-  if (stopBtn) stopBtn.disabled = !appState.isAnalyzing;
-};
 
 // ============================================================================
 // BEST LINES ANALYSIS FUNCTIONS
@@ -1106,291 +1023,17 @@ const updateBestLinesButtonStates = (): void => {
   }
 };
 
-/**
- * Update best lines status
- */
-const updateBestLinesStatus = (message?: string): void => {
-  const statusElement = document.getElementById("tree-digger-status");
-  if (!statusElement) return;
 
-  if (message) {
-    statusElement.textContent = message;
-    return;
-  }
 
-  const isAnalyzing = BestLines.isAnalyzing();
-  const progress = BestLines.getProgress();
-  const analysis = BestLines.getCurrentAnalysis();
 
-  if (isAnalyzing) {
-    const progressPercent =
-      progress.totalPositions > 0
-        ? Math.round(
-            (progress.analyzedPositions / progress.totalPositions) * 100,
-          )
-        : 0;
-    const currentPos = progress.currentPosition.substring(0, 30) + "...";
-    statusElement.textContent = `Analyzing... ${progress.analyzedPositions}/${progress.totalPositions} (${progressPercent}%) - ${currentPos}`;
-  } else if (analysis?.isComplete) {
-    statusElement.textContent = "Analysis complete";
-  } else {
-    statusElement.textContent = "Ready";
-  }
-};
 
-const updateAnalysisStatus = (message?: string): void => {
-  const statusElement = document.getElementById("analysis-status");
-  if (!statusElement) return;
 
-  if (message) {
-    statusElement.textContent = message;
-    return;
-  }
 
-  const appState = getAppState();
-  if (appState.isAnalyzing) {
-    statusElement.textContent = "Analyzing...";
-  } else {
-    statusElement.textContent = "Ready";
-  }
-};
 
-/**
- * Update best lines results display
- */
-const updateBestLinesResults = (): void => {
-  const resultsElement = document.getElementById("tree-digger-results");
-  if (!resultsElement) return;
 
-  const analysis = BestLines.getCurrentAnalysis();
-  if (!analysis) {
-    resultsElement.innerHTML = "<p>No analysis results available.</p>";
-    return;
-  }
 
-  // Update progress section
-  updateBestLinesProgress(resultsElement, analysis);
 
-  // Update tree section incrementally
-  updateBestLinesTreeIncrementally(resultsElement, analysis);
-};
 
-/**
- * Update progress section
- */
-const updateBestLinesProgress = (
-  resultsElement: HTMLElement,
-  analysis: BestLinesAnalysis,
-): void => {
-  let progressSection = resultsElement.querySelector(
-    ".tree-digger-progress-section",
-  );
-  if (!progressSection) {
-    progressSection = document.createElement("div");
-    progressSection.className = "tree-digger-progress-section";
-    resultsElement.appendChild(progressSection);
-  }
-
-  const isAnalyzing = BestLines.isAnalyzing();
-  const progress = BestLines.getProgress();
-  const totalLeafs = BestLines.calculateTotalLeafs(analysis.nodes);
-  const uniquePositions = BestLines.calculateUniquePositions(
-    analysis.nodes,
-    analysis,
-  );
-
-  // Calculate event rate for stats (based on recent events)
-  const now = Date.now();
-  const timeSinceRecentStart = now - eventTrackingState.recentStartTime;
-  const recentCount = eventTrackingState.recentCount;
-
-  // Calculate rate based on actual time window (max 1 second)
-  const timeWindow = Math.min(timeSinceRecentStart, 1000);
-  const eventsPerSecond =
-    !isAnalyzing || analysis?.isComplete
-      ? "--"
-      : timeWindow > 0
-        ? Math.round(recentCount / (timeWindow / 1000))
-        : 0;
-
-  // Calculate total positions with overrides
-  const depthScaler = getDepthScaler();
-  const responderMovesCount = getResponderMovesCount();
-  const firstReplyOverride = getFirstReplyOverride();
-  const secondReplyOverride = getSecondReplyOverride();
-
-  // Calculate total positions considering overrides
-  const totalPositionsWithOverrides = calculateTotalPositionsWithOverrides(
-    depthScaler,
-    responderMovesCount,
-    firstReplyOverride,
-    secondReplyOverride,
-  );
-
-  let overrideExplanation = "";
-  if (firstReplyOverride > 0 || secondReplyOverride > 0) {
-    // Build override explanation
-    const overrides = [];
-    if (firstReplyOverride > 0)
-      overrides.push(`1st reply: ${firstReplyOverride}`);
-    if (secondReplyOverride > 0)
-      overrides.push(`2nd reply: ${secondReplyOverride}`);
-    overrideExplanation = ` (with overrides: ${overrides.join(", ")})`;
-  }
-
-  const computationFormula = `1 + 2*${firstReplyOverride || responderMovesCount} + 2*${secondReplyOverride || responderMovesCount}<sup>2</sup> + 2∑(${responderMovesCount}<sup>n</sup>) for n from 3 to ⌊${depthScaler}/2⌋ = ${totalPositionsWithOverrides}`;
-
-  const html = `
-    <div class="best-line-progress-container">
-      <div class="best-line-progress-left">
-        <div class="best-line-stats">
-          <div class="stat = ${totalPositionsWithOverrides}">
-            <div class="stat-label">Total positions to analyze</div>
-            <div class="stat-value">${totalPositionsWithOverrides}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Analyzed</div>
-            <div class="stat-value">${progress.analyzedPositions}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Total Leafs</div>
-            <div class="stat-value">${totalLeafs}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Unique Positions</div>
-            <div class="stat-value">${uniquePositions}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Stockfish Events</div>
-            <div class="stat-value">${eventTrackingState.totalCount}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">Event Rate</div>
-            <div class="stat-value">${eventsPerSecond || 0}/s</div>
-          </div>
-        </div>
-        <div class="best-line-settings">
-          <div class="setting">
-            <div class="setting-label">Depth Scaler</div>
-            <div class="setting-value">${depthScaler}</div>
-          </div>
-          <div class="setting">
-            <div class="setting-label">1st ${(() => {
-              const currentAnalysis = BestLines.getCurrentAnalysis();
-              const rootFen =
-                currentAnalysis?.rootFen ||
-                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-              const startingPlayer = getStartingPlayer(rootFen);
-              return startingPlayer === "w" ? "White" : "Black";
-            })()} Move</div>
-            <div class="setting-value">${(document.getElementById("tree-digger-initiator-move-1") as HTMLInputElement | null)?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
-          </div>
-          <div class="setting">
-            <div class="setting-label">2nd ${(() => {
-              const currentAnalysis = BestLines.getCurrentAnalysis();
-              const rootFen =
-                currentAnalysis?.rootFen ||
-                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-              const startingPlayer = getStartingPlayer(rootFen);
-              return startingPlayer === "w" ? "White" : "Black";
-            })()} Move</div>
-            <div class="setting-value">${(document.getElementById("tree-digger-initiator-move-2") as HTMLInputElement | null)?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
-          </div>
-          <div class="setting">
-            <div class="setting-label">Responder Moves</div>
-            <div class="setting-value">${responderMovesCount}</div>
-          </div>
-          <div class="setting">
-            <div class="setting-label">1st Reply Override</div>
-            <div class="setting-value">${firstReplyOverride > 0 ? firstReplyOverride : "0 (default)"}</div>
-          </div>
-          <div class="setting">
-            <div class="setting-label">2nd Reply Override</div>
-            <div class="setting-value">${secondReplyOverride > 0 ? secondReplyOverride : "0 (default)"}</div>
-          </div>
-          <div class="setting">
-            <div class="setting-label">Threads</div>
-            <div class="setting-value">${getThreadCount()}</div>
-          </div>
-        </div>
-        <div class="best-line-progress">
-          <div class="best-line-progress-bar" style="width: ${progress.totalPositions > 0 ? (progress.analyzedPositions / progress.totalPositions) * 100 : 0}%"></div>
-        </div>
-        <div class="best-line-explanation">
-          <h3>Analysis Progress</h3>
-          <ul>
-            <li><strong>Initial position</strong>: ${progress.initialPosition}</li>
-            <li><strong>Total positions</strong>: ${computationFormula} positions to analyze${overrideExplanation}</li>
-            <li><strong>Analyzed</strong>: ${progress.analyzedPositions} positions completed</li>
-            <li><strong>Total leafs</strong>: ${totalLeafs} leaf nodes in the tree</li>
-            <li><strong>Unique Positions</strong>: ${uniquePositions} distinct positions analyzed</li>
-            <li><strong>Current activity</strong>: ${isAnalyzing ? "🔄 Analyzing position" : "Ready"} ${progress.currentPosition.substring(0, 30)}...</li>
-            ${firstReplyOverride > 0 || secondReplyOverride > 0 ? `<li><strong>Computation</strong>: Depth ${depthScaler} × 2 = ${depthScaler * 2} levels, with ${firstReplyOverride > 0 ? `1st reply: ${firstReplyOverride}` : `1st reply: ${responderMovesCount}`} and ${secondReplyOverride > 0 ? `2nd reply: ${secondReplyOverride}` : `2nd reply: ${responderMovesCount}`} responder responses</li>` : ""}
-          </ul>
-        </div>
-      </div>
-      <div class="best-line-progress-board">
-        <div class="best-line-progress-board-title">Root Board</div>
-        <div class="offset-board" id="progress-board"></div>
-      </div>
-    </div>
-  `;
-
-  progressSection.innerHTML = html;
-
-  // Render the board for the initial position (root position)
-  const boardElement = progressSection.querySelector(
-    "#progress-board",
-  ) as HTMLElement;
-  if (boardElement) {
-    renderProgressBoard(boardElement, progress.initialPosition);
-  }
-};
-
-/**
- * Render a small board for the progress panel
- */
-const renderProgressBoard = (boardElement: HTMLElement, fen: string): void => {
-  try {
-    const position = parseFEN(fen);
-    let html = "";
-
-    // Render board from white's perspective (bottom to top)
-    for (let rank = 0; rank <= 7; rank++) {
-      for (let file = 0; file < 8; file++) {
-        const square = coordsToSquare(rank, file);
-        const piece = position.board[rank][file];
-        const isLight = (rank + file) % 2 === 0;
-        const squareClass = isLight ? "light" : "dark";
-
-        html += `<div class="square ${squareClass}" data-square="${square}">`;
-        if (piece) {
-          const pieceNotation = createPieceNotation(piece);
-          const color = getColorFromNotation(pieceNotation);
-          const pieceClass = color === "w" ? "white" : "black";
-          html += `<div class="piece ${pieceClass}">${piece}</div>`;
-        }
-        html += "</div>";
-      }
-    }
-
-    boardElement.innerHTML = html;
-  } catch (error) {
-    console.error("Error rendering progress board:", error);
-    boardElement.innerHTML =
-      '<div style="padding: 20px; text-align: center; color: #666;">Invalid position</div>';
-  }
-};
-
-/**
- * Simple tree node structure for UI management
- */
-interface UITreeNode {
-  id: string;
-  element: HTMLElement;
-  children: UITreeNode[];
-  parent: UITreeNode | null;
-}
 
 /**
  * Create a DOM element for a tree node
@@ -1554,62 +1197,9 @@ const updateTreeNodeElement = (
   }
 };
 
-/**
- * Build the shadow tree from the data tree
- */
-const buildShadowTree = (
-  nodes: BestLineNode[],
-  analysis: BestLinesAnalysis,
-  parent: UITreeNode | null = null,
-  depth: number = 0,
-): UITreeNode[] => {
-  const uiNodes: UITreeNode[] = [];
 
-  for (const node of nodes) {
-    const nodeId = generateNodeId(node);
-    const element = createTreeNodeElement(node, depth, analysis);
 
-    const uiNode: UITreeNode = {
-      id: nodeId,
-      element,
-      children: [],
-      parent,
-    };
 
-    // Recursively build children
-    if (node.children.length > 0) {
-      uiNode.children = buildShadowTree(
-        node.children,
-        analysis,
-        uiNode,
-        depth + 1,
-      );
-    }
-
-    uiNodes.push(uiNode);
-  }
-
-  return uiNodes;
-};
-
-/**
- * Find a node by ID in the data tree
- */
-const findNodeById = (
-  nodeId: string,
-  nodes: BestLineNode[],
-): BestLineNode | null => {
-  for (const node of nodes) {
-    if (generateNodeId(node) === nodeId) {
-      return node;
-    }
-    if (node.children.length > 0) {
-      const found = findNodeById(nodeId, node.children);
-      if (found) return found;
-    }
-  }
-  return null;
-};
 
 /**
  * Sync the DOM with the shadow tree
@@ -1824,46 +1414,6 @@ const renderTreeNode = (
   html += `</div>`;
   return html;
 };
-
-/**
- * Get the completion text for a leaf node
- */
-
-
-
-
-/**
- * Format a list of moves with proper chess notation
- */
-const formatLineWithMoveNumbers = (moves: BestLineNode[]): string => {
-  let formattedLine = "";
-
-  // Get the starting move number from the first node's moveNumber
-  // This accounts for the current game position
-  const startingMoveNumber = moves.length > 0 ? moves[0].moveNumber : 1;
-
-  for (let i = 0; i < moves.length; i++) {
-    const moveNode = moves[i];
-    // Always use algebraic notation (KQR etc.) for copy functionality
-    const moveText = moveToNotation(moveNode.move, "short", "english");
-
-    if (moveNode.isWhiteMove) {
-      // White move - start new move number
-      if (i > 0) formattedLine += " ";
-      // Use the node's calculated move number (which accounts for current game position)
-      formattedLine += `${moveNode.moveNumber}. ${moveText}`;
-    } else {
-      // Black move - add to current move number
-      formattedLine += ` ${moveText}`;
-    }
-  }
-
-  return formattedLine;
-};
-
-/**
- * Get the complete line from root to the given node
- */
 
 
 /**
@@ -2791,6 +2341,12 @@ export {
 
   // Results panel
   actuallyUpdateResultsPanel,
+
+  // Best lines tree management
+  updateBestLinesTreeIncrementally,
+
+  // Event tracking
+  getEventTrackingState,
 };
 
 // ============================================================================

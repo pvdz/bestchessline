@@ -95,9 +95,6 @@ function createEmptyEffect() {
     };
 }
 /**
- * Checks if a square coordinate is valid
- */
-/**
  * Checks if a move is legal for the piece type (basic rules only)
  */
 function isLegalMove(position, move) {

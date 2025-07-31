@@ -1,4 +1,4 @@
-import { ChessMove, AnalysisResult, AnalysisMove } from "./types.js";
+import { ChessMove, AnalysisResult, AnalysisMove, BestLinesAnalysis } from "./types.js";
 import { highlightLastMove, clearLastMoveHighlight } from "./utils/board-utils.js";
 import { updateStatus } from "./utils/status-utils.js";
 import { updateNavigationButtons } from "./utils/button-utils.js";
@@ -21,6 +21,15 @@ interface AppState {
         isAnalyzing: boolean;
     };
 }
+/**
+ * Get event tracking state
+ */
+declare const getEventTrackingState: () => {
+    totalCount: number;
+    recentCount: number;
+    recentStartTime: number;
+    lastEventTime: number;
+};
 /**
  * Update application state
  */
@@ -45,6 +54,10 @@ declare const startAnalysis: () => Promise<void>;
  * Stop analysis
  */
 declare const stopAnalysis: () => void;
+/**
+ * Update the tree UI incrementally
+ */
+declare const updateBestLinesTreeIncrementally: (resultsElement: HTMLElement, analysis: BestLinesAnalysis) => void;
 /**
  * Update results display
  */
@@ -80,4 +93,4 @@ declare const nextMove: () => void;
  * Update move list display
  */
 declare const updateMoveList: () => void;
-export { initializeApp, getAppState, updateAppState, startAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight, clearBranch, resetPositionEvaluation, actuallyUpdateResultsPanel, };
+export { initializeApp, getAppState, updateAppState, startAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight, clearBranch, resetPositionEvaluation, actuallyUpdateResultsPanel, updateBestLinesTreeIncrementally, getEventTrackingState, };

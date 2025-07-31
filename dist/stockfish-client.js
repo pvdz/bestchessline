@@ -487,12 +487,6 @@ const parseRawMove = (moveStr) => {
         return null;
     return { from, to, piece };
 };
-/**
- * Parse move string (for compatibility)
- */
-const parseMove = (moveStr) => {
-    return parseRawMove(moveStr);
-};
 // ============================================================================
 // ANALYSIS FUNCTIONS
 // ============================================================================
