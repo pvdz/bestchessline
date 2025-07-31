@@ -11,9 +11,3 @@
  * @returns Formatted score string
  */
 export declare function formatScoreWithMateIn(score: number, mateIn: number): string;
-/**
- * Format a time duration in milliseconds to a human-readable string
- * @param ms Time in milliseconds
- * @returns Formatted time string
- */
-export declare function formatTime(ms: number): string;

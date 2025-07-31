@@ -10,7 +10,7 @@ import { createPieceNotation, getColorFromNotation } from "../types.js";
 /**
  * Render a small board for the progress panel
  */
-export function renderProgressBoard(boardElement: HTMLElement, fen: string): void {
+function renderProgressBoard(boardElement: HTMLElement, fen: string): void {
   try {
     const position = parseFEN(fen);
     let html = "";

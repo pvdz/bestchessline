@@ -28,7 +28,7 @@ export function getButtonElement(id) {
 /**
  * Safely get an HTML select element by ID
  */
-export function getSelectElement(id) {
+function getSelectElement(id) {
     const element = document.getElementById(id);
     return element instanceof HTMLSelectElement ? element : null;
 }
@@ -42,7 +42,7 @@ export function getCheckedRadio(name, value) {
 /**
  * Safely get all radio buttons by name
  */
-export function getAllRadios(name) {
+function getAllRadios(name) {
     const elements = document.querySelectorAll(`input[name="${name}"]`);
     return elements.length > 0
         ? elements
@@ -58,52 +58,52 @@ export function getCheckedRadioByName(name) {
 /**
  * Safely get an element that matches a selector
  */
-export function querySelector(selector) {
+function querySelector(selector) {
     const element = document.querySelector(selector);
     return element;
 }
 /**
  * Safely get all elements that match a selector
  */
-export function querySelectorAll(selector) {
+function querySelectorAll(selector) {
     const elements = document.querySelectorAll(selector);
     return elements.length > 0 ? elements : null;
 }
 /**
  * Safely get an element by ID with type checking
  */
-export function getElementById(id) {
+function getElementById(id) {
     const element = document.getElementById(id);
     return element;
 }
 /**
  * Check if an element is an HTMLElement
  */
-export function isHTMLElement(element) {
+function isHTMLElement(element) {
     return element instanceof HTMLElement;
 }
 /**
  * Check if an element is an HTMLInputElement
  */
-export function isHTMLInputElement(element) {
+function isHTMLInputElement(element) {
     return element instanceof HTMLInputElement;
 }
 /**
  * Check if an element is an HTMLButtonElement
  */
-export function isHTMLButtonElement(element) {
+function isHTMLButtonElement(element) {
     return element instanceof HTMLButtonElement;
 }
 /**
  * Check if an element is an HTMLTextAreaElement
  */
-export function isHTMLTextAreaElement(element) {
+function isHTMLTextAreaElement(element) {
     return element instanceof HTMLTextAreaElement;
 }
 /**
  * Safely get an element by querySelector with type checking
  */
-export function querySelectorElement(parent, selector) {
+function querySelectorElement(parent, selector) {
     const element = parent.querySelector(selector);
     return element instanceof Element ? element : null;
 }

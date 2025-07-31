@@ -32,7 +32,7 @@ export function formatScoreWithMateIn(score, mateIn) {
  * @param ms Time in milliseconds
  * @returns Formatted time string
  */
-export function formatTime(ms) {
+function formatTime(ms) {
     if (ms < 1000)
         return `${ms}ms`;
     if (ms < 60000)

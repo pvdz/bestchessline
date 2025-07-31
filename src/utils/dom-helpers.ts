@@ -32,7 +32,7 @@ export function getButtonElement(id: string): HTMLButtonElement | null {
 /**
  * Safely get an HTML select element by ID
  */
-export function getSelectElement(id: string): HTMLSelectElement | null {
+function getSelectElement(id: string): HTMLSelectElement | null {
   const element = document.getElementById(id);
   return element instanceof HTMLSelectElement ? element : null;
 }
@@ -53,7 +53,7 @@ export function getCheckedRadio(
 /**
  * Safely get all radio buttons by name
  */
-export function getAllRadios(
+function getAllRadios(
   name: string,
 ): NodeListOf<HTMLInputElement> | null {
   const elements = document.querySelectorAll(`input[name="${name}"]`);
@@ -73,7 +73,7 @@ export function getCheckedRadioByName(name: string): HTMLInputElement | null {
 /**
  * Safely get an element that matches a selector
  */
-export function querySelector<T extends Element>(selector: string): T | null {
+function querySelector<T extends Element>(selector: string): T | null {
   const element = document.querySelector(selector);
   return element as T | null;
 }
@@ -81,7 +81,7 @@ export function querySelector<T extends Element>(selector: string): T | null {
 /**
  * Safely get all elements that match a selector
  */
-export function querySelectorAll<T extends Element>(
+function querySelectorAll<T extends Element>(
   selector: string,
 ): NodeListOf<T> | null {
   const elements = document.querySelectorAll(selector);
@@ -91,7 +91,7 @@ export function querySelectorAll<T extends Element>(
 /**
  * Safely get an element by ID with type checking
  */
-export function getElementById<T extends Element>(id: string): T | null {
+function getElementById<T extends Element>(id: string): T | null {
   const element = document.getElementById(id);
   return element as T | null;
 }
@@ -99,7 +99,7 @@ export function getElementById<T extends Element>(id: string): T | null {
 /**
  * Check if an element is an HTMLElement
  */
-export function isHTMLElement(
+function isHTMLElement(
   element: EventTarget | null,
 ): element is HTMLElement {
   return element instanceof HTMLElement;
@@ -108,7 +108,7 @@ export function isHTMLElement(
 /**
  * Check if an element is an HTMLInputElement
  */
-export function isHTMLInputElement(
+function isHTMLInputElement(
   element: Element | null,
 ): element is HTMLInputElement {
   return element instanceof HTMLInputElement;
@@ -117,7 +117,7 @@ export function isHTMLInputElement(
 /**
  * Check if an element is an HTMLButtonElement
  */
-export function isHTMLButtonElement(
+function isHTMLButtonElement(
   element: Element | null,
 ): element is HTMLButtonElement {
   return element instanceof HTMLButtonElement;
@@ -126,7 +126,7 @@ export function isHTMLButtonElement(
 /**
  * Check if an element is an HTMLTextAreaElement
  */
-export function isHTMLTextAreaElement(
+function isHTMLTextAreaElement(
   element: Element | null,
 ): element is HTMLTextAreaElement {
   return element instanceof HTMLTextAreaElement;
@@ -135,7 +135,7 @@ export function isHTMLTextAreaElement(
 /**
  * Safely get an element by querySelector with type checking
  */
-export function querySelectorElement<T extends Element>(
+function querySelectorElement<T extends Element>(
   parent: Element,
   selector: string,
 ): T | null {

@@ -11,13 +11,13 @@ let loggingEnabled = false;
 /**
  * Enable or disable logging
  */
-export function setLoggingEnabled(enabled) {
+function setLoggingEnabled(enabled) {
     loggingEnabled = enabled;
 }
 /**
  * Get current logging state
  */
-export function isLoggingEnabled() {
+function isLoggingEnabled() {
     return loggingEnabled;
 }
 /**

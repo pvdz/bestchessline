@@ -14,14 +14,14 @@ let loggingEnabled = false;
 /**
  * Enable or disable logging
  */
-export function setLoggingEnabled(enabled: boolean): void {
+function setLoggingEnabled(enabled: boolean): void {
   loggingEnabled = enabled;
 }
 
 /**
  * Get current logging state
  */
-export function isLoggingEnabled(): boolean {
+function isLoggingEnabled(): boolean {
   return loggingEnabled;
 }
 
