@@ -10,6 +10,7 @@ import { getDepthScaler, getResponderMovesCount, getThreadCount, getFirstReplyOv
 import { log, logError, } from "./utils/logging.js";
 import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadio, getCheckedRadioByName, querySelectorHTMLElementBySelector, } from "./utils/dom-helpers.js";
 import { parseGameNotation, } from "./utils/move-parsing.js";
+import { formatNodeScore, } from "./utils/node-utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
@@ -2652,24 +2653,6 @@ const clearInitiatorMoveInputs = () => {
 /**
  * Update FEN input with current board position
  */
-// Add this near the top-level of your main.ts (after DOMContentLoaded or in initializeApp)
-function showMoveParseWarningToast(message) {
-    const toast = document.createElement("div");
-    toast.textContent = message;
-    toast.style.position = "fixed";
-    toast.style.bottom = "64px";
-    toast.style.left = "50%";
-    toast.style.transform = "translateX(-50%)";
-    toast.style.background = "#ff9800";
-    toast.style.color = "#fff";
-    toast.style.padding = "8px 16px";
-    toast.style.borderRadius = "6px";
-    toast.style.zIndex = "9999";
-    toast.style.fontWeight = "bold";
-    toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 5000);
-}
 window.addEventListener("move-parse-warning", (event) => {
     const detail = event.detail;
     if (detail && detail.message) {
@@ -2707,41 +2690,6 @@ window.addEventListener("move-parse-warning", (event) => {
         }
     }
 });
-/**
- * Format a node's score with delta information
- */
-const formatNodeScore = (node) => {
-    if (node.needsEvaluation) {
-        return " (?)";
-    }
-    if (node.score === undefined || node.score === null) {
-        return "";
-    }
-    const currentScore = formatScoreWithMateIn(node.score, node.mateIn ?? 0);
-    // Calculate delta from parent position
-    let deltaText = "";
-    if (node.parent) {
-        const parentScore = node.parent.score;
-        if (parentScore !== undefined && parentScore !== null) {
-            const delta = node.score - parentScore;
-            if (Math.abs(delta) < 0.01) {
-                // Equal position (within 0.01 centipawns)
-                deltaText = " <span class='delta-equal'>(≈)</span>";
-            }
-            else if (delta > 0) {
-                // Improved position
-                const deltaFormatted = formatScoreWithMateIn(delta, 0);
-                deltaText = ` <span class='delta-improved'>(▲${deltaFormatted})</span>`;
-            }
-            else {
-                // Regressed position
-                const deltaFormatted = formatScoreWithMateIn(Math.abs(delta), 0);
-                deltaText = ` <span class='delta-regressed'>(▼${deltaFormatted})</span>`;
-            }
-        }
-    }
-    return ` (${currentScore}${deltaText})`;
-};
 /**
  * Get the path from root to a specific node
  */
