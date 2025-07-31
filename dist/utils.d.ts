@@ -1,13 +1,5 @@
-import { ChessMove, NotationFormat, PieceFormat, PieceTypeNotation, ColorNotation, PieceNotation, PlayerColor } from "./types.js";
+import { ChessMove, PieceTypeNotation, ColorNotation, PieceNotation, PlayerColor } from "./types.js";
 export declare function getPieceColor(piece: PieceNotation): ColorNotation;
-export declare const PIECE_TYPES: {
-    readonly KING: PieceTypeNotation;
-    readonly QUEEN: PieceTypeNotation;
-    readonly ROOK: PieceTypeNotation;
-    readonly BISHOP: PieceTypeNotation;
-    readonly KNIGHT: PieceTypeNotation;
-    readonly PAWN: PieceTypeNotation;
-};
 export declare function getPieceType(piece: PieceNotation): PieceTypeNotation;
 /**
  * Format a score with proper mate notation using mateIn
@@ -30,9 +22,6 @@ export declare function getGlobalCurrentMoveIndex(): number;
  */
 export declare function getFENWithCorrectMoveCounter(boardFEN: string, currentMoveIndex: number, castling?: string, enPassant?: string | null): string;
 export declare function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number): (...args: Parameters<T>) => void;
-export declare function moveToNotation(move: ChessMove, format?: NotationFormat, pieceFormat?: PieceFormat, fen?: string): string;
-export declare function getPieceSymbol(type: PieceTypeNotation, color: ColorNotation, format?: PieceFormat): string;
-export declare function pvToNotation(pv: ChessMove[], format?: NotationFormat, pieceFormat?: PieceFormat, fen?: string): string;
 /**
  * Apply a chess move to a FEN string and return the new FEN
  */

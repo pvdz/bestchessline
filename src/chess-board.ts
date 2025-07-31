@@ -8,9 +8,11 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import {
-  getPieceSymbol,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  getPieceSymbol,
+} from "./utils/notation-utils.js";
 import {
   parseFEN,
   toFEN,

@@ -12,7 +12,6 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import {
-  moveToNotation,
   getFENWithCorrectMoveCounter,
   setGlobalCurrentMoveIndex,
   getGlobalCurrentMoveIndex,
@@ -23,6 +22,9 @@ import {
   compareAnalysisMoves,
   formatScoreWithMateIn,
 } from "./utils.js";
+import {
+  moveToNotation,
+} from "./utils/notation-utils.js";
 import {
   findFromSquare,
   findFromSquareWithDisambiguation,

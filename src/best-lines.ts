@@ -9,7 +9,6 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import {
-  moveToNotation,
   compareAnalysisMoves,
   getFENWithCorrectMoveCounter,
   getGlobalCurrentMoveIndex,
@@ -17,6 +16,9 @@ import {
   calculateTotalPositionsWithOverrides,
   getStartingPlayer,
 } from "./utils.js";
+import {
+  moveToNotation,
+} from "./utils/notation-utils.js";
 import {
   parseSimpleMove,
 } from "./utils/move-parser.js";
