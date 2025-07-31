@@ -48,6 +48,10 @@ export declare const updateBestLinesTreeIncrementally: (resultsElement: HTMLElem
  */
 export declare const actuallyUpdateResultsPanel: (moves: AnalysisMove[]) => void;
 /**
+ * Create a branch from the current position
+ */
+export declare const createBranch: (branchMoves: ChessMove[], originalPosition: string) => void;
+/**
  * Clear the current branch
  */
 export declare const clearBranch: () => void;

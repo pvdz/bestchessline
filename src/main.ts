@@ -101,6 +101,14 @@ import {
   nextMove,
   updateMoveList,
 } from "./utils/game-navigation.js";
+import {
+  startAnalysis,
+  stopAnalysis,
+  updateResults,
+  addPVClickListeners,
+  makeAnalysisMove,
+  handleMakeEngineMove,
+} from "./utils/analysis-manager.js";
 
 import { buildShadowTree, findNodeById, UITreeNode } from "./utils/tree-building.js";
 
@@ -670,59 +678,7 @@ const initializePositionControls = (): void => {
 // ANALYSIS FUNCTIONS
 // ============================================================================
 
-/**
- * Start analysis
- */
-const startAnalysis = async (): Promise<void> => {
-  if (appState.isAnalyzing) return;
 
-  updateAppState({
-    isAnalyzing: true,
-  });
-  updateButtonStates();
-  updatePositionEvaluationDisplay();
-
-  try {
-    const options = getAnalysisOptions();
-    const fen = Board.getFEN();
-
-    const result = await Stockfish.analyzePosition(
-      fen,
-      options,
-      (analysisResult) => {
-        updateAppState({
-          currentResults: analysisResult,
-          isAnalyzing: !analysisResult.completed,
-        });
-        updateResults(analysisResult);
-        updateButtonStates();
-      },
-    );
-
-    updateAppState({
-      currentResults: result,
-      isAnalyzing: false,
-    });
-    updateButtonStates();
-  } catch (error) {
-    logError("Analysis failed:", error);
-    updateAppState({ isAnalyzing: false });
-    updateButtonStates();
-  }
-};
-
-/**
- * Stop analysis
- */
-const stopAnalysis = (): void => {
-  Stockfish.stopAnalysis();
-  updateAppState({
-    isAnalyzing: false,
-    currentResults: null,
-  });
-  updateButtonStates();
-      updateResultsPanel([]);
-};
 
 // ============================================================================
 // BEST LINES ANALYSIS FUNCTIONS
@@ -1130,15 +1086,7 @@ const renderBestLineNode = (node: BestLineNode): string => {
 // RESULTS MANAGEMENT
 // ============================================================================
 
-/**
- * Update results display
- */
-const updateResults = (result: AnalysisResult): void => {
-  if (!result || !result.moves) return;
 
-      updateResultsPanel(result.moves);
-  updateStatus(`Analysis complete: ${result.moves.length} moves found`);
-};
 
 // Debounce mechanism for analysis updates
 let analysisUpdateTimeout: number | null = null;
@@ -1354,47 +1302,7 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
   addPVClickListeners();
 };
 
-/**
- * Make a move from analysis results
- */
-const makeAnalysisMove = (move: ChessMove): void => {
-  console.log("makeAnalysisMove called with:", move);
 
-  // Determine move effects if not already present
-  if (!move.effect) {
-    const position = parseFEN(Board.getFEN());
-    const validationResult = validateMove(position, move);
-    if (validationResult.isValid) {
-      move.effect = validationResult.effect;
-    }
-  }
-
-  // Add the move to the game history
-  addMove(move);
-
-  // Update the board position
-  const newFEN = applyMoveToFEN(Board.getFEN(), move);
-  Board.setPosition(newFEN);
-
-  // Update UI controls
-  updateFENInput();
-  updateControlsFromPosition();
-
-  // Update move list and navigation
-  updateMoveList();
-  updateNavigationButtons();
-
-  // Clear any existing move highlights
-  clearLastMoveHighlight();
-
-  // Highlight the new move
-  highlightLastMove(move);
-
-  // Evaluate the new position
-  resetPositionEvaluation();
-
-  updateStatus(`Made move: ${move.from}${move.to}`);
-};
 
 // ============================================================================
 // MOVE HOVER EVENTS
@@ -1403,7 +1311,7 @@ const makeAnalysisMove = (move: ChessMove): void => {
 /**
  * Create a branch from the current position
  */
-const createBranch = (
+export const createBranch = (
   branchMoves: ChessMove[],
   originalPosition: string,
 ): void => {
@@ -1461,20 +1369,7 @@ export const clearBranch = (): void => {
   resetPositionEvaluation();
 };
 
-/**
- * Add PV move click listeners
- */
-const addPVClickListeners = (): void => {
-  // Use event delegation on the results panel
-  const resultsPanel = document.getElementById("analysis-results");
-  if (!resultsPanel) return;
 
-  // Remove any existing listeners to prevent duplicates
-  resultsPanel.removeEventListener("click", handlePVClick);
-
-  // Add the event listener
-  resultsPanel.addEventListener("click", handlePVClick);
-};
 
 const handlePVClick = (e: Event): void => {
   const target = e.target as HTMLElement;
@@ -1616,38 +1511,7 @@ const handlePVClick = (e: Event): void => {
   }
 };
 
-/**
- * Handle click on main move notation in Engine Moves results
- */
-const handleMakeEngineMove = (move: AnalysisMove): void => {
-  console.log("Main move clicked:", move);
 
-  const appState = getAppState();
-  const currentFEN = Board.getFEN();
-
-  // Check if we're at the last move of the game
-  const isAtLastMove = appState.currentMoveIndex === appState.moves.length - 1;
-
-  if (isAtLastMove) {
-    // If we're at the last move, just make the move directly
-    console.log("At last move, making move directly");
-    makeAnalysisMove(move.move);
-  } else {
-    // If we're not at the last move, create a branch
-    console.log("Not at last move, creating branch");
-    createBranch([move.move], currentFEN);
-    updateMoveList();
-
-    // Apply the move to the board
-    const newFEN = applyMoveToFEN(currentFEN, move.move);
-    Board.setPosition(newFEN);
-
-    // Update UI
-    updateFENInput();
-    updateControlsFromPosition();
-    highlightLastMove(move.move);
-  }
-};
 
 
 
