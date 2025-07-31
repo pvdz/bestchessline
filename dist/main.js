@@ -10,7 +10,7 @@ import { log, logError, } from "./utils/logging.js";
 import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName, } from "./utils/dom-helpers.js";
 import { parseGameNotation, } from "./utils/move-parsing.js";
 import { formatNodeScore, } from "./utils/node-utils.js";
-import { highlightLastMove, clearLastMoveHighlight, } from "./utils/board-utils.js";
+import { highlightLastMove, } from "./utils/board-utils.js";
 import { clearTreeNodeDOMMap, } from "./utils/debug-utils.js";
 import { initializeCopyButton, } from "./utils/copy-utils.js";
 import { getLineCompletion, } from "./utils/line-analysis.js";
@@ -26,9 +26,11 @@ import { updateBestLinesStatus, updateAnalysisStatus, } from "./utils/status-man
 import { updateBestLinesResults, } from "./utils/best-lines-results.js";
 import { buildShadowTree, findNodeById } from "./utils/tree-building.js";
 import * as Board from "./chess-board.js";
+import { clearLastMoveHighlight } from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
 import * as BestLines from "./best-lines.js";
+import { hideMoveArrow } from "./utils/arrow-utils.js";
 /**
  * Application state instance
  */
@@ -58,11 +60,11 @@ const eventTrackingState = {
 /**
  * Get event tracking state
  */
-const getEventTrackingState = () => ({ ...eventTrackingState });
+export const getEventTrackingState = () => ({ ...eventTrackingState });
 /**
  * Update application state
  */
-const updateAppState = (updates) => {
+export const updateAppState = (updates) => {
     appState = { ...appState, ...updates };
     // Update global move index when it changes
     if (updates.currentMoveIndex !== undefined) {
@@ -72,14 +74,14 @@ const updateAppState = (updates) => {
 /**
  * Get current application state
  */
-const getAppState = () => ({ ...appState });
+export const getAppState = () => ({ ...appState });
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
 /**
  * Initialize the application
  */
-const initializeApp = () => {
+export const initializeApp = () => {
     log("Initializing Best Chess Line Discovery App...");
     // Initialize board
     const boardElement = document.getElementById("chess-board");
@@ -98,7 +100,7 @@ const initializeApp = () => {
     });
     Board.setOnMoveMade((move) => {
         // Clear analysis arrows when a move is made on the board
-        Board.hideMoveArrow();
+        hideMoveArrow();
         addMove(move);
     });
     // Initialize event listeners
@@ -119,7 +121,7 @@ const initializeApp = () => {
 /**
  * Reset position evaluation to initial state
  */
-const resetPositionEvaluation = () => {
+export const resetPositionEvaluation = () => {
     updateAppState({
         positionEvaluation: {
             score: null,
@@ -849,7 +851,7 @@ const syncDOMWithShadowTree = (container, shadowNodes, analysis) => {
 /**
  * Update the tree UI incrementally
  */
-const updateBestLinesTreeIncrementally = (resultsElement, analysis) => {
+export const updateBestLinesTreeIncrementally = (resultsElement, analysis) => {
     let treeSection = resultsElement.querySelector(".tree-digger-tree");
     if (!treeSection) {
         treeSection = document.createElement("div");
@@ -987,13 +989,13 @@ let queuedMoves = [];
 /**
  * Update results panel
  */
-const actuallyUpdateResultsPanel = (moves) => {
+export const actuallyUpdateResultsPanel = (moves) => {
     analysisUpdateTimeout = null;
     const resultsPanel = document.getElementById("analysis-results");
     if (!resultsPanel)
         return;
     // Clear existing arrows
-    Board.hideMoveArrow();
+    hideMoveArrow();
     // Get current format settings
     const notationFormat = getCheckedRadioByName("notation-format")?.value || "algebraic-short";
     const pieceFormat = getCheckedRadioByName("piece-format")?.value || "symbols";
@@ -1202,7 +1204,7 @@ const createBranch = (branchMoves, originalPosition) => {
 /**
  * Clear the current branch
  */
-const clearBranch = () => {
+export const clearBranch = () => {
     console.log("clearBranch called - clearing branch state");
     updateAppState({
         branchMoves: [],
@@ -1296,7 +1298,6 @@ const handlePVClick = (e) => {
             console.log("Valid clicked index:", validClickedIndex);
             if (pvMoves && validClickedIndex >= 0) {
                 const appState = getAppState();
-                const isAtLastMove = appState.currentMoveIndex === appState.moves.length - 1;
                 // Always create or update a branch, regardless of position
                 const movesAfterCurrent = pvMoves.slice(0, validClickedIndex + 1);
                 console.log("Branch logic:", {
@@ -1453,7 +1454,7 @@ const nextMove = () => {
 /**
  * Update move list display
  */
-const updateMoveList = () => {
+export const updateMoveList = () => {
     const movesPanel = document.getElementById("game-moves");
     if (!movesPanel)
         return;
@@ -1603,36 +1604,6 @@ const updateMoveList = () => {
         }
     }
 };
-// ============================================================================
-// EXPORT FUNCTIONS
-// ============================================================================
-export { 
-// Initialization
-initializeApp, 
-// State management
-getAppState, updateAppState, 
-// Analysis
-startAnalysis, stopAnalysis, 
-// Game management
-addMove, importGame, previousMove, nextMove, 
-// UI updates
-updateResults, updateStatus, updateMoveList, updateNavigationButtons, 
-// Move highlighting
-highlightLastMove, clearLastMoveHighlight, 
-// Branch management
-clearBranch, 
-// Position evaluation
-resetPositionEvaluation, 
-// Results panel
-actuallyUpdateResultsPanel, 
-// Best lines tree management
-updateBestLinesTreeIncrementally, 
-// Event tracking
-getEventTrackingState, };
-/**
- * Map to track DOM elements for tree nodes
- */
-const treeNodeDOMMap = new Map();
 window.addEventListener("move-parse-warning", (event) => {
     const detail = event.detail;
     if (detail && detail.message) {

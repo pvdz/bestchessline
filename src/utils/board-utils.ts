@@ -1,5 +1,5 @@
 import { ChessMove } from "../types.js";
-import * as Board from "../chess-board.js";
+import { clearLastMoveHighlight } from "../chess-board.js";
 
 /**
  * Board Utility Functions
@@ -26,10 +26,3 @@ export function highlightLastMove(move: ChessMove): void {
     toSquare.classList.add("last-move-to");
   }
 }
-
-/**
- * Clear last move highlight
- */
-export function clearLastMoveHighlight(): void {
-  Board.clearLastMoveHighlight();
-} 

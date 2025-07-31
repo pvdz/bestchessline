@@ -36,17 +36,13 @@ const updateBoardState = (updates) => {
 const updateDragState = (updates) => {
     dragState = { ...dragState, ...updates };
 };
-/**
- * Get current board state
- */
-const getBoardState = () => ({ ...boardState });
 // ============================================================================
 // BOARD RENDERING
 // ============================================================================
 /**
  * Initialize chess board
  */
-const initializeBoard = (element, initialFEN) => {
+export const initializeBoard = (element, initialFEN) => {
     const fen = initialFEN || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     updateBoardState({
         position: parseFEN(fen),
@@ -305,7 +301,7 @@ const findSquareAtPosition = (clientX, clientY) => {
 /**
  * Make a move on the board
  */
-const makeMove = (from, to, piece) => {
+export const makeMove = (from, to, piece) => {
     // Clear any existing arrows and labels before re-rendering
     hideMoveArrow();
     // Update board state
@@ -406,7 +402,7 @@ const applyMoveToPosition = (position, from, to, piece) => {
 /**
  * Set board position
  */
-const setPosition = (fen) => {
+export const setPosition = (fen) => {
     const newPosition = parseFEN(fen);
     const currentPosition = boardState.position;
     // Only clear arrows and re-render if the position has actually changed
@@ -433,27 +429,27 @@ const setPosition = (fen) => {
 /**
  * Get current position
  */
-const getPosition = () => boardState.position;
+export const getPosition = () => boardState.position;
 /**
  * Get current FEN
  */
-const getFEN = () => toFEN(boardState.position);
+export const getFEN = () => toFEN(boardState.position);
 /**
  * Set position change callback
  */
-const setOnPositionChange = (callback) => {
+export const setOnPositionChange = (callback) => {
     updateBoardState({ onPositionChange: callback });
 };
 /**
  * Set move made callback
  */
-const setOnMoveMade = (callback) => {
+export const setOnMoveMade = (callback) => {
     updateBoardState({ onMoveMade: callback });
 };
 /**
  * Show move arrow
  */
-const showMoveArrow = (from, to, piece, score, allMoves, index, customArrowId, mateIn) => {
+export const showMoveArrow = (from, to, piece, score, allMoves, index, customArrowId, mateIn) => {
     const pieceNotation = createPieceNotation(piece);
     // Use custom arrow ID if provided, otherwise create a unique identifier for this arrow based on the move
     const arrowId = customArrowId || `${getPieceTypeFromNotation(pieceNotation)}-${from}-${to}`;
@@ -622,39 +618,10 @@ const showMoveArrow = (from, to, piece, score, allMoves, index, customArrowId, m
 /**
  * Clear last move highlight
  */
-const clearLastMoveHighlight = () => {
+export const clearLastMoveHighlight = () => {
     const highlightedSquares = document.querySelectorAll(".last-move-from, .last-move-to");
     highlightedSquares.forEach((square) => {
         square.classList.remove("last-move-from", "last-move-to");
     });
 };
-/**
- * Destroy board
- */
-const destroy = () => {
-    hideMoveArrow();
-    clearLastMoveHighlight();
-    // Remove event listeners
-    const boardElement = document.querySelector("#chess-board");
-    if (boardElement) {
-        boardElement.removeEventListener("mousedown", handleMouseDown);
-        boardElement.removeEventListener("touchstart", handleTouchStart);
-    }
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("touchmove", handleTouchMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-    document.removeEventListener("touchend", handleTouchEnd);
-};
-// ============================================================================
-// EXPORT FUNCTIONS
-// ============================================================================
-export { 
-// Initialization
-initializeBoard, 
-// State management
-getBoardState, updateBoardState, 
-// Rendering
-renderBoard, 
-// Public API
-setPosition, getPosition, getFEN, setOnPositionChange, setOnMoveMade, showMoveArrow, hideMoveArrow, clearLastMoveHighlight, destroy, };
 //# sourceMappingURL=chess-board.js.map

@@ -135,7 +135,7 @@ const getStockfishState = (): StockfishState => ({ ...stockfishState });
 /**
  * Check if running in fallback mode
  */
-const isFallbackMode = (): boolean => stockfishState.fallbackMode;
+export const isFallbackMode = (): boolean => stockfishState.fallbackMode;
 
 // ============================================================================
 // STOCKFISH INITIALIZATION
@@ -144,7 +144,7 @@ const isFallbackMode = (): boolean => stockfishState.fallbackMode;
 /**
  * Initialize Stockfish with fallback support
  */
-const initializeStockfish = (): void => {
+export const initializeStockfish = (): void => {
   try {
     // Dispatch loading event
     window.dispatchEvent(
@@ -634,7 +634,7 @@ const parseRawMove = (moveStr: string): ChessMove | null => {
 /**
  * Analyze position with Stockfish
  */
-const analyzePosition = async (
+export const analyzePosition = async (
   fen: string,
   options: StockfishOptions = {},
   onUpdate?: (result: AnalysisResult) => void,
@@ -734,7 +734,7 @@ const analyzePosition = async (
   });
 };
 
-const stopAnalysis = (): void => {
+export const stopAnalysis = (): void => {
   if (stockfishState.isAnalyzing) {
     uciCmd("stop");
     updateStockfishState({ isAnalyzing: false });
@@ -744,7 +744,7 @@ const stopAnalysis = (): void => {
 /**
  * Check if currently analyzing
  */
-const isAnalyzingPosition = (): boolean => stockfishState.isAnalyzing;
+export const isAnalyzingPosition = (): boolean => stockfishState.isAnalyzing;
 
 /**
  * Get current analysis result
@@ -775,22 +775,3 @@ const destroy = (): void => {
 // ============================================================================
 // EXPORT FUNCTIONS
 // ============================================================================
-
-export {
-  // Initialization
-  initializeStockfish,
-
-  // State management
-  getStockfishState,
-  updateStockfishState,
-
-  // Analysis
-  analyzePosition,
-  stopAnalysis,
-  isAnalyzingPosition,
-  getCurrentAnalysis,
-
-  // Utility
-  destroy,
-  isFallbackMode,
-};

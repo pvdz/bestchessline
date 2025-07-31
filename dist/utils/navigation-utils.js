@@ -1,9 +1,10 @@
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { updateFENInput, updateControlsFromPosition } from "./position-controls.js";
-import { highlightLastMove, clearLastMoveHighlight } from "./board-utils.js";
+import { highlightLastMove } from "./board-utils.js";
 import { updateStatus } from "./status-utils.js";
+import { updateNavigationButtons } from "./button-utils.js";
 import * as Board from "../chess-board.js";
-import { getAppState, clearBranch, updateAppState, updateMoveList, updateNavigationButtons, resetPositionEvaluation } from "../main.js";
+import { getAppState, clearBranch, updateAppState, updateMoveList, resetPositionEvaluation } from "../main.js";
 /**
  * Navigation Utility Functions
  *
@@ -54,7 +55,7 @@ export function applyMovesUpToIndex(index) {
         highlightLastMove(appState.moves[index]);
     }
     else {
-        clearLastMoveHighlight();
+        Board.clearLastMoveHighlight();
     }
 }
 //# sourceMappingURL=navigation-utils.js.map

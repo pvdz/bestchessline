@@ -27,6 +27,7 @@ import {
   setArrowElements,
 } from "./utils/arrow-utils.js";
 
+
 // ============================================================================
 // BOARD STATE MANAGEMENT
 // ============================================================================
@@ -94,11 +95,6 @@ const updateDragState = (updates: Partial<DragState>): void => {
   dragState = { ...dragState, ...updates };
 };
 
-/**
- * Get current board state
- */
-const getBoardState = (): BoardState => ({ ...boardState });
-
 // ============================================================================
 // BOARD RENDERING
 // ============================================================================
@@ -106,7 +102,7 @@ const getBoardState = (): BoardState => ({ ...boardState });
 /**
  * Initialize chess board
  */
-const initializeBoard = (element: HTMLElement, initialFEN?: string): void => {
+export const initializeBoard = (element: HTMLElement, initialFEN?: string): void => {
   const fen =
     initialFEN || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   updateBoardState({
@@ -419,7 +415,7 @@ const findSquareAtPosition = (
 /**
  * Make a move on the board
  */
-const makeMove = (from: string, to: string, piece: string): void => {
+export const makeMove = (from: string, to: string, piece: string): void => {
   // Clear any existing arrows and labels before re-rendering
   hideMoveArrow();
 
@@ -534,7 +530,7 @@ const applyMoveToPosition = (
 /**
  * Set board position
  */
-const setPosition = (fen: string): void => {
+export const setPosition = (fen: string): void => {
   const newPosition = parseFEN(fen);
   const currentPosition = boardState.position;
 
@@ -565,17 +561,17 @@ const setPosition = (fen: string): void => {
 /**
  * Get current position
  */
-const getPosition = (): ChessPosition => boardState.position;
+export const getPosition = (): ChessPosition => boardState.position;
 
 /**
  * Get current FEN
  */
-const getFEN = (): string => toFEN(boardState.position);
+export const getFEN = (): string => toFEN(boardState.position);
 
 /**
  * Set position change callback
  */
-const setOnPositionChange = (
+export const setOnPositionChange = (
   callback: (position: ChessPosition) => void,
 ): void => {
   updateBoardState({ onPositionChange: callback });
@@ -584,14 +580,14 @@ const setOnPositionChange = (
 /**
  * Set move made callback
  */
-const setOnMoveMade = (callback: (move: ChessMove) => void): void => {
+export const setOnMoveMade = (callback: (move: ChessMove) => void): void => {
   updateBoardState({ onMoveMade: callback });
 };
 
 /**
  * Show move arrow
  */
-const showMoveArrow = (
+export const showMoveArrow = (
   from: string,
   to: string,
   piece: string,
@@ -800,71 +796,14 @@ const showMoveArrow = (
   getArrowElements().set(arrowId, arrow);
 };
 
-
-
 /**
  * Clear last move highlight
  */
-const clearLastMoveHighlight = (): void => {
+export const clearLastMoveHighlight = (): void => {
   const highlightedSquares = document.querySelectorAll(
     ".last-move-from, .last-move-to",
   );
   highlightedSquares.forEach((square: Element) => {
     square.classList.remove("last-move-from", "last-move-to");
   });
-};
-
-
-
-/**
- * Destroy board
- */
-const destroy = (): void => {
-  hideMoveArrow();
-  clearLastMoveHighlight();
-
-  // Remove event listeners
-  const boardElement = document.querySelector("#chess-board") as HTMLElement;
-  if (boardElement) {
-    boardElement.removeEventListener(
-      "mousedown",
-      handleMouseDown as EventListener,
-    );
-    boardElement.removeEventListener(
-      "touchstart",
-      handleTouchStart as EventListener,
-    );
-  }
-
-  document.removeEventListener("mousemove", handleMouseMove as EventListener);
-  document.removeEventListener("touchmove", handleTouchMove as EventListener);
-  document.removeEventListener("mouseup", handleMouseUp as EventListener);
-  document.removeEventListener("touchend", handleTouchEnd as EventListener);
-};
-
-// ============================================================================
-// EXPORT FUNCTIONS
-// ============================================================================
-
-export {
-  // Initialization
-  initializeBoard,
-
-  // State management
-  getBoardState,
-  updateBoardState,
-
-  // Rendering
-  renderBoard,
-
-  // Public API
-  setPosition,
-  getPosition,
-  getFEN,
-  setOnPositionChange,
-  setOnMoveMade,
-  showMoveArrow,
-  hideMoveArrow,
-  clearLastMoveHighlight,
-  destroy,
 };

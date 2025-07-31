@@ -9,7 +9,3 @@ import { ChessMove } from "../types.js";
  * @param move The move to highlight
  */
 export declare function highlightLastMove(move: ChessMove): void;
-/**
- * Clear last move highlight
- */
-export declare function clearLastMoveHighlight(): void;

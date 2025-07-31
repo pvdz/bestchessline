@@ -84,14 +84,14 @@ const getStockfishState = () => ({ ...stockfishState });
 /**
  * Check if running in fallback mode
  */
-const isFallbackMode = () => stockfishState.fallbackMode;
+export const isFallbackMode = () => stockfishState.fallbackMode;
 // ============================================================================
 // STOCKFISH INITIALIZATION
 // ============================================================================
 /**
  * Initialize Stockfish with fallback support
  */
-const initializeStockfish = () => {
+export const initializeStockfish = () => {
     try {
         // Dispatch loading event
         window.dispatchEvent(new CustomEvent("stockfish-loading", {
@@ -493,7 +493,7 @@ const parseRawMove = (moveStr) => {
 /**
  * Analyze position with Stockfish
  */
-const analyzePosition = async (fen, options = {}, onUpdate) => {
+export const analyzePosition = async (fen, options = {}, onUpdate) => {
     return new Promise((resolve, reject) => {
         // Validate input parameters
         if (!fen || typeof fen !== "string") {
@@ -573,7 +573,7 @@ const analyzePosition = async (fen, options = {}, onUpdate) => {
         uciCmd(goCommand);
     });
 };
-const stopAnalysis = () => {
+export const stopAnalysis = () => {
     if (stockfishState.isAnalyzing) {
         uciCmd("stop");
         updateStockfishState({ isAnalyzing: false });
@@ -582,7 +582,7 @@ const stopAnalysis = () => {
 /**
  * Check if currently analyzing
  */
-const isAnalyzingPosition = () => stockfishState.isAnalyzing;
+export const isAnalyzingPosition = () => stockfishState.isAnalyzing;
 /**
  * Get current analysis result
  */
@@ -609,13 +609,4 @@ const destroy = () => {
 // ============================================================================
 // EXPORT FUNCTIONS
 // ============================================================================
-export { 
-// Initialization
-initializeStockfish, 
-// State management
-getStockfishState, updateStockfishState, 
-// Analysis
-analyzePosition, stopAnalysis, isAnalyzingPosition, getCurrentAnalysis, 
-// Utility
-destroy, isFallbackMode, };
 //# sourceMappingURL=stockfish-client.js.map

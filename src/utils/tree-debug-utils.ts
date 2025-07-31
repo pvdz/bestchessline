@@ -2,7 +2,6 @@ import { BestLineNode, BestLinesAnalysis } from "../types.js";
 import { generateNodeId } from "./node-utils.js";
 import { getPathToNode, applyMovesToBoard } from "./tree-navigation.js";
 import { log } from "./logging.js";
-import { clearBranch, updateAppState, updateMoveList } from "../main.js";
 
 /**
  * Tree Debug Utility Functions

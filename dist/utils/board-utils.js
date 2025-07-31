@@ -1,4 +1,4 @@
-import * as Board from "../chess-board.js";
+import { clearLastMoveHighlight } from "../chess-board.js";
 /**
  * Board Utility Functions
  *
@@ -20,11 +20,5 @@ export function highlightLastMove(move) {
     if (toSquare) {
         toSquare.classList.add("last-move-to");
     }
-}
-/**
- * Clear last move highlight
- */
-export function clearLastMoveHighlight() {
-    Board.clearLastMoveHighlight();
 }
 //# sourceMappingURL=board-utils.js.map

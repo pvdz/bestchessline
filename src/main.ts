@@ -78,7 +78,6 @@ import {
 } from "./utils/node-utils.js";
 import {
   highlightLastMove,
-  clearLastMoveHighlight,
 } from "./utils/board-utils.js";
 import {
   clearTreeNodeDOMMap,
@@ -144,9 +143,11 @@ import { buildShadowTree, findNodeById, UITreeNode } from "./utils/tree-building
 
 
 import * as Board from "./chess-board.js";
+import {clearLastMoveHighlight, makeMove } from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
 import * as BestLines from "./best-lines.js";
+import { hideMoveArrow } from "./utils/arrow-utils.js";
 
 // ============================================================================
 // LOGGING CONFIGURATION
@@ -217,12 +218,12 @@ const eventTrackingState = {
 /**
  * Get event tracking state
  */
-const getEventTrackingState = () => ({ ...eventTrackingState });
+export const getEventTrackingState = () => ({ ...eventTrackingState });
 
 /**
  * Update application state
  */
-const updateAppState = (updates: Partial<AppState>): void => {
+export const updateAppState = (updates: Partial<AppState>): void => {
   appState = { ...appState, ...updates };
 
   // Update global move index when it changes
@@ -234,7 +235,7 @@ const updateAppState = (updates: Partial<AppState>): void => {
 /**
  * Get current application state
  */
-const getAppState = (): AppState => ({ ...appState });
+export const getAppState = (): AppState => ({ ...appState });
 
 // ============================================================================
 // INITIALIZATION
@@ -243,7 +244,7 @@ const getAppState = (): AppState => ({ ...appState });
 /**
  * Initialize the application
  */
-const initializeApp = (): void => {
+export const initializeApp = (): void => {
   log("Initializing Best Chess Line Discovery App...");
 
   // Initialize board
@@ -267,7 +268,7 @@ const initializeApp = (): void => {
 
   Board.setOnMoveMade((move) => {
     // Clear analysis arrows when a move is made on the board
-    Board.hideMoveArrow();
+    hideMoveArrow();
     addMove(move);
   });
 
@@ -296,7 +297,7 @@ const initializeApp = (): void => {
 /**
  * Reset position evaluation to initial state
  */
-const resetPositionEvaluation = (): void => {
+export const resetPositionEvaluation = (): void => {
   updateAppState({
     positionEvaluation: {
       score: null,
@@ -1181,7 +1182,7 @@ const syncDOMWithShadowTree = (
 /**
  * Update the tree UI incrementally
  */
-const updateBestLinesTreeIncrementally = (
+export const updateBestLinesTreeIncrementally = (
   resultsElement: HTMLElement,
   analysis: BestLinesAnalysis,
 ): void => {
@@ -1353,14 +1354,14 @@ let queuedMoves: AnalysisMove[] = [];
  */
 
 
-const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
+export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
   analysisUpdateTimeout = null;
 
   const resultsPanel = document.getElementById("analysis-results");
   if (!resultsPanel) return;
 
   // Clear existing arrows
-  Board.hideMoveArrow();
+  hideMoveArrow();
 
   // Get current format settings
   const notationFormat =
@@ -1653,7 +1654,7 @@ const createBranch = (
 /**
  * Clear the current branch
  */
-const clearBranch = (): void => {
+export const clearBranch = (): void => {
   console.log("clearBranch called - clearing branch state");
   updateAppState({
     branchMoves: [],
@@ -1771,8 +1772,6 @@ const handlePVClick = (e: Event): void => {
 
       if (pvMoves && validClickedIndex >= 0) {
         const appState = getAppState();
-        const isAtLastMove =
-          appState.currentMoveIndex === appState.moves.length - 1;
 
         // Always create or update a branch, regardless of position
         const movesAfterCurrent = pvMoves.slice(0, validClickedIndex + 1);
@@ -1958,7 +1957,7 @@ const nextMove = (): void => {
 /**
  * Update move list display
  */
-const updateMoveList = (): void => {
+export const updateMoveList = (): void => {
   const movesPanel = document.getElementById("game-moves");
   if (!movesPanel) return;
 
@@ -2154,72 +2153,6 @@ const updateMoveList = (): void => {
     }
   }
 };
-
-// ============================================================================
-// EXPORT FUNCTIONS
-// ============================================================================
-
-export {
-  // Initialization
-  initializeApp,
-
-  // State management
-  getAppState,
-  updateAppState,
-
-  // Analysis
-  startAnalysis,
-  stopAnalysis,
-
-  // Game management
-  addMove,
-  importGame,
-  previousMove,
-  nextMove,
-
-  // UI updates
-  updateResults,
-  updateStatus,
-  updateMoveList,
-  updateNavigationButtons,
-
-  // Move highlighting
-  highlightLastMove,
-  clearLastMoveHighlight,
-
-  // Branch management
-  clearBranch,
-
-  // Position evaluation
-  resetPositionEvaluation,
-
-  // Results panel
-  actuallyUpdateResultsPanel,
-
-  // Best lines tree management
-  updateBestLinesTreeIncrementally,
-
-  // Event tracking
-  getEventTrackingState,
-};
-
-// ============================================================================
-// TREE DIGGER DOM MANAGEMENT
-// ============================================================================
-
-/**
- * Interface for tracking DOM elements associated with tree nodes
- */
-interface TreeNodeDOM {
-  element: HTMLElement;
-  childrenContainer?: HTMLElement;
-  nodeId: string;
-}
-
-/**
- * Map to track DOM elements for tree nodes
- */
-const treeNodeDOMMap = new Map<string, TreeNodeDOM>();
 
 window.addEventListener("move-parse-warning", (event: Event) => {
   const detail = (event as CustomEvent).detail;
