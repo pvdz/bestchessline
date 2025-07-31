@@ -83,7 +83,17 @@ import {
 import {
   clearTreeNodeDOMMap,
   logTreeStructure,
+  countTotalNodes,
+  debugTreeDiggerStart,
 } from "./utils/debug-utils.js";
+import {
+  getPathToNode,
+  applyMovesToBoard,
+} from "./utils/tree-navigation.js";
+import {
+  initializeCopyButton,
+  generateAllLines,
+} from "./utils/copy-utils.js";
 
 
 
@@ -3197,135 +3207,13 @@ const verifyDOMStructure = (
   }
 };
 
-/**
- * Count total nodes in the tree recursively
- */
-const countTotalNodes = (nodes: BestLineNode[]): number => {
-  let count = 0;
-  const countRecursive = (nodeList: BestLineNode[]): void => {
-    for (const node of nodeList) {
-      count++;
-      if (node.children.length > 0) {
-        countRecursive(node.children);
-      }
-    }
-  };
-  countRecursive(nodes);
-  return count;
-};
 
-// Initialize copy button functionality
-const initializeCopyButton = (): void => {
-  const copyBtn = document.getElementById("copy-tree-digger-tree");
-  if (copyBtn) {
-    copyBtn.addEventListener("click", () => {
-      const analysis = BestLines.getCurrentAnalysis();
-      if (analysis && analysis.nodes.length > 0) {
-        const treeText = generateAllLines(analysis.nodes);
 
-        // Debug: Log the generated text to see if it's complete
-        console.log("Generated tree text:", treeText);
-        console.log("Text length:", treeText.length);
-        console.log("Number of lines:", treeText.split("\n").length);
 
-        navigator.clipboard
-          .writeText(treeText)
-          .then(() => {
-            copyBtn.textContent = "Copied!";
-            setTimeout(() => {
-              copyBtn.textContent = "Copy";
-            }, 2000);
-          })
-          .catch((err) => {
-            console.error("Failed to copy: ", err);
-            copyBtn.textContent = "Copy Failed";
-            setTimeout(() => {
-              copyBtn.textContent = "Copy";
-            }, 2000);
-          });
-      } else {
-        // Show a short confirmation for no data
-        const toast = document.createElement("div");
-        toast.textContent = "No tree to copy!";
-        toast.style.position = "fixed";
-        toast.style.bottom = "24px";
-        toast.style.left = "50%";
-        toast.style.transform = "translateX(-50%)";
-        toast.style.background = "#dc3545";
-        toast.style.color = "#fff";
-        toast.style.padding = "8px 16px";
-        toast.style.borderRadius = "6px";
-        toast.style.zIndex = "9999";
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 1200);
-      }
-    });
-  }
-};
 
-// Add debugging for tree digger initialization
-const debugTreeDiggerStart = (): void => {
-  console.log("=== Tree Digger Debug Info ===");
-  console.log("Current board FEN:", Board.getFEN());
-  console.log("Current move index:", getGlobalCurrentMoveIndex());
-  console.log("Board position:", Board.getPosition());
 
-  const analysis = BestLines.getCurrentAnalysis();
-  if (analysis) {
-    console.log("Analysis root FEN:", analysis.rootFen);
-    console.log("Analysis nodes count:", analysis.nodes.length);
-    console.log("Analysis max depth:", analysis.maxDepth);
-    console.log("Analysis config:", analysis.config);
-  } else {
-    console.log("No current analysis found");
-  }
-  console.log("=== End Debug Info ===");
-};
 
-// 2. Function to generate all complete lines from the tree
-function generateAllLines(nodes: BestLineNode[]): string {
-  let result = "";
-  let lineCount = 0;
 
-  const traverseNode = (
-    node: BestLineNode,
-    currentLine: BestLineNode[] = [],
-  ): void => {
-    // Add current node to the line
-    const newLine = [...currentLine, node];
-
-    if (node.children.length === 0) {
-      // Check if this is a transposed node (not a real leaf)
-      const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-      const analysis = BestLines.getCurrentAnalysis();
-      const isTransposition =
-        analysis && analysis.analyzedPositions.has(positionAfterMove);
-
-      if (!isTransposition) {
-        // This is a real leaf node - output the complete line
-        const lineText = formatLineWithMoveNumbers(newLine);
-        result += `${lineText}\n`;
-        lineCount++;
-        console.log(`Generated line ${lineCount}:`, lineText);
-      } else {
-        console.log(`Skipping transposed node: ${moveToNotation(node.move)}`);
-      }
-    } else {
-      // Continue traversing children
-      for (const child of node.children) {
-        traverseNode(child, newLine);
-      }
-    }
-  };
-
-  // Traverse all root nodes
-  for (const rootNode of nodes) {
-    traverseNode(rootNode);
-  }
-
-  console.log(`Total lines generated: ${lineCount}`);
-  return result;
-}
 
 /**
  * Clear initiator move inputs when board changes
@@ -3382,70 +3270,9 @@ window.addEventListener("move-parse-warning", (event: Event) => {
 
 
 
-/**
- * Get the path from root to a specific node
- */
-const getPathToNode = (
-  targetNode: BestLineNode,
-  rootNodes: BestLineNode[],
-): BestLineNode[] => {
-  const findPath = (
-    nodes: BestLineNode[],
-    path: BestLineNode[] = [],
-  ): BestLineNode[] | null => {
-    for (const node of nodes) {
-      const currentPath = [...path, node];
 
-      if (node === targetNode) {
-        return currentPath;
-      }
 
-      if (node.children.length > 0) {
-        const result = findPath(node.children, currentPath);
-        if (result) {
-          return result;
-        }
-      }
-    }
-    return null;
-  };
 
-  return findPath(rootNodes) || [];
-};
-
-/**
- * Apply a sequence of moves to the board, replacing the current game
- */
-const applyMovesToBoard = (moves: BestLineNode[]): void => {
-  // Clear any existing branch
-  clearBranch();
-
-  // Convert BestLineNode moves to ChessMove array
-  const chessMoves: ChessMove[] = moves.map((node) => node.move);
-
-  // Get the initial FEN from the first node, or use current board FEN
-  const initialFEN = moves.length > 0 ? moves[0].fen : Board.getFEN();
-
-  // Replace the entire game with these moves
-  updateAppState({
-    moves: chessMoves,
-    initialFEN: initialFEN,
-    currentMoveIndex: chessMoves.length - 1, // Set to last move
-    isInBranch: false,
-    branchMoves: [],
-    branchStartIndex: -1,
-  });
-
-  // Update the board to show the final position
-  if (moves.length > 0) {
-    const lastNode = moves[moves.length - 1];
-    const finalFen = applyMoveToFEN(lastNode.fen, lastNode.move);
-    Board.setPosition(finalFen);
-  }
-
-  // Update the UI
-  updateMoveList();
-};
 
 /**
  * Handle click on tree node
@@ -3456,7 +3283,7 @@ const handleTreeNodeClick = (
 ): void => {
   const path = getPathToNode(node, analysis.nodes);
   if (path.length > 0) {
-    applyMovesToBoard(path);
+    applyMovesToBoard(path, clearBranch, updateAppState, updateMoveList);
     log(`Applied ${path.length} moves to board from tree click`);
   }
 };

@@ -1,4 +1,5 @@
 import { ChessPosition, ChessMove, AnalysisMove } from "./types.js";
+import { hideMoveArrow } from "./utils/arrow-utils.js";
 /**
  * Board state interface
  */
@@ -50,10 +51,6 @@ declare const setOnMoveMade: (callback: (move: ChessMove) => void) => void;
  * Show move arrow
  */
 declare const showMoveArrow: (from: string, to: string, piece: string, score?: number, allMoves?: AnalysisMove[], index?: number, customArrowId?: string, mateIn?: number) => void;
-/**
- * Hide move arrow
- */
-declare const hideMoveArrow: (arrowId?: string) => void;
 /**
  * Clear last move highlight
  */

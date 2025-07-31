@@ -20,6 +20,12 @@ import {
   coordsToSquare,
 } from "./utils/fen-utils.js";
 import { PIECES, PIECE_TYPES } from "./move-validator.js";
+import {
+  hideMoveArrow,
+  positionArrow,
+  getArrowElements,
+  setArrowElements,
+} from "./utils/arrow-utils.js";
 
 // ============================================================================
 // BOARD STATE MANAGEMENT
@@ -70,10 +76,7 @@ let dragState: DragState = {
   originalSquare: null,
 };
 
-/**
- * Arrow state for move visualization
- */
-let arrowElements: Map<string, HTMLElement> = new Map();
+
 
 // ============================================================================
 // STATE UPDATE FUNCTIONS
@@ -792,45 +795,14 @@ const showMoveArrow = (
       scoreLabel.style.zIndex = zIndex.toString();
 
       boardContainer.appendChild(scoreLabel);
-      arrowElements.set(`${arrowId}-score`, scoreLabel);
+      getArrowElements().set(`${arrowId}-score`, scoreLabel);
     }
   }
 
-  arrowElements.set(arrowId, arrow);
+  getArrowElements().set(arrowId, arrow);
 };
 
-/**
- * Hide move arrow
- */
-const hideMoveArrow = (arrowId?: string): void => {
-  if (arrowId) {
-    // Hide specific arrow and its score label
-    const arrow = arrowElements.get(arrowId);
-    if (arrow) {
-      arrow.remove();
-      arrowElements.delete(arrowId);
-    }
 
-    const scoreLabel = arrowElements.get(`${arrowId}-score`);
-    if (scoreLabel) {
-      scoreLabel.remove();
-      arrowElements.delete(`${arrowId}-score`);
-    }
-  } else {
-    // Hide all arrows and score labels
-    const elementsToRemove = Array.from(arrowElements.values());
-    elementsToRemove.forEach((element: HTMLElement) => {
-      element.remove();
-    });
-    arrowElements.clear();
-
-    // Also remove any orphaned score labels from document.body
-    const orphanedLabels = document.querySelectorAll(".move-score-label");
-    orphanedLabels.forEach((label: Element) => {
-      label.remove();
-    });
-  }
-};
 
 /**
  * Clear last move highlight
@@ -844,50 +816,7 @@ const clearLastMoveHighlight = (): void => {
   });
 };
 
-/**
- * Position arrow between squares
- */
-const positionArrow = (arrow: HTMLElement, from: string, to: string): void => {
-  const fromElement = document.querySelector(`[data-square="${from}"]`);
-  const toElement = document.querySelector(`[data-square="${to}"]`);
-  const boardContainer = document.querySelector(
-    ".board-section",
-  ) as HTMLElement;
 
-  if (!fromElement || !toElement || !boardContainer) {
-    return;
-  }
-
-  const fromRect = fromElement.getBoundingClientRect();
-  const toRect = toElement.getBoundingClientRect();
-  const boardContainerRect = boardContainer.getBoundingClientRect();
-
-  const fromCenter = {
-    x: fromRect.left + fromRect.width / 2 - boardContainerRect.left,
-    y: fromRect.top + fromRect.height / 2 - boardContainerRect.top,
-  };
-
-  const toCenter = {
-    x: toRect.left + toRect.width / 2 - boardContainerRect.left,
-    y: toRect.top + toRect.height / 2 - boardContainerRect.top,
-  };
-
-  const angle = Math.atan2(
-    toCenter.y - fromCenter.y,
-    toCenter.x - fromCenter.x,
-  );
-  const distance = Math.sqrt(
-    Math.pow(toCenter.x - fromCenter.x, 2) +
-      Math.pow(toCenter.y - fromCenter.y, 2),
-  );
-
-  arrow.style.position = "absolute";
-  arrow.style.left = `${fromCenter.x}px`;
-  arrow.style.top = `${fromCenter.y}px`;
-  arrow.style.width = `${distance - 24}px`; // Subtract arrow head width to compensate
-  arrow.style.transform = `rotate(${angle}rad)`;
-  arrow.style.transformOrigin = "0 50%";
-};
 
 /**
  * Destroy board

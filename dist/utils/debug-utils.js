@@ -1,4 +1,7 @@
 import { moveToNotation } from "./notation-utils.js";
+import { getGlobalCurrentMoveIndex } from "../utils.js";
+import * as Board from "../chess-board.js";
+import * as BestLines from "../best-lines.js";
 /**
  * Debug Utility Functions
  *
@@ -29,5 +32,43 @@ export function logTreeStructure(nodes, depth = 0) {
             logTreeStructure(node.children, depth + 1);
         }
     }
+}
+/**
+ * Count total nodes in the tree recursively
+ * @param nodes Array of nodes to count
+ * @returns Total number of nodes including all children
+ */
+export function countTotalNodes(nodes) {
+    let count = 0;
+    const countRecursive = (nodeList) => {
+        for (const node of nodeList) {
+            count++;
+            if (node.children.length > 0) {
+                countRecursive(node.children);
+            }
+        }
+    };
+    countRecursive(nodes);
+    return count;
+}
+/**
+ * Debug function to log tree digger initialization info
+ */
+export function debugTreeDiggerStart() {
+    console.log("=== Tree Digger Debug Info ===");
+    console.log("Current board FEN:", Board.getFEN());
+    console.log("Current move index:", getGlobalCurrentMoveIndex());
+    console.log("Board position:", Board.getPosition());
+    const analysis = BestLines.getCurrentAnalysis();
+    if (analysis) {
+        console.log("Analysis root FEN:", analysis.rootFen);
+        console.log("Analysis nodes count:", analysis.nodes.length);
+        console.log("Analysis max depth:", analysis.maxDepth);
+        console.log("Analysis config:", analysis.config);
+    }
+    else {
+        console.log("No current analysis found");
+    }
+    console.log("=== End Debug Info ===");
 }
 //# sourceMappingURL=debug-utils.js.map
