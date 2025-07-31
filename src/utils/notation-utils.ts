@@ -8,7 +8,7 @@ import {
   createPieceNotation,
   createColorNotation,
 } from "../types.js";
-import { parseFEN, squareToCoords } from "./fen-utils.js";
+import { parseFEN } from "./fen-utils.js";
 
 /**
  * Chess Notation Utility Functions

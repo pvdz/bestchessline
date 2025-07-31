@@ -71,9 +71,6 @@ declare const actuallyUpdateResultsPanel: (moves: AnalysisMove[]) => void;
  */
 declare const clearBranch: () => void;
 /**
- * Update position from controls
- */
-/**
  * Add move to game history
  */
 declare const addMove: (move: ChessMove) => void;

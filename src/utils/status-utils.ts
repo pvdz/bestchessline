@@ -15,17 +15,4 @@ export function updateStatus(message: string): void {
   }
 }
 
-/**
- * Initialize move hover events
- */
-export function initializeMoveHoverEvents(): void {
-  addMoveHoverListeners();
-}
-
-/**
- * Add move hover listeners
- */
-export function addMoveHoverListeners(): void {
-  // No longer needed since arrows are always shown for analysis results
-  // This function is kept for potential future use with game moves
-} 
+ 

@@ -8,11 +8,3 @@
  * @param message The status message to display
  */
 export declare function updateStatus(message: string): void;
-/**
- * Initialize move hover events
- */
-export declare function initializeMoveHoverEvents(): void;
-/**
- * Add move hover listeners
- */
-export declare function addMoveHoverListeners(): void;

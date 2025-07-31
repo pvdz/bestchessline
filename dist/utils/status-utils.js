@@ -13,17 +13,4 @@ export function updateStatus(message) {
         statusElement.textContent = message;
     }
 }
-/**
- * Initialize move hover events
- */
-export function initializeMoveHoverEvents() {
-    addMoveHoverListeners();
-}
-/**
- * Add move hover listeners
- */
-export function addMoveHoverListeners() {
-    // No longer needed since arrows are always shown for analysis results
-    // This function is kept for potential future use with game moves
-}
 //# sourceMappingURL=status-utils.js.map
