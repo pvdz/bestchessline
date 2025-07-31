@@ -1,7 +1,7 @@
 import {
   BestLineNode,
-  BestLinesAnalysis,
-  BestLinesState,
+  TreeDiggerAnalysis,
+  TreeDiggerState,
   ChessMove,
   AnalysisResult,
   AnalysisMove,
@@ -45,13 +45,13 @@ import * as Stockfish from "./stockfish-client.js";
 import * as Board from "./chess-board.js";
 
 // ============================================================================
-// BEST LINES STATE MANAGEMENT
+// TREE DIGGER STATE MANAGEMENT
 // ============================================================================
 
 /**
- * Best lines state instance
+ * Tree digger state instance
  */
-let bestLinesState: BestLinesState = {
+let bestLinesState: TreeDiggerState = {
   isAnalyzing: false,
   currentAnalysis: null,
   progress: {
@@ -64,9 +64,9 @@ let bestLinesState: BestLinesState = {
 };
 
 /**
- * Update best lines state
+ * Update tree digger state
  */
-const updateBestLinesState = (updates: Partial<BestLinesState>): void => {
+const updateBestLinesState = (updates: Partial<TreeDiggerState>): void => {
   bestLinesState = { ...bestLinesState, ...updates };
 };
 
@@ -77,8 +77,8 @@ const updateBestLinesState = (updates: Partial<BestLinesState>): void => {
 /**
  * Get analysis options from predefined configuration
  */
-const getAnalysisOptions = (analysis: BestLinesAnalysis): StockfishOptions => {
-  log(`Best lines analysis using ${analysis.config.threads} threads`);
+const getAnalysisOptions = (analysis: TreeDiggerAnalysis): StockfishOptions => {
+  log(`Tree digger analysis using ${analysis.config.threads} threads`);
 
   return {
     depth: 20,
@@ -92,9 +92,9 @@ const getAnalysisOptions = (analysis: BestLinesAnalysis): StockfishOptions => {
 // ============================================================================
 
 /**
- * Initialize a new best lines analysis
+ * Initialize a new tree digger analysis
  */
-const initializeBestLinesAnalysis = (): BestLinesAnalysis => {
+const initializeBestLinesAnalysis = (): TreeDiggerAnalysis => {
   // Use current board position instead of hardcoded starting position
   const boardFEN = Board.getFEN();
 
@@ -125,7 +125,7 @@ const initializeBestLinesAnalysis = (): BestLinesAnalysis => {
     secondReplyOverride,
   );
 
-  log(`Initializing best lines analysis from current position: ${rootFen}`);
+  log(`Initializing tree digger analysis from current position: ${rootFen}`);
   log(
     `Configuration: depthScaler=${depthScaler} (maxDepth=${maxDepth}), responderMoves=${responderMovesCount}, threads=${threads}, initiatorMoves=${initiatorMoves.join(",")}, overrides=[${firstReplyOverride},${secondReplyOverride}]`,
   );
@@ -180,7 +180,7 @@ const parseAndApplyMove = (
 };
 
 /**
- * Create a node for the best lines tree
+ * Create a node for the tree digger
  */
 const createNode = (
   fen: string,
@@ -210,7 +210,7 @@ const createNode = (
  */
 const analyzePosition = async (
   fen: string,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): Promise<AnalysisResult | null> => {
   // Check if analysis has been stopped
   if (!bestLinesState.isAnalyzing) {
@@ -230,10 +230,10 @@ const analyzePosition = async (
 };
 
 /**
- * Start the best lines analysis
+ * Start the tree digger analysis
  */
 export const startBestLinesAnalysis = async (): Promise<void> => {
-  log("Starting best lines analysis...");
+  log("Starting tree digger analysis...");
 
   // Add debugging info
   console.log("=== Tree Digger Debug Info ===");
@@ -313,9 +313,9 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
       currentAnalysis: analysis,
     });
 
-    log("Best lines analysis complete!");
+    log("Tree digger analysis complete!");
   } catch (error) {
-    logError("Error during best lines analysis:", error);
+    logError("Error during tree digger analysis:", error);
     updateBestLinesState({
       isAnalyzing: false,
     });
@@ -327,7 +327,7 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
  */
 const buildAnalysisTree = async (
   fen: string,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
   parentNode: BestLineNode | null,
   depth: number,
 ): Promise<void> => {
@@ -341,7 +341,7 @@ const buildAnalysisTree = async (
   const currentAnalyzed = bestLinesState.progress.analyzedPositions + 1;
 
   window.dispatchEvent(
-    new CustomEvent("best-lines-progress", {
+    new CustomEvent("tree-digger-progress", {
       detail: {
         analyzedPositions: currentAnalyzed,
         totalPositions: bestLinesState.progress.totalPositions,
@@ -414,7 +414,7 @@ const buildAnalysisTree = async (
  */
 const processInitiatorMoveInTree = async (
   fen: string,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
   parentNode: BestLineNode | null,
   depth: number,
 ): Promise<void> => {
@@ -666,7 +666,7 @@ const processInitiatorMoveInTree = async (
  */
 const processResponderMovesInTree = async (
   fen: string,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
   parentNode: BestLineNode | null,
   depth: number,
 ): Promise<void> => {
@@ -842,11 +842,11 @@ const processResponderMovesInTree = async (
 };
 
 /**
- * Stop the best lines analysis
+ * Stop the tree digger analysis
  */
 export const stopBestLinesAnalysis = (): void => {
-  log("BestLines: Stopping best lines analysis...");
-  log("Stopping best lines analysis...");
+  log("TreeDigger: Stopping tree digger analysis...");
+  log("Stopping tree digger analysis...");
   updateBestLinesState({
     isAnalyzing: false,
   });
@@ -854,10 +854,10 @@ export const stopBestLinesAnalysis = (): void => {
 };
 
 /**
- * Clear the best lines analysis
+ * Clear the tree digger analysis
  */
 export const clearBestLinesAnalysis = (): void => {
-  log("Clearing best lines analysis...");
+  log("Clearing tree digger analysis...");
   updateBestLinesState({
     isAnalyzing: false,
     currentAnalysis: null,
@@ -874,7 +874,7 @@ export const clearBestLinesAnalysis = (): void => {
 /**
  * Get the current analysis results
  */
-export const getCurrentAnalysis = (): BestLinesAnalysis | null => {
+export const getCurrentAnalysis = (): TreeDiggerAnalysis | null => {
   return bestLinesState.currentAnalysis;
 };
 
@@ -888,7 +888,7 @@ export const isAnalyzing = (): boolean => {
 /**
  * Get current progress
  */
-export const getProgress = (): BestLinesState["progress"] => {
+export const getProgress = (): TreeDiggerState["progress"] => {
   return bestLinesState.progress;
 };
 
@@ -936,7 +936,7 @@ export const calculateTotalLeafs = (nodes: BestLineNode[]): number => {
  */
 export const calculateUniquePositions = (
   nodes: BestLineNode[],
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): number => {
   return analysis.analyzedPositions.size;
 };

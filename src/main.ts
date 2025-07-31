@@ -3,7 +3,7 @@ import {
   AnalysisResult,
   AnalysisMove,
   BestLineNode,
-  BestLinesAnalysis,
+  TreeDiggerAnalysis,
   PLAYER_COLORS,
 } from "./types.js";
 import {
@@ -88,12 +88,12 @@ import {
   updateButtonStates,
 } from "./utils/analysis-config.js";
 import {
-  updateBestLinesStatus,
+  updateTreeDiggerStatus,
   updateAnalysisStatus,
 } from "./utils/status-management.js";
 import {
-  updateBestLinesResults,
-} from "./utils/best-lines-results.js";
+  updateTreeDiggerResults,
+} from "./utils/tree-digger-results.js";
 import {
   addMove,
   importGame,
@@ -110,11 +110,16 @@ import {
   handleMakeEngineMove,
 } from "./utils/analysis-manager.js";
 import {
-  startBestLinesAnalysis,
-  stopBestLinesAnalysis,
-  clearBestLinesAnalysis,
-  updateBestLinesButtonStates,
-} from "./utils/best-lines-manager.js";
+  startTreeDiggerAnalysis,
+  stopTreeDiggerAnalysis,
+  clearTreeDiggerAnalysis,
+  updateTreeDiggerButtonStates,
+  updateTreeNodeElement,
+  syncDOMWithShadowTree,
+  updateTreeDiggerTreeIncrementally,
+  renderTreeNode,
+  renderTreeDiggerNode,
+} from "./utils/tree-digger-manager.js";
 
 import { buildShadowTree, findNodeById, UITreeNode } from "./utils/tree-building.js";
 
@@ -124,7 +129,7 @@ import * as Board from "./chess-board.js";
 import {clearLastMoveHighlight, makeMove } from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
-import * as BestLines from "./best-lines.js";
+import * as BestLines from "./tree-digger.js";
 import { hideMoveArrow } from "./utils/arrow-utils.js";
 
 // ============================================================================
@@ -374,27 +379,27 @@ const initializeEventListeners = (): void => {
     stopBtn.addEventListener("click", () => stopAnalysis());
   }
 
-  // Best lines analysis controls
+  // Tree digger analysis controls
   const startTreeDiggerBtn = document.getElementById("start-tree-digger");
   const stopTreeDiggerBtn = document.getElementById("stop-tree-digger");
   const clearTreeDiggerBtn = document.getElementById("clear-tree-digger");
 
   if (startTreeDiggerBtn) {
     startTreeDiggerBtn.addEventListener("click", () =>
-      startBestLinesAnalysis(),
+      startTreeDiggerAnalysis(),
     );
   }
 
   if (stopTreeDiggerBtn) {
     stopTreeDiggerBtn.addEventListener("click", () => {
       console.log("USER PRESSED STOP BUTTON - Analysis manually stopped");
-      stopBestLinesAnalysis();
+      stopTreeDiggerAnalysis();
     });
   }
 
   if (clearTreeDiggerBtn) {
     clearTreeDiggerBtn.addEventListener("click", () =>
-      clearBestLinesAnalysis(),
+      clearTreeDiggerAnalysis(),
     );
   }
 
@@ -449,12 +454,12 @@ const initializeEventListeners = (): void => {
   window.addEventListener("stockfish-loading", ((event: Event) => {
     const customEvent = event as CustomEvent;
     const message = customEvent.detail?.message || "Loading Stockfish...";
-    updateBestLinesStatus(message);
+    updateTreeDiggerStatus(message);
     updateAnalysisStatus(message);
   }) as EventListener);
 
   window.addEventListener("stockfish-ready", (() => {
-    updateBestLinesStatus("Stockfish ready");
+    updateTreeDiggerStatus("Stockfish ready");
     updateAnalysisStatus("Stockfish ready");
   }) as EventListener);
 
@@ -462,7 +467,7 @@ const initializeEventListeners = (): void => {
     const customEvent = event as CustomEvent;
     const message = customEvent.detail?.message || "Analyzing...";
     const position = customEvent.detail?.position || "";
-    updateBestLinesStatus(`${message} ${position}`);
+    updateTreeDiggerStatus(`${message} ${position}`);
     updateAnalysisStatus(`${message} ${position}`);
   }) as EventListener);
 
@@ -470,7 +475,7 @@ const initializeEventListeners = (): void => {
     const customEvent = event as CustomEvent;
     const message = customEvent.detail?.message || "Analysis complete";
     const movesFound = customEvent.detail?.movesFound || 0;
-    updateBestLinesStatus(`${message} (${movesFound} moves)`);
+    updateTreeDiggerStatus(`${message} (${movesFound} moves)`);
     updateAnalysisStatus(`${message} (${movesFound} moves)`);
   }) as EventListener);
 
@@ -502,7 +507,7 @@ const initializeEventListeners = (): void => {
 
     // log(`Stockfish PV line: depth=${depth}, multipv=${multipv}, score=${score}, moves=${pvMoves}`);
 
-    // Increment the PV lines counter in best lines state
+    // Increment the PV lines counter in tree digger state
     if (BestLines.isAnalyzing()) {
       const progress = BestLines.getProgress();
       progress.pvLinesReceived++;
@@ -567,10 +572,10 @@ const initializeEventListeners = (): void => {
   // Update threads input based on fallback mode
   updateThreadsInputForFallbackMode();
 
-  // Debounced update mechanism for best lines analysis
-  let bestLinesUpdateTimeout: number | null = null;
+  // Debounced update mechanism for tree digger analysis
+  let treeDiggerUpdateTimeout: number | null = null;
 
-  const debouncedBestLinesUpdate = () => {
+  const debouncedTreeDiggerUpdate = () => {
     // Reset event rate when analysis stops
     if (BestLines.isAnalyzing()) {
       eventTrackingState.totalCount++;
@@ -578,9 +583,9 @@ const initializeEventListeners = (): void => {
       eventTrackingState.recentCount = 0;
     }
 
-    if (bestLinesUpdateTimeout) return;
-    bestLinesUpdateTimeout = setTimeout(() => {
-      bestLinesUpdateTimeout = null;
+    if (treeDiggerUpdateTimeout) return;
+    treeDiggerUpdateTimeout = setTimeout(() => {
+      treeDiggerUpdateTimeout = null;
       const now = Date.now();
 
       // Track recent events (last 1 second)
@@ -595,23 +600,23 @@ const initializeEventListeners = (): void => {
       eventTrackingState.lastEventTime = now;
 
       // Update immediately
-      updateBestLinesStatus();
-      updateBestLinesResults();
-      updateBestLinesButtonStates();
+          updateTreeDiggerStatus();
+    updateTreeDiggerResults();
+    updateTreeDiggerButtonStates();
     }, 200);
   };
 
   // Listen for Stockfish events to trigger UI updates
-  window.addEventListener("stockfish-pv-update", debouncedBestLinesUpdate);
-  window.addEventListener("stockfish-pv-line", debouncedBestLinesUpdate);
-  window.addEventListener("stockfish-info-update", debouncedBestLinesUpdate);
+    window.addEventListener("stockfish-pv-update", debouncedTreeDiggerUpdate);
+  window.addEventListener("stockfish-pv-line", debouncedTreeDiggerUpdate);
+  window.addEventListener("stockfish-info-update", debouncedTreeDiggerUpdate);
   window.addEventListener(
     "stockfish-analysis-complete",
-    debouncedBestLinesUpdate,
+    debouncedTreeDiggerUpdate,
   );
-  window.addEventListener("best-lines-progress", debouncedBestLinesUpdate);
+  window.addEventListener("tree-digger-progress", debouncedTreeDiggerUpdate);
 
-  // Responder moves control for best lines
+  // Responder moves control for tree digger
   const treeDiggerResponderMovesInput = document.getElementById(
     "tree-digger-responder-moves",
   ) as HTMLInputElement;
@@ -624,7 +629,7 @@ const initializeEventListeners = (): void => {
     });
   }
 
-  // Override controls for best lines
+  // Override controls for tree digger
   const treeDiggerOverride1Input = document.getElementById(
     "tree-digger-override-1",
   ) as HTMLInputElement;
@@ -684,328 +689,21 @@ const initializePositionControls = (): void => {
 
 
 // ============================================================================
-// BEST LINES ANALYSIS FUNCTIONS
+// TREE DIGGER ANALYSIS FUNCTIONS
 // ============================================================================
 
 
 
-/**
- * Update an existing DOM element for a tree node
- */
-const updateTreeNodeElement = (
-  element: HTMLElement,
-  node: BestLineNode,
-  analysis: BestLinesAnalysis,
-): void => {
-  const moveInfo = element.querySelector(".move-info") as HTMLElement;
-
-  const moveText = moveToNotation(node.move);
-  const scoreText = formatNodeScore(node);
-
-  // Update move text
-  const moveTextSpan = element.querySelector(".move-text");
-  if (moveTextSpan) {
-    moveTextSpan.textContent = moveText;
-  }
-
-  // Update score
-  let scoreSpan = element.querySelector(".move-score");
-  if (scoreText) {
-    if (!scoreSpan) {
-      scoreSpan = document.createElement("span");
-      scoreSpan.className = "move-score";
-      if (moveInfo) {
-        moveInfo.appendChild(scoreSpan);
-      }
-    }
-    scoreSpan.innerHTML = scoreText;
-  } else if (scoreSpan) {
-    scoreSpan.remove();
-  }
-
-  // Update transposition indicator
-  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-  const isTransposition =
-    node.children.length === 0 &&
-    analysis.analyzedPositions.has(positionAfterMove);
-
-  let transpositionSpan = element.querySelector(".transposition-indicator");
-  if (isTransposition) {
-    if (!transpositionSpan) {
-      transpositionSpan = document.createElement("span");
-      transpositionSpan.className = "transposition-indicator";
-      transpositionSpan.textContent = "🔄";
-      if (moveInfo) {
-        moveInfo.appendChild(transpositionSpan);
-      }
-    }
-  } else if (transpositionSpan) {
-    transpositionSpan.remove();
-  }
-
-  // Update line completion
-  let lineCompletion = element.querySelector(".line-completion");
-  if (node.children.length === 0) {
-    if (!lineCompletion) {
-      lineCompletion = document.createElement("div");
-      lineCompletion.className = "line-completion";
-      element.appendChild(lineCompletion);
-    }
-    lineCompletion.innerHTML = getLineCompletion(node, analysis);
-  } else if (lineCompletion) {
-    lineCompletion.remove();
-  }
-
-  // Update classes
-  element.className = element.className.replace(
-    /tree-depth-\d+/,
-    `tree-depth-${node.depth || 0}`,
-  );
-  if (isTransposition) {
-    element.classList.add("transposition");
-  } else {
-    element.classList.remove("transposition");
-  }
-
-  // Ensure clickable class and styles are applied
-  if (moveInfo) {
-    moveInfo.classList.add("clickable");
-    moveInfo.style.cursor = "pointer";
-    moveInfo.title = "Click to view this position on the board";
-  }
-};
-
-/**
- * Sync the DOM with the shadow tree
- */
-const syncDOMWithShadowTree = (
-  container: HTMLElement,
-  shadowNodes: UITreeNode[],
-  analysis: BestLinesAnalysis,
-): void => {
-  // Get existing DOM nodes
-  const existingNodes = Array.from(container.children) as HTMLElement[];
-  const existingNodeMap = new Map<string, HTMLElement>();
-
-  for (const element of existingNodes) {
-    const nodeId = element.getAttribute("data-node-id");
-    if (nodeId) {
-      existingNodeMap.set(nodeId, element);
-    }
-  }
-
-  // Process shadow nodes in order
-  for (let i = 0; i < shadowNodes.length; i++) {
-    const shadowNode = shadowNodes[i];
-    const existingElement = existingNodeMap.get(shadowNode.id);
-
-    if (existingElement) {
-      // Update existing element - we need to find the original node data
-      const originalNode = findNodeById(shadowNode.id, analysis.nodes);
-      if (originalNode) {
-        updateTreeNodeElement(existingElement, originalNode, analysis);
-      }
-
-      // Move to correct position if needed
-      if (container.children[i] !== existingElement) {
-        container.insertBefore(existingElement, container.children[i] || null);
-      }
-
-      // Process children
-      let childrenContainer = existingElement.querySelector(
-        ".tree-children",
-      ) as HTMLElement;
-      if (shadowNode.children.length > 0) {
-        if (!childrenContainer) {
-          childrenContainer = document.createElement("div");
-          childrenContainer.className = "tree-children";
-          existingElement.appendChild(childrenContainer);
-        }
-        syncDOMWithShadowTree(childrenContainer, shadowNode.children, analysis);
-      } else if (childrenContainer) {
-        childrenContainer.remove();
-      }
-    } else {
-      // Create new element
-      const newElement = shadowNode.element;
-
-      // Insert at correct position
-      if (i < container.children.length) {
-        container.insertBefore(newElement, container.children[i]);
-      } else {
-        container.appendChild(newElement);
-      }
-
-      // Process children
-      if (shadowNode.children.length > 0) {
-        const childrenContainer = document.createElement("div");
-        childrenContainer.className = "tree-children";
-        newElement.appendChild(childrenContainer);
-        syncDOMWithShadowTree(childrenContainer, shadowNode.children, analysis);
-      }
-    }
-  }
-
-  // Remove extra DOM nodes that shouldn't be there
-  for (const element of existingNodes) {
-    const nodeId = element.getAttribute("data-node-id");
-    if (nodeId && !shadowNodes.find((n) => n.id === nodeId)) {
-      element.remove();
-    }
-  }
-};
-
-/**
- * Update the tree UI incrementally
- */
-export const updateBestLinesTreeIncrementally = (
-  resultsElement: HTMLElement,
-  analysis: BestLinesAnalysis,
-): void => {
-  let treeSection = resultsElement.querySelector(
-    ".tree-digger-tree",
-  ) as HTMLElement;
-  if (!treeSection) {
-    treeSection = document.createElement("div");
-    treeSection.className = "tree-digger-tree";
-    resultsElement.appendChild(treeSection);
-  }
-
-  // Always update the tree section, even when there are no nodes
-  if (analysis.nodes.length === 0) {
-    treeSection.innerHTML =
-      "<p id='tree-digger-tree-empty-message'>No analysis results yet. Starting analysis...</p>";
-    return;
-  }
-
-  // Build the new shadow tree
-  const newShadowNodes = buildShadowTree(analysis.nodes, analysis);
-
-  // Sync the DOM with the shadow tree
-  syncDOMWithShadowTree(treeSection, newShadowNodes, analysis);
-
-  // Apply current font size to the updated tree
-  const treeFontSizeInput = document.getElementById(
-    "tree-font-size",
-  ) as HTMLInputElement;
-  if (treeFontSizeInput) {
-    const currentFontSize = parseInt(treeFontSizeInput.value);
-    updateTreeFontSize(currentFontSize);
-  }
-
-  // Add click event delegation to the tree section for better performance
-  // Only add the listener if it doesn't already exist
-  if (!treeSection.hasAttribute("data-tree-digger-clicks-enabled")) {
-    treeSection.setAttribute("data-tree-digger-clicks-enabled", "true");
-    treeSection.addEventListener("click", (e) => {
-      const target = e.target as HTMLElement;
-      const moveInfo = target.closest(".move-info.clickable");
-      if (moveInfo) {
-        const treeNode = moveInfo.closest(".tree-node");
-        if (treeNode) {
-          const nodeId = treeNode.getAttribute("data-node-id");
-          if (nodeId) {
-            const node = findNodeById(nodeId, analysis.nodes);
-            if (node) {
-              handleTreeNodeClick(node, analysis);
-            }
-          }
-        }
-      }
-    });
-  }
-};
-
-/**
- * Render a tree node recursively
- */
-const renderTreeNode = (
-  node: BestLineNode,
-  depth: number,
-  analysis: BestLinesAnalysis,
-): string => {
-  const moveText = moveToNotation(node.move);
-  const scoreText = formatNodeScore(node);
-  const moveClass = node.isWhiteMove ? "white-move" : "black-move";
-
-  // Use the move number from the node itself (calculated based on game position)
-  const moveNumber = node.moveNumber;
-  let moveNumberText = "";
-  if (node.isWhiteMove) {
-    moveNumberText = `${moveNumber}.`;
-  } else {
-    moveNumberText = `${moveNumber}...`;
-  }
-  const depthClass = `tree-depth-${depth}`;
-
-  // Generate a unique node ID for debugging
-  const nodeId = `node-${node.fen.replace(/[^a-zA-Z0-9]/g, "")}-${node.move.from}-${node.move.to}`;
-
-  // Check if this position is a transposition (has been analyzed before)
-  // We show transposition when this node has no children because the position was already analyzed
-  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-  const isTransposition =
-    node.children.length === 0 &&
-    analysis.analyzedPositions.has(positionAfterMove);
-  const transpositionClass = isTransposition ? "transposition" : "";
-
-  let html = `
-    <div class="tree-node ${moveClass} ${depthClass} ${transpositionClass}" data-node-id="${nodeId}">
-      <div class="move-info">
-        <span class="move-number">${moveNumberText}</span>
-        <span class="move-text">${moveText}</span>
-        ${scoreText ? `<span class="move-score">${scoreText}</span>` : ""}
-
-        ${isTransposition ? `<span class="transposition-indicator">🔄</span>` : ""}
-      </div>
-      ${node.children.length === 0 ? `<div class="line-completion">${getLineCompletion(node, analysis)}</div>` : ""}
-  `;
-
-  if (node.children.length > 0) {
-    html += `<div class="tree-children">`;
-    for (const child of node.children) {
-      html += renderTreeNode(child, depth + 1, analysis);
-    }
-    html += `</div>`;
-  }
-
-  html += `</div>`;
-  return html;
-};
 
 
-/**
- * Render a best line node
- */
-const renderBestLineNode = (node: BestLineNode): string => {
-  const moveText = moveToNotation(node.move);
-  const scoreText = formatNodeScore(node);
-  const depthText = node.depth > 0 ? ` [depth: ${node.depth}]` : "";
-  const moveClass = node.isWhiteMove ? "white-move" : "black-move";
-  const playerText = node.isWhiteMove ? "White" : "Black";
 
-  let html = `
-    <div class="best-line-node ${moveClass}">
-      <div class="move-info">
-        <span class="move-player">${playerText}</span>
-        <span class="move-text">${moveText}</span>
-        ${scoreText ? `<span class="move-score">${scoreText}</span>` : ""}
-        ${depthText ? `<span class="move-depth">${depthText}</span>` : ""}
-      </div>
-      <div class="move-fen">${node.fen}</div>
-  `;
 
-  if (node.children.length > 0) {
-    html += "<div class='children'>";
-    for (const child of node.children) {
-      html += renderBestLineNode(child);
-    }
-    html += "</div>";
-  }
 
-  html += "</div>";
-  return html;
-};
+
+
+
+
+
 
 // ============================================================================
 // RESULTS MANAGEMENT

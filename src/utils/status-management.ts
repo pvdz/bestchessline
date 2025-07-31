@@ -1,5 +1,5 @@
 import { getAppState } from "../main.js";
-import * as BestLines from "../best-lines.js";
+import * as BestLines from "../tree-digger.js";
 
 /**
  * Status Management Utility Functions
@@ -8,9 +8,9 @@ import * as BestLines from "../best-lines.js";
  */
 
 /**
- * Update best lines status
+ * Update tree digger status
  */
-export function updateBestLinesStatus(message?: string): void {
+export function updateTreeDiggerStatus(message?: string): void {
   const statusElement = document.getElementById("tree-digger-status");
   if (!statusElement) return;
 

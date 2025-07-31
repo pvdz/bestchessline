@@ -2,7 +2,7 @@ import { BestLineNode } from "../types.js";
 import { moveToNotation } from "./notation-utils.js";
 import { getGlobalCurrentMoveIndex } from "../utils.js";
 import * as Board from "../chess-board.js";
-import * as BestLines from "../best-lines.js";
+import * as BestLines from "../tree-digger.js";
 
 /**
  * Debug Utility Functions

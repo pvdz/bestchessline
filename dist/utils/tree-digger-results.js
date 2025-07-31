@@ -1,18 +1,18 @@
-import * as BestLines from "../best-lines.js";
+import * as BestLines from "../tree-digger.js";
 import { getStartingPlayer } from "../utils.js";
 import { getThreadCount, getDepthScaler, getFirstReplyOverride, getSecondReplyOverride, getResponderMovesCount } from "./ui-getters.js";
 import { getEventTrackingState } from "../main.js";
-import { updateBestLinesTreeIncrementally } from "./best-lines-manager.js";
+import { updateTreeDiggerTreeIncrementally } from "./tree-digger-manager.js";
 import { renderProgressBoard } from "./board-rendering.js";
 /**
- * Best Lines Results Management Utility Functions
+ * Tree Digger Results Management Utility Functions
  *
- * Provides functions for managing best lines results display and progress.
+ * Provides functions for managing tree digger results display and progress.
  */
 /**
- * Update best lines results display
+ * Update tree digger results display
  */
-export function updateBestLinesResults() {
+export function updateTreeDiggerResults() {
     const resultsElement = document.getElementById("tree-digger-results");
     if (!resultsElement)
         return;
@@ -22,14 +22,14 @@ export function updateBestLinesResults() {
         return;
     }
     // Update progress section
-    updateBestLinesProgress(resultsElement, analysis);
+    updateTreeDiggerProgress(resultsElement, analysis);
     // Update tree section incrementally
-    updateBestLinesTreeIncrementally(resultsElement, analysis);
+    updateTreeDiggerTreeIncrementally(resultsElement, analysis);
 }
 /**
- * Update progress section
+ * Update tree digger progress section
  */
-export function updateBestLinesProgress(resultsElement, analysis) {
+export function updateTreeDiggerProgress(resultsElement, analysis) {
     let progressSection = resultsElement.querySelector(".tree-digger-progress-section");
     if (!progressSection) {
         progressSection = document.createElement("div");
@@ -71,10 +71,10 @@ export function updateBestLinesProgress(resultsElement, analysis) {
     }
     const computationFormula = `1 + 2*${firstReplyOverride || responderMovesCount} + 2*${secondReplyOverride || responderMovesCount}<sup>2</sup> + 2∑(${responderMovesCount}<sup>n</sup>) for n from 3 to ⌊${depthScaler}/2⌋ = ${totalPositionsWithOverrides}`;
     const html = `
-    <div class="best-line-progress-container">
-      <div class="best-line-progress-left">
-        <div class="best-line-stats">
-          <div class="stat = ${totalPositionsWithOverrides}">
+    <div class="tree-digger-progress-container">
+      <div class="tree-digger-progress-left">
+        <div class="tree-digger-stats">
+          <div class="stat">
             <div class="stat-label">Total positions to analyze</div>
             <div class="stat-value">${totalPositionsWithOverrides}</div>
           </div>
@@ -99,7 +99,7 @@ export function updateBestLinesProgress(resultsElement, analysis) {
             <div class="stat-value">${eventsPerSecond || 0}/s</div>
           </div>
         </div>
-        <div class="best-line-settings">
+        <div class="tree-digger-settings">
           <div class="setting">
             <div class="setting-label">Depth Scaler</div>
             <div class="setting-value">${depthScaler}</div>
@@ -139,12 +139,12 @@ export function updateBestLinesProgress(resultsElement, analysis) {
           <div class="setting">
             <div class="setting-label">Threads</div>
             <div class="setting-value">${getThreadCount()}</div>
-          </div>
-        </div>
-        <div class="best-line-progress">
-          <div class="best-line-progress-bar" style="width: ${progress.totalPositions > 0 ? (progress.analyzedPositions / progress.totalPositions) * 100 : 0}%"></div>
-        </div>
-        <div class="best-line-explanation">
+                  </div>
+      </div>
+      <div class="tree-digger-progress">
+        <div class="tree-digger-progress-bar" style="width: ${progress.totalPositions > 0 ? (progress.analyzedPositions / progress.totalPositions) * 100 : 0}%"></div>
+      </div>
+      <div class="tree-digger-explanation">
           <h3>Analysis Progress</h3>
           <ul>
             <li><strong>Initial position</strong>: ${progress.initialPosition}</li>
@@ -157,8 +157,8 @@ export function updateBestLinesProgress(resultsElement, analysis) {
           </ul>
         </div>
       </div>
-      <div class="best-line-progress-board">
-        <div class="best-line-progress-board-title">Root Board</div>
+      <div class="tree-digger-progress-board">
+        <div class="tree-digger-progress-board-title">Root Board</div>
         <div class="offset-board" id="progress-board"></div>
       </div>
     </div>
@@ -170,4 +170,4 @@ export function updateBestLinesProgress(resultsElement, analysis) {
         renderProgressBoard(progressBoardElement, analysis.rootFen);
     }
 }
-//# sourceMappingURL=best-lines-results.js.map
+//# sourceMappingURL=tree-digger-results.js.map

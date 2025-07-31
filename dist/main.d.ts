@@ -1,4 +1,4 @@
-import { ChessMove, AnalysisResult, AnalysisMove, BestLinesAnalysis } from "./types.js";
+import { ChessMove, AnalysisResult, AnalysisMove } from "./types.js";
 /**
  * Application state interface
  */
@@ -39,10 +39,6 @@ export declare const getAppState: () => AppState;
  * Initialize the application
  */
 export declare const initializeApp: () => void;
-/**
- * Update the tree UI incrementally
- */
-export declare const updateBestLinesTreeIncrementally: (resultsElement: HTMLElement, analysis: BestLinesAnalysis) => void;
 export declare const actuallyUpdateResultsPanel: (moves: AnalysisMove[]) => void;
 /**
  * Create a branch from the current position

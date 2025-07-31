@@ -1,4 +1,4 @@
-import { BestLineNode, BestLinesAnalysis } from "../types.js";
+import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
 import { generateNodeId } from "./node-utils.js";
 import { getPathToNode, applyMovesToBoard } from "./tree-navigation.js";
 import { log } from "./logging.js";
@@ -70,7 +70,7 @@ export function verifyDOMStructure(
  */
 export function handleTreeNodeClick(
   node: BestLineNode,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): void {
   const path = getPathToNode(node, analysis.nodes);
   if (path.length > 0) {

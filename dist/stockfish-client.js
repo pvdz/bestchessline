@@ -372,7 +372,7 @@ const parseInfoMessage = (message) => {
             hasPV: pv.length > 0,
         },
     }));
-    // Dispatch PV line update event for best lines tracking (for backward compatibility)
+    // Dispatch PV line update event for tree digger tracking (for backward compatibility)
     if (pv.length > 0) {
         window.dispatchEvent(new CustomEvent("stockfish-pv-line", {
             detail: {

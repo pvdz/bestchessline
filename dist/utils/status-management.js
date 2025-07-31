@@ -1,14 +1,14 @@
 import { getAppState } from "../main.js";
-import * as BestLines from "../best-lines.js";
+import * as BestLines from "../tree-digger.js";
 /**
  * Status Management Utility Functions
  *
  * Provides functions for updating status messages and progress displays.
  */
 /**
- * Update best lines status
+ * Update tree digger status
  */
-export function updateBestLinesStatus(message) {
+export function updateTreeDiggerStatus(message) {
     const statusElement = document.getElementById("tree-digger-status");
     if (!statusElement)
         return;

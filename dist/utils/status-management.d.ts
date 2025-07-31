@@ -4,9 +4,9 @@
  * Provides functions for updating status messages and progress displays.
  */
 /**
- * Update best lines status
+ * Update tree digger status
  */
-export declare function updateBestLinesStatus(message?: string): void;
+export declare function updateTreeDiggerStatus(message?: string): void;
 /**
  * Update analysis status
  */

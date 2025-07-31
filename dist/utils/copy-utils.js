@@ -1,6 +1,6 @@
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { moveToNotation } from "./notation-utils.js";
-import * as BestLines from "../best-lines.js";
+import * as BestLines from "../tree-digger.js";
 /**
  * Copy and Export Utility Functions
  *

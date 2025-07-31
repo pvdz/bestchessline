@@ -1,77 +1,79 @@
-import { BestLineNode, BestLinesAnalysis } from "../types.js";
+import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
 import { getAppState, updateAppState } from "../main.js";
 import { moveToNotation } from "./notation-utils.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { getButtonElement } from "./dom-helpers.js";
 import { log, logError } from "./logging.js";
-import { updateBestLinesStatus } from "./status-management.js";
-import { updateBestLinesResults } from "./best-lines-results.js";
+import { updateTreeDiggerStatus } from "./status-management.js";
+import { updateTreeDiggerResults } from "./tree-digger-results.js";
 import { formatNodeScore } from "./node-utils.js";
 import { getLineCompletion } from "./line-analysis.js";
 import { clearTreeNodeDOMMap } from "./debug-utils.js";
 import { buildShadowTree, findNodeById, UITreeNode } from "./tree-building.js";
-import * as BestLines from "../best-lines.js";
+import { updateTreeFontSize } from "./ui-utils.js";
+import { handleTreeNodeClick } from "./tree-debug-utils.js";
+import * as BestLines from "../tree-digger.js";
 
 /**
- * Best Lines Analysis Management Utility Functions
+ * Tree Digger Analysis Management Utility Functions
  * 
  * Provides functions for managing tree digger analysis, UI updates, and tree rendering.
  */
 
 /**
- * Start best lines analysis
+ * Start tree digger analysis
  */
-export const startBestLinesAnalysis = async (): Promise<void> => {
+export const startTreeDiggerAnalysis = async (): Promise<void> => {
   try {
     // Clear any previous analysis results first
     BestLines.clearBestLinesAnalysis();
 
     await BestLines.startBestLinesAnalysis();
-    updateBestLinesButtonStates();
-    updateBestLinesStatus();
-    updateBestLinesResults();
+    updateTreeDiggerButtonStates();
+    updateTreeDiggerStatus();
+    updateTreeDiggerResults();
   } catch (error) {
-    logError("Failed to start best lines analysis:", error);
-    updateBestLinesStatus("Error starting analysis");
+    logError("Failed to start tree digger analysis:", error);
+    updateTreeDiggerStatus("Error starting analysis");
   }
 };
 
 /**
- * Stop best lines analysis
+ * Stop tree digger analysis
  */
-export const stopBestLinesAnalysis = (): void => {
+export const stopTreeDiggerAnalysis = (): void => {
   log("Stop button clicked - calling stopBestLinesAnalysis");
   try {
     BestLines.stopBestLinesAnalysis();
     log("BestLines.stopBestLinesAnalysis() completed");
     clearTreeNodeDOMMap(); // Clear tracked DOM elements
-    updateBestLinesButtonStates();
-    updateBestLinesStatus("Analysis stopped");
+    updateTreeDiggerButtonStates();
+    updateTreeDiggerStatus("Analysis stopped");
     log("Stop analysis completed successfully");
   } catch (error) {
-    logError("Failed to stop best lines analysis:", error);
+    logError("Failed to stop tree digger analysis:", error);
   }
 };
 
 /**
- * Clear best lines analysis
+ * Clear tree digger analysis
  */
-export const clearBestLinesAnalysis = (): void => {
+export const clearTreeDiggerAnalysis = (): void => {
   try {
     BestLines.clearBestLinesAnalysis();
     clearTreeNodeDOMMap(); // Clear tracked DOM elements
-    updateBestLinesButtonStates();
-    updateBestLinesStatus("Ready");
-    updateBestLinesResults();
+    updateTreeDiggerButtonStates();
+    updateTreeDiggerStatus("Ready");
+    updateTreeDiggerResults();
   } catch (error) {
-    logError("Failed to clear best lines analysis:", error);
+    logError("Failed to clear tree digger analysis:", error);
   }
 };
 
 /**
- * Update best lines button states
+ * Update tree digger button states
  */
-export const updateBestLinesButtonStates = (): void => {
+export const updateTreeDiggerButtonStates = (): void => {
   const startBtn = getButtonElement("start-tree-digger");
   const stopBtn = getButtonElement("stop-tree-digger");
   const clearBtn = getButtonElement("clear-tree-digger");
@@ -104,7 +106,7 @@ export const updateBestLinesButtonStates = (): void => {
 export const updateTreeNodeElement = (
   element: HTMLElement,
   node: BestLineNode,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): void => {
   const moveInfo = element.querySelector(".move-info") as HTMLElement;
 
@@ -121,7 +123,7 @@ export const updateTreeNodeElement = (
   const scoreSpan = element.querySelector(".move-score") as HTMLElement;
   if (scoreSpan) {
     if (scoreText) {
-      scoreSpan.textContent = scoreText;
+      scoreSpan.innerHTML = scoreText;
       scoreSpan.style.display = "inline";
     } else {
       scoreSpan.style.display = "none";
@@ -157,7 +159,7 @@ export const updateTreeNodeElement = (
 export const syncDOMWithShadowTree = (
   container: HTMLElement,
   shadowNodes: UITreeNode[],
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): void => {
   // Get existing DOM nodes
   const existingNodes = Array.from(container.children) as HTMLElement[];
@@ -234,9 +236,9 @@ export const syncDOMWithShadowTree = (
 /**
  * Update the tree UI incrementally
  */
-export const updateBestLinesTreeIncrementally = (
+export const updateTreeDiggerTreeIncrementally = (
   resultsElement: HTMLElement,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): void => {
   let treeSection = resultsElement.querySelector(
     ".tree-digger-tree",
@@ -245,6 +247,17 @@ export const updateBestLinesTreeIncrementally = (
     treeSection = document.createElement("div");
     treeSection.className = "tree-digger-tree";
     resultsElement.appendChild(treeSection);
+    
+    // Apply current font size to newly created tree section
+    const treeFontSizeInput = document.getElementById(
+      "tree-font-size",
+    ) as HTMLInputElement;
+    if (treeFontSizeInput) {
+      const currentFontSize = parseInt(treeFontSizeInput.value);
+      updateTreeFontSize(currentFontSize);
+    } else {
+      updateTreeFontSize(16);
+    }
   }
 
   // Always update the tree section, even when there are no nodes
@@ -265,6 +278,40 @@ export const updateBestLinesTreeIncrementally = (
 
   // Sync DOM with shadow tree
   syncDOMWithShadowTree(treeSection, shadowNodes, analysis);
+
+  // Apply current font size to the updated tree
+  const treeFontSizeInput = document.getElementById(
+    "tree-font-size",
+  ) as HTMLInputElement;
+  if (treeFontSizeInput) {
+    const currentFontSize = parseInt(treeFontSizeInput.value);
+    updateTreeFontSize(currentFontSize);
+  } else {
+    // If no input found, apply default font size
+    updateTreeFontSize(16);
+  }
+
+  // Add click event delegation to the tree section for better performance
+  // Only add the listener if it doesn't already exist
+  if (!treeSection.hasAttribute("data-tree-digger-clicks-enabled")) {
+    treeSection.setAttribute("data-tree-digger-clicks-enabled", "true");
+    treeSection.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      const moveInfo = target.closest(".move-info.clickable");
+      if (moveInfo) {
+        const treeNode = moveInfo.closest(".tree-node");
+        if (treeNode) {
+          const nodeId = treeNode.getAttribute("data-node-id");
+          if (nodeId) {
+            const node = findNodeById(nodeId, analysis.nodes);
+            if (node) {
+              handleTreeNodeClick(node, analysis);
+            }
+          }
+        }
+      }
+    });
+  }
 };
 
 /**
@@ -273,7 +320,7 @@ export const updateBestLinesTreeIncrementally = (
 export const renderTreeNode = (
   node: BestLineNode,
   depth: number,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): string => {
   const moveText = moveToNotation(node.move);
   const scoreText = formatNodeScore(node);
@@ -325,9 +372,9 @@ export const renderTreeNode = (
 };
 
 /**
- * Render a best line node
+ * Render a tree digger node
  */
-export const renderBestLineNode = (node: BestLineNode): string => {
+export const renderTreeDiggerNode = (node: BestLineNode): string => {
   const moveText = moveToNotation(node.move);
   const scoreText = formatNodeScore(node);
   const depthText = node.depth > 0 ? ` [depth: ${node.depth}]` : "";
@@ -335,7 +382,7 @@ export const renderBestLineNode = (node: BestLineNode): string => {
   const playerText = node.isWhiteMove ? "White" : "Black";
 
   let html = `
-    <div class="best-line-node ${moveClass}">
+    <div class="tree-digger-node ${moveClass}">
       <div class="move-info">
         <span class="move-player">${playerText}</span>
         <span class="move-text">${moveText}</span>
@@ -348,7 +395,7 @@ export const renderBestLineNode = (node: BestLineNode): string => {
   if (node.children.length > 0) {
     html += "<div class='children'>";
     for (const child of node.children) {
-      html += renderBestLineNode(child);
+      html += renderTreeDiggerNode(child);
     }
     html += "</div>";
   }

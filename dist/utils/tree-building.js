@@ -78,7 +78,7 @@ function createTreeNodeElement(node, depth, analysis) {
     if (scoreText) {
         const scoreSpan = document.createElement("span");
         scoreSpan.className = "move-score";
-        scoreSpan.textContent = scoreText;
+        scoreSpan.innerHTML = scoreText;
         moveInfo.appendChild(scoreSpan);
     }
     if (isTransposition) {

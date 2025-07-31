@@ -225,7 +225,7 @@ export interface BestLineNode {
     mateIn?: number;
     needsEvaluation?: boolean;
 }
-export interface BestLinesAnalysis {
+export interface TreeDiggerAnalysis {
     rootFen: string;
     nodes: BestLineNode[];
     maxDepth: number;
@@ -245,9 +245,9 @@ export interface BestLinesAnalysis {
         secondReplyOverride: number;
     };
 }
-export interface BestLinesState {
+export interface TreeDiggerState {
     isAnalyzing: boolean;
-    currentAnalysis: BestLinesAnalysis | null;
+    currentAnalysis: TreeDiggerAnalysis | null;
     progress: {
         totalPositions: number;
         analyzedPositions: number;

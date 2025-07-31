@@ -1,4 +1,4 @@
-import { BestLineNode, BestLinesAnalysis } from "../types.js";
+import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { formatLineWithMoveNumbers } from "./copy-utils.js";
 import { moveToNotation } from "./notation-utils.js";
@@ -17,7 +17,7 @@ import { moveToNotation } from "./notation-utils.js";
  */
 export function getLineCompletion(
   node: BestLineNode,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): string {
   const positionAfterMove = applyMoveToFEN(node.fen, node.move);
   const isTransposition = analysis.analyzedPositions.has(positionAfterMove);
@@ -45,7 +45,7 @@ export function getLineCompletion(
  */
 export function findExistingLine(
   targetFen: string,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): string | null {
   const searchNode = (
     nodes: BestLineNode[],

@@ -1,4 +1,4 @@
-import { BestLineNode, BestLinesAnalysis } from "../types.js";
+import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
 /**
  * Tree Debug Utility Functions
  *
@@ -16,4 +16,4 @@ export declare function verifyDOMStructure(container: HTMLElement, nodes: BestLi
  * @param node The node that was clicked
  * @param analysis The current analysis
  */
-export declare function handleTreeNodeClick(node: BestLineNode, analysis: BestLinesAnalysis): void;
+export declare function handleTreeNodeClick(node: BestLineNode, analysis: TreeDiggerAnalysis): void;

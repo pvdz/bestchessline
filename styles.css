@@ -1296,7 +1296,7 @@ h2 {
   line-height: 1.4;
 }
 
-.best-line-node {
+.tree-digger-node {
   margin-bottom: 10px;
   padding: 8px;
   border-radius: 4px;
@@ -1304,15 +1304,15 @@ h2 {
   border-left: 3px solid #007bff;
 }
 
-.best-line-node.white-move {
+.tree-digger-node.white-move {
   border-left-color: #28a745;
 }
 
-.best-line-node.black-move {
+.tree-digger-node.black-move {
   border-left-color: #dc3545;
 }
 
-.best-line-explanation {
+.tree-digger-explanation {
   background: #e3f2fd;
   border: 1px solid #2196f3;
   border-radius: 5px;
@@ -1320,17 +1320,17 @@ h2 {
   margin-bottom: 15px;
 }
 
-.best-line-explanation h3 {
+.tree-digger-explanation h3 {
   margin: 0 0 10px 0;
   color: #1976d2;
 }
 
-.best-line-explanation ul {
+.tree-digger-explanation ul {
   margin: 0;
   padding-left: 20px;
 }
 
-.best-line-explanation li {
+.tree-digger-explanation li {
   margin-bottom: 5px;
 }
 
@@ -1519,26 +1519,26 @@ h2 {
   margin-left: 15px;
 }
 
-.best-line-node .move-depth {
+.tree-digger-node .move-depth {
   color: #6c757d;
   font-size: 0.8em;
 }
 
-.best-line-node .move-fen {
+.tree-digger-node .move-fen {
   color: #6c757d;
   font-size: 0.7em;
   word-break: break-all;
   margin-top: 5px;
 }
 
-.best-line-node .children {
+.tree-digger-node .children {
   margin-left: 20px;
   margin-top: 8px;
   padding-left: 10px;
   border-left: 1px solid #e9ecef;
 }
 
-.best-line-progress {
+.tree-digger-progress {
   background: #e9ecef;
   border-radius: 4px;
   height: 8px;
@@ -1546,28 +1546,28 @@ h2 {
   overflow: hidden;
 }
 
-.best-line-progress-bar {
+.tree-digger-progress-bar {
   background: #007bff;
   height: 100%;
   transition: width 0.3s ease;
 }
 
-.best-line-progress-container {
+.tree-digger-progress-container {
   display: flex;
   gap: 20px;
   align-items: flex-start;
 }
 
-.best-line-progress-left {
+.tree-digger-progress-left {
   flex: 1;
 }
 
-.best-line-progress-board {
+.tree-digger-progress-board {
   flex-shrink: 0;
   width: 200px;
 }
 
-.best-line-progress-board h4 {
+.tree-digger-progress-board h4 {
   margin: 0 0 10px 0;
   font-size: 0.9em;
   color: #495057;
@@ -1623,7 +1623,7 @@ h2 {
   text-shadow: 1px 1px 1px #fff;
 }
 
-.best-line-stats {
+.tree-digger-stats {
   display: flex;
   gap: 20px;
   margin-bottom: 10px;
@@ -1631,22 +1631,22 @@ h2 {
   color: #6c757d;
 }
 
-.best-line-stats .stat {
+.tree-digger-stats .stat {
   display: flex;
   flex-direction: column;
 }
 
-.best-line-stats .stat-label {
+.tree-digger-stats .stat-label {
   font-weight: 500;
   margin-bottom: 2px;
 }
 
-.best-line-stats .stat-value {
+.tree-digger-stats .stat-value {
   font-weight: bold;
   color: #333;
 }
 
-.best-line-settings {
+.tree-digger-settings {
   display: flex;
   gap: 20px;
   margin-bottom: 10px;
@@ -1658,18 +1658,18 @@ h2 {
   border: 1px solid #e9ecef;
 }
 
-.best-line-settings .setting {
+.tree-digger-settings .setting {
   display: flex;
   flex-direction: column;
 }
 
-.best-line-settings .setting-label {
+.tree-digger-settings .setting-label {
   font-weight: 500;
   margin-bottom: 2px;
   color: #495057;
 }
 
-.best-line-settings .setting-value {
+.tree-digger-settings .setting-value {
   font-weight: bold;
   color: #007bff;
 }
@@ -1684,7 +1684,7 @@ h2 {
   .board-section,
   .controls-section,
   .results-section,
-  .best-lines-section {
+  .tree-digger-section {
     max-width: 600px;
     margin: 0 auto;
   }

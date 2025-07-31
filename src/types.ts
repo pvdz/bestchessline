@@ -280,7 +280,7 @@ export type PieceFormat = "unicode" | "english";
 export type AnalysisStatus = "analyzing" | "complete" | "error";
 
 // ============================================================================
-// BEST LINES ANALYSIS TYPES
+// TREE DIGGER ANALYSIS TYPES
 // ============================================================================
 
 export interface BestLineNode {
@@ -297,7 +297,7 @@ export interface BestLineNode {
   needsEvaluation?: boolean; // Flag for predefined moves that need evaluation
 }
 
-export interface BestLinesAnalysis {
+export interface TreeDiggerAnalysis {
   rootFen: string;
   nodes: BestLineNode[];
   maxDepth: number;
@@ -319,9 +319,9 @@ export interface BestLinesAnalysis {
   };
 }
 
-export interface BestLinesState {
+export interface TreeDiggerState {
   isAnalyzing: boolean;
-  currentAnalysis: BestLinesAnalysis | null;
+  currentAnalysis: TreeDiggerAnalysis | null;
   progress: {
     totalPositions: number;
     analyzedPositions: number;

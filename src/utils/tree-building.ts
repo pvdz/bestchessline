@@ -1,4 +1,4 @@
-import { BestLineNode, BestLinesAnalysis } from "../types.js";
+import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
 import { generateNodeId, formatNodeScore } from "./node-utils.js";
 import { moveToNotation } from "./notation-utils.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
@@ -24,7 +24,7 @@ export interface UITreeNode {
  */
 export function buildShadowTree(
   nodes: BestLineNode[],
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
   parent: UITreeNode | null = null,
   depth: number = 0,
 ): UITreeNode[] {
@@ -82,7 +82,7 @@ export function findNodeById(
 function createTreeNodeElement(
   node: BestLineNode,
   depth: number,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): HTMLElement {
   const moveText = moveToNotation(node.move);
   const scoreText = formatNodeScore(node);
@@ -128,7 +128,7 @@ function createTreeNodeElement(
   if (scoreText) {
     const scoreSpan = document.createElement("span");
     scoreSpan.className = "move-score";
-    scoreSpan.textContent = scoreText;
+    scoreSpan.innerHTML = scoreText;
     moveInfo.appendChild(scoreSpan);
   }
 
