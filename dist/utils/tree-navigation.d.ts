@@ -14,8 +14,5 @@ export declare function getPathToNode(targetNode: BestLineNode, rootNodes: BestL
 /**
  * Apply a sequence of moves to the board, replacing the current game
  * @param moves Array of BestLineNode moves to apply
- * @param clearBranch Function to clear any existing branch
- * @param updateAppState Function to update application state
- * @param updateMoveList Function to update the move list UI
  */
-export declare function applyMovesToBoard(moves: BestLineNode[], clearBranch: () => void, updateAppState: (updates: any) => void, updateMoveList: () => void): void;
+export declare function applyMovesToBoard(moves: BestLineNode[]): void;

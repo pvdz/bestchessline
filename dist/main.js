@@ -1,20 +1,26 @@
 import { createPieceNotation, getColorFromNotation, PLAYER_COLORS, } from "./types.js";
-import { getFENWithCorrectMoveCounter, setGlobalCurrentMoveIndex, getStartingPlayer, } from "./utils.js";
-import { showToast, clearInitiatorMoveInputs, updateTreeFontSize, } from "./utils/ui-utils.js";
+import { setGlobalCurrentMoveIndex, getStartingPlayer, } from "./utils.js";
+import { showToast, updateTreeFontSize, } from "./utils/ui-utils.js";
 import { formatScoreWithMateIn, } from "./utils/formatting-utils.js";
 import { compareAnalysisMoves, calculateTotalPositionsWithOverrides, } from "./utils/analysis-utils.js";
 import { applyMoveToFEN, } from "./utils/fen-manipulation.js";
 import { moveToNotation, } from "./utils/notation-utils.js";
-import { parseFEN, toFEN, coordsToSquare, } from "./utils/fen-utils.js";
+import { parseFEN, coordsToSquare, } from "./utils/fen-utils.js";
 import { getDepthScaler, getResponderMovesCount, getThreadCount, getFirstReplyOverride, getSecondReplyOverride, } from "./utils/ui-getters.js";
 import { log, logError, } from "./utils/logging.js";
-import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadio, getCheckedRadioByName, querySelectorHTMLElementBySelector, } from "./utils/dom-helpers.js";
+import { getInputElement, getTextAreaElement, getButtonElement, getCheckedRadioByName, querySelectorHTMLElementBySelector, } from "./utils/dom-helpers.js";
 import { parseGameNotation, } from "./utils/move-parsing.js";
 import { formatNodeScore, generateNodeId, } from "./utils/node-utils.js";
 import { highlightLastMove, clearLastMoveHighlight, } from "./utils/board-utils.js";
 import { clearTreeNodeDOMMap, } from "./utils/debug-utils.js";
-import { getPathToNode, applyMovesToBoard, } from "./utils/tree-navigation.js";
 import { initializeCopyButton, } from "./utils/copy-utils.js";
+import { getLineCompletion, } from "./utils/line-analysis.js";
+import { formatPVWithEffects, updateResultsPanel, } from "./utils/pv-utils.js";
+import { updateStatus, initializeMoveHoverEvents, addMoveHoverListeners, } from "./utils/status-utils.js";
+import { updateFENInput, updateControlsFromPosition, updatePositionFromControls, } from "./utils/position-controls.js";
+import { navigateToMove, applyMovesUpToIndex, } from "./utils/navigation-utils.js";
+import { updateNavigationButtons, } from "./utils/button-utils.js";
+import { handleTreeNodeClick, } from "./utils/tree-debug-utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
@@ -1375,43 +1381,6 @@ const renderTreeNode = (node, depth, analysis) => {
 /**
  * Get the completion text for a leaf node
  */
-const getLineCompletion = (node, analysis) => {
-    const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-    const isTransposition = analysis.analyzedPositions.has(positionAfterMove);
-    if (isTransposition) {
-        // Show incomplete line for transposed positions
-        const currentLine = getCompleteLine(node);
-        const existingLine = findExistingLine(positionAfterMove, analysis);
-        if (existingLine) {
-            return `<span class="incomplete-line">→ Incomplete line: ${currentLine} → transposes into: ${existingLine}</span>`;
-        }
-        return `<span class="incomplete-line">→ Incomplete line: ${currentLine} → position already analyzed</span>`;
-    }
-    else {
-        // Show the complete line from root to this leaf
-        const completeLine = getCompleteLine(node);
-        return `<span class="complete-line">→ Complete line: ${completeLine}</span>`;
-    }
-};
-/**
- * Find an existing line that leads to the given position
- */
-const findExistingLine = (targetFen, analysis) => {
-    const searchNode = (nodes, path) => {
-        for (const node of nodes) {
-            const newPath = [...path, node];
-            const nodeFen = applyMoveToFEN(node.fen, node.move);
-            if (nodeFen === targetFen) {
-                return formatLineWithMoveNumbers(newPath);
-            }
-            const result = searchNode(node.children, newPath);
-            if (result)
-                return result;
-        }
-        return null;
-    };
-    return searchNode(analysis.nodes, []);
-};
 /**
  * Format a list of moves with proper chess notation
  */
@@ -1441,33 +1410,6 @@ const formatLineWithMoveNumbers = (moves) => {
 /**
  * Get the complete line from root to the given node
  */
-const getCompleteLine = (node) => {
-    const moves = [];
-    let current = node;
-    // Walk up the tree to collect moves
-    while (current) {
-        moves.unshift(current);
-        current = current.parent;
-    }
-    // Format the line with proper chess notation
-    let formattedLine = "";
-    for (let i = 0; i < moves.length; i++) {
-        const moveNode = moves[i];
-        const moveText = moveToNotation(moveNode.move);
-        if (moveNode.isWhiteMove) {
-            // White move - start new move number
-            if (i > 0)
-                formattedLine += " ";
-            // Use the node's calculated move number (which accounts for current game position)
-            formattedLine += `${moveNode.moveNumber}. ${moveText}`;
-        }
-        else {
-            // Black move - add to current move number
-            formattedLine += ` ${moveText}`;
-        }
-    }
-    return formattedLine;
-};
 /**
  * Render a best line node
  */
@@ -1509,100 +1451,12 @@ const updateResults = (result) => {
     updateResultsPanel(result.moves);
     updateStatus(`Analysis complete: ${result.moves.length} moves found`);
 };
-const formatPVWithEffects = (pv, position, format, pieceFormat) => {
-    if (pv.length === 0)
-        return "";
-    // Parse the position to determine whose turn it is
-    const parsedPosition = parseFEN(position);
-    const isBlackTurn = parsedPosition.turn === PLAYER_COLORS.BLACK;
-    // Get current game state to determine starting move number
-    const appState = getAppState();
-    const currentMoveCount = appState.currentMoveIndex + 1; // +1 because currentMoveIndex is 0-based
-    const currentMoveNumber = Math.floor(currentMoveCount / 2) + 1;
-    // Process moves in the context of the actual position
-    let currentPosition = parseFEN(position);
-    const moves = pv.map((move, index) => {
-        // Validate each move against the current position
-        const validation = validateMove(currentPosition, move);
-        // Update the move with effect information
-        const enhancedMove = {
-            ...move,
-            effect: validation.effect,
-        };
-        const notation = moveToNotation(enhancedMove, format, pieceFormat, toFEN(currentPosition));
-        // Apply the move to get the position for the next move
-        if (validation.isValid) {
-            const newFEN = applyMoveToFEN(toFEN(currentPosition), move);
-            currentPosition = parseFEN(newFEN);
-        }
-        // Create clickable move with data attributes
-        return `<span class="pv-move" data-move-from="${move.from}" data-move-to="${move.to}" data-move-piece="${move.piece}" data-original-position="${position}" data-move-index="${index}" title="Click to apply all moves up to this point">${notation}</span>`;
-    });
-    if (format === "long") {
-        // Long format: just show the moves with piece symbols
-        return moves.join(" ");
-    }
-    else {
-        // Short format: standard game notation with move numbers
-        let result = "";
-        let currentMoveNum = currentMoveNumber;
-        for (let i = 0; i < moves.length; i++) {
-            if (isBlackTurn) {
-                // If it's black's turn, the first move is black's move
-                if (i % 2 === 0) {
-                    // Black move - only show move number with dots for the very first move
-                    if (i === 0) {
-                        result += `${currentMoveNum}...${moves[i]}`;
-                    }
-                    else {
-                        result += ` ${moves[i]}`;
-                    }
-                }
-                else {
-                    // White move (second move)
-                    result += ` ${currentMoveNum + 1}.${moves[i]}`;
-                }
-            }
-            else {
-                // If it's white's turn, the first move is white's move
-                if (i % 2 === 0) {
-                    // White move (first move)
-                    result += `${currentMoveNum}.${moves[i]}`;
-                }
-                else {
-                    // Black move (second move)
-                    result += ` ${moves[i]}`;
-                }
-            }
-            // Increment move number after every second move (complete move pair)
-            if (i % 2 === 1) {
-                currentMoveNum++;
-            }
-            // Add line breaks every 6 moves (3 full moves)
-            if ((i + 1) % 6 === 0 && i < moves.length - 1) {
-                result += "\n";
-            }
-            else if (i < moves.length - 1) {
-                result += " ";
-            }
-        }
-        return result;
-    }
-};
 // Debounce mechanism for analysis updates
 let analysisUpdateTimeout = null;
 let queuedMoves = [];
 /**
  * Update results panel
  */
-const updateResultsPanel = (moves) => {
-    queuedMoves = moves;
-    if (analysisUpdateTimeout) {
-        return;
-    }
-    // Debounce the update to prevent rapid changes
-    analysisUpdateTimeout = setTimeout(() => actuallyUpdateResultsPanel(queuedMoves), 100); // 100ms debounce delay
-};
 const actuallyUpdateResultsPanel = (moves) => {
     analysisUpdateTimeout = null;
     const resultsPanel = document.getElementById("analysis-results");
@@ -1779,31 +1633,9 @@ const makeAnalysisMove = (move) => {
     resetPositionEvaluation();
     updateStatus(`Made move: ${move.from}${move.to}`);
 };
-/**
- * Update status message
- */
-const updateStatus = (message) => {
-    const statusElement = document.getElementById("engine-status");
-    if (statusElement) {
-        statusElement.textContent = message;
-    }
-};
 // ============================================================================
 // MOVE HOVER EVENTS
 // ============================================================================
-/**
- * Initialize move hover events
- */
-const initializeMoveHoverEvents = () => {
-    addMoveHoverListeners();
-};
-/**
- * Add move hover listeners
- */
-const addMoveHoverListeners = () => {
-    // No longer needed since arrows are always shown for analysis results
-    // This function is kept for potential future use with game moves
-};
 /**
  * Create a branch from the current position
  */
@@ -2009,95 +1841,8 @@ const handleMakeEngineMove = (move) => {
 // FEN MANAGEMENT
 // ============================================================================
 /**
- * Update FEN input field
- */
-const updateFENInput = () => {
-    const fenInput = getInputElement("fen-input");
-    if (fenInput) {
-        const boardFEN = Board.getFEN();
-        const appState = getAppState();
-        const position = Board.getPosition();
-        fenInput.value = getFENWithCorrectMoveCounter(boardFEN, appState.currentMoveIndex, position.castling, position.enPassant);
-    }
-    clearInitiatorMoveInputs();
-};
-/**
- * Update controls from current position
- */
-const updateControlsFromPosition = () => {
-    const position = Board.getPosition();
-    const { turn, castling, enPassant } = position;
-    // Update current player
-    const whiteRadio = getCheckedRadio("current-player", "w");
-    const blackRadio = getCheckedRadio("current-player", "b");
-    if (whiteRadio && blackRadio) {
-        if (turn === "w") {
-            whiteRadio.checked = true;
-        }
-        else {
-            blackRadio.checked = true;
-        }
-    }
-    // Update castling rights
-    const whiteKingside = getInputElement("white-kingside");
-    const whiteQueenside = getInputElement("white-queenside");
-    const blackKingside = getInputElement("black-kingside");
-    const blackQueenside = getInputElement("black-queenside");
-    if (whiteKingside)
-        whiteKingside.checked = castling.includes("K");
-    if (whiteQueenside)
-        whiteQueenside.checked = castling.includes("Q");
-    if (blackKingside)
-        blackKingside.checked = castling.includes("k");
-    if (blackQueenside)
-        blackQueenside.checked = castling.includes("q");
-    // Update en passant
-    const enPassantInput = getInputElement("en-passant");
-    if (enPassantInput) {
-        enPassantInput.value =
-            enPassant === null || enPassant === "-" ? "" : enPassant;
-    }
-};
-/**
  * Update position from controls
  */
-const updatePositionFromControls = () => {
-    // Get current player
-    const whiteRadio = getCheckedRadio("current-player", "w");
-    const turn = whiteRadio?.checked ? "w" : "b";
-    // Get castling rights
-    const whiteKingside = getInputElement("white-kingside");
-    const whiteQueenside = getInputElement("white-queenside");
-    const blackKingside = getInputElement("black-kingside");
-    const blackQueenside = getInputElement("black-queenside");
-    let castling = "";
-    if (whiteKingside?.checked)
-        castling += "K";
-    if (whiteQueenside?.checked)
-        castling += "Q";
-    if (blackKingside?.checked)
-        castling += "k";
-    if (blackQueenside?.checked)
-        castling += "q";
-    if (!castling)
-        castling = "-";
-    // Get en passant
-    const enPassantInput = getInputElement("en-passant");
-    const enPassant = enPassantInput?.value || "-";
-    // Construct new FEN
-    const currentFEN = Board.getFEN();
-    const fenParts = currentFEN.split(" ");
-    const newFEN = `${fenParts[0]} ${turn} ${castling} ${enPassant} ${fenParts[4]} ${fenParts[5]}`;
-    // Update state and board
-    updateAppState({
-        initialFEN: newFEN,
-        moves: [],
-        currentMoveIndex: -1,
-    });
-    Board.setPosition(newFEN);
-    updateMoveList();
-    updateNavigationButtons();
-};
 // ============================================================================
 // GAME MANAGEMENT
 // ============================================================================
@@ -2180,50 +1925,6 @@ const nextMove = () => {
         updateFENInput();
         updateControlsFromPosition();
         resetPositionEvaluation();
-    }
-};
-/**
- * Navigate to a specific move index
- */
-const navigateToMove = (moveIndex) => {
-    if (moveIndex < -1 || moveIndex >= appState.moves.length) {
-        return;
-    }
-    // Clear any existing branch
-    clearBranch();
-    // Update the current move index
-    updateAppState({ currentMoveIndex: moveIndex });
-    // Apply moves up to the specified index
-    applyMovesUpToIndex(moveIndex);
-    // Update the move list to reflect the new current position
-    updateMoveList();
-    updateNavigationButtons();
-    // Evaluate the new position
-    resetPositionEvaluation();
-    updateStatus(`Navigated to move ${moveIndex + 1}`);
-};
-/**
- * Apply moves up to specified index
- */
-const applyMovesUpToIndex = (index) => {
-    // Reset to initial position
-    Board.setPosition(appState.initialFEN);
-    // Apply moves up to index
-    let currentFEN = appState.initialFEN;
-    for (let i = 0; i <= index && i < appState.moves.length; i++) {
-        const move = appState.moves[i];
-        currentFEN = applyMoveToFEN(currentFEN, move);
-    }
-    Board.setPosition(currentFEN);
-    updateMoveList();
-    updateFENInput();
-    updateControlsFromPosition();
-    // Highlight last move if there is one
-    if (index >= 0 && index < appState.moves.length) {
-        highlightLastMove(appState.moves[index]);
-    }
-    else {
-        clearLastMoveHighlight();
     }
 };
 /**
@@ -2379,19 +2080,6 @@ const updateMoveList = () => {
         }
     }
 };
-/**
- * Update navigation buttons
- */
-const updateNavigationButtons = () => {
-    const prevBtn = getButtonElement("prev-move");
-    const nextBtn = getButtonElement("next-move");
-    if (prevBtn) {
-        prevBtn.disabled = appState.currentMoveIndex <= -1;
-    }
-    if (nextBtn) {
-        nextBtn.disabled = appState.currentMoveIndex >= appState.moves.length - 1;
-    }
-};
 // ============================================================================
 // EXPORT FUNCTIONS
 // ============================================================================
@@ -2407,43 +2095,17 @@ addMove, importGame, previousMove, nextMove,
 // UI updates
 updateResults, updateStatus, updateMoveList, updateNavigationButtons, 
 // Move highlighting
-highlightLastMove, clearLastMoveHighlight, };
+highlightLastMove, clearLastMoveHighlight, 
+// Branch management
+clearBranch, 
+// Position evaluation
+resetPositionEvaluation, 
+// Results panel
+actuallyUpdateResultsPanel, };
 /**
  * Map to track DOM elements for tree nodes
  */
 const treeNodeDOMMap = new Map();
-/**
- * Debug function to verify DOM structure matches data structure
- */
-const verifyDOMStructure = (container, nodes, depth = 0) => {
-    const domNodes = Array.from(container.children);
-    if (domNodes.length !== nodes.length) {
-        console.log(`Depth ${depth}: DOM has ${domNodes.length} nodes, data has ${nodes.length} nodes`);
-    }
-    // Check all nodes at this level
-    for (let i = 0; i < Math.max(domNodes.length, nodes.length); i++) {
-        if (i < domNodes.length && i < nodes.length) {
-            const domNode = domNodes[i];
-            const dataNode = nodes[i];
-            const nodeId = generateNodeId(dataNode);
-            const domNodeId = domNode.getAttribute("data-node-id");
-            if (domNodeId !== nodeId) {
-                console.log(`  Node ${i}: DOM ID: ${domNodeId}, Data ID: ${nodeId}, Match: false`);
-            }
-            // Check children
-            const childrenContainer = domNode.querySelector(".tree-children");
-            if (childrenContainer && dataNode.children.length > 0) {
-                verifyDOMStructure(childrenContainer, dataNode.children, depth + 1);
-            }
-        }
-        else if (i < nodes.length) {
-            console.log(`  Node ${i}: Missing in DOM, Data ID: ${generateNodeId(nodes[i])}`);
-        }
-        else {
-            console.log(`  Node ${i}: Extra in DOM, DOM ID: ${domNodes[i].getAttribute("data-node-id")}`);
-        }
-    }
-};
 window.addEventListener("move-parse-warning", (event) => {
     const detail = event.detail;
     if (detail && detail.message) {
@@ -2481,14 +2143,4 @@ window.addEventListener("move-parse-warning", (event) => {
         }
     }
 });
-/**
- * Handle click on tree node
- */
-const handleTreeNodeClick = (node, analysis) => {
-    const path = getPathToNode(node, analysis.nodes);
-    if (path.length > 0) {
-        applyMovesToBoard(path, clearBranch, updateAppState, updateMoveList);
-        log(`Applied ${path.length} moves to board from tree click`);
-    }
-};
 //# sourceMappingURL=main.js.map

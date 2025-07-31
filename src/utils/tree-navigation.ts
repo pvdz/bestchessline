@@ -2,6 +2,7 @@ import { BestLineNode, ChessMove } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import * as Board from "../chess-board.js";
 import { log } from "./logging.js";
+import { clearBranch, updateAppState, updateMoveList } from "../main.js";
 
 /**
  * Tree Navigation Utility Functions
@@ -46,15 +47,9 @@ export function getPathToNode(
 /**
  * Apply a sequence of moves to the board, replacing the current game
  * @param moves Array of BestLineNode moves to apply
- * @param clearBranch Function to clear any existing branch
- * @param updateAppState Function to update application state
- * @param updateMoveList Function to update the move list UI
  */
 export function applyMovesToBoard(
   moves: BestLineNode[],
-  clearBranch: () => void,
-  updateAppState: (updates: any) => void,
-  updateMoveList: () => void,
 ): void {
   // Clear any existing branch
   clearBranch();

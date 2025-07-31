@@ -871,6 +871,8 @@ npm run serve        # Start development server (human runs this)
 
 ### Development Guidelines
 
+Do not use classes, keep flat simple concepts, prefer module exports, do not pass on exported functions as parameters, keep it simple and maintainable, use greppable obvious names.
+
 #### Adding Features
 
 1. **Type Safety**: All functions must have explicit types for arguments and return values

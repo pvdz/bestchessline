@@ -1,5 +1,7 @@
-import { ChessMove, AnalysisResult } from "./types.js";
+import { ChessMove, AnalysisResult, AnalysisMove } from "./types.js";
 import { highlightLastMove, clearLastMoveHighlight } from "./utils/board-utils.js";
+import { updateStatus } from "./utils/status-utils.js";
+import { updateNavigationButtons } from "./utils/button-utils.js";
 /**
  * Application state interface
  */
@@ -32,6 +34,10 @@ declare const getAppState: () => AppState;
  */
 declare const initializeApp: () => void;
 /**
+ * Reset position evaluation to initial state
+ */
+declare const resetPositionEvaluation: () => void;
+/**
  * Start analysis
  */
 declare const startAnalysis: () => Promise<void>;
@@ -44,9 +50,16 @@ declare const stopAnalysis: () => void;
  */
 declare const updateResults: (result: AnalysisResult) => void;
 /**
- * Update status message
+ * Update results panel
  */
-declare const updateStatus: (message: string) => void;
+declare const actuallyUpdateResultsPanel: (moves: AnalysisMove[]) => void;
+/**
+ * Clear the current branch
+ */
+declare const clearBranch: () => void;
+/**
+ * Update position from controls
+ */
 /**
  * Add move to game history
  */
@@ -67,8 +80,4 @@ declare const nextMove: () => void;
  * Update move list display
  */
 declare const updateMoveList: () => void;
-/**
- * Update navigation buttons
- */
-declare const updateNavigationButtons: () => void;
-export { initializeApp, getAppState, updateAppState, startAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight, };
+export { initializeApp, getAppState, updateAppState, startAnalysis, stopAnalysis, addMove, importGame, previousMove, nextMove, updateResults, updateStatus, updateMoveList, updateNavigationButtons, highlightLastMove, clearLastMoveHighlight, clearBranch, resetPositionEvaluation, actuallyUpdateResultsPanel, };
