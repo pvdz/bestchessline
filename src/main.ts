@@ -66,6 +66,8 @@ import {
   parseGameNotation,
 } from "./utils/move-parsing.js";
 
+
+
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
@@ -365,15 +367,15 @@ const updatePositionEvaluationDisplay = (): void => {
     className = "evaluation-button mate";
   } else {
     // Convert centipawns to pawns and format
-    const pawns = score / 100;
-    if (Math.abs(pawns) < 0.1) {
-      displayText = "0.0";
-      className = "evaluation-button neutral";
-    } else {
-      displayText = pawns > 0 ? `+${pawns.toFixed(1)}` : `${pawns.toFixed(1)}`;
-      className =
-        pawns > 0 ? "evaluation-button positive" : "evaluation-button negative";
-    }
+    const scoreInPawns = score / 100;
+    displayText = score > 0
+      ? `+${scoreInPawns.toFixed(1)}`
+      : `${scoreInPawns.toFixed(1)}`;
+    className = score > 0
+      ? "evaluation-button positive"
+      : score < 0
+      ? "evaluation-button negative"
+      : "evaluation-button neutral";
   }
 
   evaluationButton.textContent = displayText;
@@ -1093,6 +1095,11 @@ const updateAnalysisStatus = (message?: string): void => {
     statusElement.textContent = "Ready";
   }
 };
+
+
+
+
+
 
 /**
  * Update best lines results display
