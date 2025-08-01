@@ -1,4 +1,4 @@
-import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
 import { UITreeNode } from "./tree-building.js";
 /**
  * Tree Digger Analysis Management Utility Functions
@@ -8,15 +8,15 @@ import { UITreeNode } from "./tree-building.js";
 /**
  * Start tree digger analysis
  */
-export declare const startTreeDiggerAnalysis: () => Promise<void>;
+export declare const startTreeDiggerAnalysisFromManager: () => Promise<void>;
 /**
  * Stop tree digger analysis
  */
-export declare const stopTreeDiggerAnalysis: () => void;
+export declare const stopTreeDiggerAnalysisFromManager: () => void;
 /**
  * Clear tree digger analysis
  */
-export declare const clearTreeDiggerAnalysis: () => void;
+export declare const clearTreeDiggerAnalysisFromManager: () => void;
 /**
  * Update tree digger button states
  */
@@ -24,7 +24,7 @@ export declare const updateTreeDiggerButtonStates: () => void;
 /**
  * Update an existing DOM element for a tree node
  */
-export declare const updateTreeNodeElement: (element: HTMLElement, node: BestLineNode, analysis: TreeDiggerAnalysis) => void;
+export declare const updateTreeNodeElement: (element: HTMLElement, node: TreeDiggerNode, analysis: TreeDiggerAnalysis) => void;
 /**
  * Sync the DOM with the shadow tree
  */
@@ -36,8 +36,8 @@ export declare const updateTreeDiggerTreeIncrementally: (resultsElement: HTMLEle
 /**
  * Render a tree node recursively
  */
-export declare const renderTreeNode: (node: BestLineNode, depth: number, analysis: TreeDiggerAnalysis) => string;
+export declare const renderTreeNode: (node: TreeDiggerNode, depth: number, analysis: TreeDiggerAnalysis) => string;
 /**
  * Render a tree digger node
  */
-export declare const renderTreeDiggerNode: (node: BestLineNode) => string;
+export declare const renderTreeDiggerNode: (node: TreeDiggerNode) => string;

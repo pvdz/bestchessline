@@ -18,11 +18,11 @@ import { updateTreeDiggerStatus, updateAnalysisStatus, } from "./utils/status-ma
 import { updateTreeDiggerResults } from "./utils/tree-digger-results.js";
 import { addMove, importGame, previousMove, nextMove, updateMoveList, } from "./utils/game-navigation.js";
 import { startAnalysis, stopAnalysis, addPVClickListeners, handleMakeEngineMove, } from "./utils/analysis-manager.js";
-import { startTreeDiggerAnalysis, stopTreeDiggerAnalysis, clearTreeDiggerAnalysis, updateTreeDiggerButtonStates, } from "./utils/tree-digger-manager.js";
+import { startTreeDiggerAnalysisFromManager, stopTreeDiggerAnalysisFromManager, clearTreeDiggerAnalysisFromManager, updateTreeDiggerButtonStates, } from "./utils/tree-digger-manager.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
-import * as BestLines from "./tree-digger.js";
+import * as TreeDigger from "./tree-digger.js";
 import { hideMoveArrow } from "./utils/arrow-utils.js";
 /**
  * Application state instance
@@ -202,16 +202,16 @@ const initializeEventListeners = () => {
     const stopTreeDiggerBtn = document.getElementById("stop-tree-digger");
     const clearTreeDiggerBtn = document.getElementById("clear-tree-digger");
     if (startTreeDiggerBtn) {
-        startTreeDiggerBtn.addEventListener("click", () => startTreeDiggerAnalysis());
+        startTreeDiggerBtn.addEventListener("click", () => startTreeDiggerAnalysisFromManager());
     }
     if (stopTreeDiggerBtn) {
         stopTreeDiggerBtn.addEventListener("click", () => {
             console.log("USER PRESSED STOP BUTTON - Analysis manually stopped");
-            stopTreeDiggerAnalysis();
+            stopTreeDiggerAnalysisFromManager();
         });
     }
     if (clearTreeDiggerBtn) {
-        clearTreeDiggerBtn.addEventListener("click", () => clearTreeDiggerAnalysis());
+        clearTreeDiggerBtn.addEventListener("click", () => clearTreeDiggerAnalysisFromManager());
     }
     // Tree font size control
     const treeFontSizeInput = document.getElementById("tree-font-size");
@@ -273,8 +273,8 @@ const initializeEventListeners = () => {
         const pvLines = customEvent.detail?.pvLines || 0;
         // Update the status immediately with PV count
         const statusElement = document.getElementById("tree-digger-status");
-        if (statusElement && BestLines.isAnalyzing()) {
-            const progress = BestLines.getProgress();
+        if (statusElement && TreeDigger.isAnalyzing()) {
+            const progress = TreeDigger.getProgress();
             const progressPercent = progress.totalPositions > 0
                 ? Math.round((progress.analyzedPositions / progress.totalPositions) * 100)
                 : 0;
@@ -290,8 +290,8 @@ const initializeEventListeners = () => {
         // const pvMoves = customEvent.detail?.pvMoves || 0;
         // log(`Stockfish PV line: depth=${depth}, multipv=${multipv}, score=${score}, moves=${pvMoves}`);
         // Increment the PV lines counter in tree digger state
-        if (BestLines.isAnalyzing()) {
-            const progress = BestLines.getProgress();
+        if (TreeDigger.isAnalyzing()) {
+            const progress = TreeDigger.getProgress();
             progress.pvLinesReceived++;
             // Update the status immediately
             const statusElement = document.getElementById("tree-digger-status");
@@ -342,7 +342,7 @@ const initializeEventListeners = () => {
     let treeDiggerUpdateTimeout = null;
     const debouncedTreeDiggerUpdate = () => {
         // Reset event rate when analysis stops
-        if (BestLines.isAnalyzing()) {
+        if (TreeDigger.isAnalyzing()) {
             eventTrackingState.totalCount++;
         }
         else {

@@ -392,21 +392,21 @@ The tree digger performs comprehensive analysis of chess positions by building a
 interface BestLinesAnalysis {
   rootFen: string; // Starting position (current board FEN)
   maxDepth: number; // Maximum analysis depth
-  nodes: BestLineNode[]; // Root nodes of the analysis tree
+  nodes: TreeDiggerNode[]; // Root nodes of the analysis tree
   analyzedPositions: Set<string>; // Positions already analyzed
   analysisQueue: string[]; // Positions waiting to be analyzed
   isComplete: boolean; // Analysis completion status
 }
 
-interface BestLineNode {
+interface TreeDiggerNode {
   fen: string; // Position before the move
   move: ChessMove; // Move made from this position
   score: number; // Evaluation score
   depth: number; // Analysis depth
   isWhiteMove: boolean; // Whether this is a white move
   moveNumber: number; // Move number in the game
-  children: BestLineNode[]; // Child nodes (responses)
-  parent?: BestLineNode; // Parent node
+  children: TreeDiggerNode[]; // Child nodes (responses)
+  parent?: TreeDiggerNode; // Parent node
   analysisResult?: AnalysisResult; // Stockfish analysis result
 }
 ```
@@ -510,7 +510,7 @@ let shadowTree: UITreeNode | null = null;
 
 ```typescript
 // Node ID generation for predictable identification:
-const generateNodeId = (node: BestLineNode): string => {
+const generateNodeId = (node: TreeDiggerNode): string => {
   const positionAfterMove = applyMoveToFEN(node.fen, node.move);
   const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
   return `node-${cleanFen}-${node.move.from}-${node.move.to}`;
@@ -518,7 +518,7 @@ const generateNodeId = (node: BestLineNode): string => {
 
 // Shadow tree building:
 const buildShadowTree = (
-  nodes: BestLineNode[],
+  nodes: TreeDiggerNode[],
   analysis: BestLinesAnalysis,
 ): UITreeNode[] => {
   const uiNodes: UITreeNode[] = [];
@@ -652,7 +652,7 @@ The tree digger follows a recursive analysis process:
 const buildAnalysisTree = async (
   fen: string,
   analysis: BestLinesAnalysis,
-  parentNode: BestLineNode | null,
+  parentNode: TreeDiggerNode | null,
   depth: number,
 ): Promise<void> => {
   // Check depth limit

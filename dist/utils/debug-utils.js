@@ -1,7 +1,7 @@
 import { moveToNotation } from "./notation-utils.js";
 import { getGlobalCurrentMoveIndex } from "../utils.js";
 import * as Board from "../chess-board.js";
-import * as BestLines from "../tree-digger.js";
+import * as TreeDigger from "../tree-digger.js";
 /**
  * Debug Utility Functions
  *
@@ -59,7 +59,7 @@ export function debugTreeDiggerStart() {
     console.log("Current board FEN:", Board.getFEN());
     console.log("Current move index:", getGlobalCurrentMoveIndex());
     console.log("Board position:", Board.getPosition());
-    const analysis = BestLines.getCurrentAnalysis();
+    const analysis = TreeDigger.getCurrentAnalysis();
     if (analysis) {
         console.log("Analysis root FEN:", analysis.rootFen);
         console.log("Analysis nodes count:", analysis.nodes.length);

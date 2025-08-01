@@ -1,8 +1,8 @@
-import { BestLineNode } from "../types.js";
+import { TreeDiggerNode } from "../types.js";
 import { moveToNotation } from "./notation-utils.js";
 import { getGlobalCurrentMoveIndex } from "../utils.js";
 import * as Board from "../chess-board.js";
-import * as BestLines from "../tree-digger.js";
+import * as TreeDigger from "../tree-digger.js";
 
 /**
  * Debug Utility Functions
@@ -26,7 +26,7 @@ export function clearTreeNodeDOMMap(): void {
  * @param depth Current depth in the tree (default: 0)
  */
 export function logTreeStructure(
-  nodes: BestLineNode[],
+  nodes: TreeDiggerNode[],
   depth: number = 0,
 ): void {
   for (const node of nodes) {
@@ -50,9 +50,9 @@ export function logTreeStructure(
  * @param nodes Array of nodes to count
  * @returns Total number of nodes including all children
  */
-export function countTotalNodes(nodes: BestLineNode[]): number {
+export function countTotalNodes(nodes: TreeDiggerNode[]): number {
   let count = 0;
-  const countRecursive = (nodeList: BestLineNode[]): void => {
+  const countRecursive = (nodeList: TreeDiggerNode[]): void => {
     for (const node of nodeList) {
       count++;
       if (node.children.length > 0) {
@@ -73,7 +73,7 @@ export function debugTreeDiggerStart(): void {
   console.log("Current move index:", getGlobalCurrentMoveIndex());
   console.log("Board position:", Board.getPosition());
 
-  const analysis = BestLines.getCurrentAnalysis();
+  const analysis = TreeDigger.getCurrentAnalysis();
   if (analysis) {
     console.log("Analysis root FEN:", analysis.rootFen);
     console.log("Analysis nodes count:", analysis.nodes.length);

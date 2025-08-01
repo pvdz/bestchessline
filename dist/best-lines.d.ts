@@ -1,4 +1,4 @@
-import { BestLineNode, BestLinesAnalysis, BestLinesState } from "./types.js";
+import { TreeDiggerNode, BestLinesAnalysis, BestLinesState } from "./types.js";
 /**
  * Start the best lines analysis
  */
@@ -26,11 +26,8 @@ export declare const getProgress: () => BestLinesState["progress"];
 /**
  * Calculate total leaf nodes in the tree
  */
-export declare const calculateTotalLeafs: (nodes: BestLineNode[]) => number;
+export declare const calculateTotalLeafs: (nodes: TreeDiggerNode[]) => number;
 /**
  * Calculate number of unique positions analyzed
  */
-export declare const calculateUniquePositions: (
-  nodes: BestLineNode[],
-  analysis: BestLinesAnalysis,
-) => number;
+export declare const calculateUniquePositions: (nodes: TreeDiggerNode[], analysis: BestLinesAnalysis) => number;

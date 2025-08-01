@@ -1,4 +1,4 @@
-import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
 /**
  * Tree Building Utility Functions
  *
@@ -16,8 +16,8 @@ export interface UITreeNode {
 /**
  * Build the shadow tree from the data tree
  */
-export declare function buildShadowTree(nodes: BestLineNode[], analysis: TreeDiggerAnalysis, parent?: UITreeNode | null, depth?: number): UITreeNode[];
+export declare function buildShadowTree(nodes: TreeDiggerNode[], analysis: TreeDiggerAnalysis, parent?: UITreeNode | null, depth?: number): UITreeNode[];
 /**
  * Find a node by ID in the data tree
  */
-export declare function findNodeById(nodeId: string, nodes: BestLineNode[]): BestLineNode | null;
+export declare function findNodeById(nodeId: string, nodes: TreeDiggerNode[]): TreeDiggerNode | null;

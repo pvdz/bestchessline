@@ -1,5 +1,5 @@
 import { getAppState } from "../main.js";
-import * as BestLines from "../tree-digger.js";
+import * as TreeDigger from "../tree-digger.js";
 
 /**
  * Status Management Utility Functions
@@ -19,9 +19,9 @@ export function updateTreeDiggerStatus(message?: string): void {
     return;
   }
 
-  const isAnalyzing = BestLines.isAnalyzing();
-  const progress = BestLines.getProgress();
-  const analysis = BestLines.getCurrentAnalysis();
+  const isAnalyzing = TreeDigger.isAnalyzing();
+  const progress = TreeDigger.getProgress();
+  const analysis = TreeDigger.getCurrentAnalysis();
 
   if (isAnalyzing) {
     const progressPercent =

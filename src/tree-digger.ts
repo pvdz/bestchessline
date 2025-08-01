@@ -1,5 +1,5 @@
 import {
-  BestLineNode,
+  TreeDiggerNode,
   TreeDiggerAnalysis,
   TreeDiggerState,
   ChessMove,
@@ -83,7 +83,7 @@ const getAnalysisOptions = (analysis: TreeDiggerAnalysis): StockfishOptions => {
 /**
  * Initialize a new tree digger analysis
  */
-const initializeBestLinesAnalysis = (): TreeDiggerAnalysis => {
+const initializeTreeDiggerAnalysis = (): TreeDiggerAnalysis => {
   // Use current board position instead of hardcoded starting position
   const boardFEN = getFEN();
 
@@ -178,9 +178,9 @@ const createNode = (
   depth: number,
   isWhiteMove: boolean,
   moveNumber: number,
-  parent?: BestLineNode,
+  parent?: TreeDiggerNode,
   mateIn?: number,
-): BestLineNode => {
+): TreeDiggerNode => {
   return {
     fen,
     move,
@@ -221,7 +221,7 @@ const analyzePositionFromFen = async (
 /**
  * Start the tree digger analysis
  */
-export const startBestLinesAnalysis = async (): Promise<void> => {
+export const startTreeDiggerAnalysis = async (): Promise<void> => {
   log("Starting tree digger analysis...");
 
   // Add debugging info
@@ -243,7 +243,7 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
     stopAnalysis();
   }
 
-  const analysis = initializeBestLinesAnalysis();
+  const analysis = initializeTreeDiggerAnalysis();
   updateTreeDiggerState({
     isAnalyzing: true,
     currentAnalysis: analysis,
@@ -317,7 +317,7 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
 const buildAnalysisTree = async (
   fen: string,
   analysis: TreeDiggerAnalysis,
-  parentNode: BestLineNode | null,
+  parentNode: TreeDiggerNode | null,
   depth: number,
 ): Promise<void> => {
   // Check if analysis has been stopped
@@ -404,7 +404,7 @@ const buildAnalysisTree = async (
 const processInitiatorMoveInTree = async (
   fen: string,
   analysis: TreeDiggerAnalysis,
-  parentNode: BestLineNode | null,
+  parentNode: TreeDiggerNode | null,
   depth: number,
 ): Promise<void> => {
   // Check if analysis has been stopped
@@ -656,7 +656,7 @@ const processInitiatorMoveInTree = async (
 const processResponderMovesInTree = async (
   fen: string,
   analysis: TreeDiggerAnalysis,
-  parentNode: BestLineNode | null,
+  parentNode: TreeDiggerNode | null,
   depth: number,
 ): Promise<void> => {
   // Check if analysis has been stopped
@@ -830,19 +830,19 @@ const processResponderMovesInTree = async (
 /**
  * Stop the tree digger analysis
  */
-export const stopBestLinesAnalysis = (): void => {
+export const stopTreeDiggerAnalysis = (): void => {
   log("TreeDigger: Stopping tree digger analysis...");
   log("Stopping tree digger analysis...");
   updateTreeDiggerState({
     isAnalyzing: false,
   });
-  log("BestLines: Analysis stopped, isAnalyzing set to false");
+  log("TreeDigger: Analysis stopped, isAnalyzing set to false");
 };
 
 /**
  * Clear the tree digger analysis
  */
-export const clearBestLinesAnalysis = (): void => {
+export const clearTreeDiggerAnalysis = (): void => {
   log("Clearing tree digger analysis...");
   updateTreeDiggerState({
     isAnalyzing: false,
@@ -895,10 +895,10 @@ const incrementPVLines = (): void => {
 /**
  * Calculate total leaf nodes in the tree
  */
-export const calculateTotalLeafs = (nodes: BestLineNode[]): number => {
+export const calculateTotalLeafs = (nodes: TreeDiggerNode[]): number => {
   let totalLeafs = 0;
 
-  const countLeafsRecursive = (node: BestLineNode): void => {
+  const countLeafsRecursive = (node: TreeDiggerNode): void => {
     if (node.children.length === 0) {
       totalLeafs++;
     }
@@ -921,7 +921,7 @@ export const calculateTotalLeafs = (nodes: BestLineNode[]): number => {
  * Calculate number of unique positions analyzed
  */
 export const calculateUniquePositions = (
-  nodes: BestLineNode[],
+  nodes: TreeDiggerNode[],
   analysis: TreeDiggerAnalysis,
 ): number => {
   return analysis.analyzedPositions.size;

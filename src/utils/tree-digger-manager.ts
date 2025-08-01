@@ -1,4 +1,4 @@
-import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
 import { getAppState, updateAppState } from "../main.js";
 import { moveToNotation } from "./notation-utils.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
@@ -12,7 +12,7 @@ import { clearTreeNodeDOMMap } from "./debug-utils.js";
 import { buildShadowTree, findNodeById, UITreeNode } from "./tree-building.js";
 import { updateTreeFontSize } from "./ui-utils.js";
 import { handleTreeNodeClick } from "./tree-debug-utils.js";
-import { startBestLinesAnalysis, stopBestLinesAnalysis, clearBestLinesAnalysis, isAnalyzing } from "../tree-digger.js";
+import { startTreeDiggerAnalysis, stopTreeDiggerAnalysis, clearTreeDiggerAnalysis, isAnalyzing } from "../tree-digger.js";
 /**
  * Tree Digger Analysis Management Utility Functions
  *
@@ -22,12 +22,12 @@ import { startBestLinesAnalysis, stopBestLinesAnalysis, clearBestLinesAnalysis, 
 /**
  * Start tree digger analysis
  */
-export const startTreeDiggerAnalysis = async (): Promise<void> => {
+export const startTreeDiggerAnalysisFromManager = async (): Promise<void> => {
   try {
     // Clear any previous analysis results first
-    clearBestLinesAnalysis();
+    clearTreeDiggerAnalysis();
 
-    await startBestLinesAnalysis();
+    await startTreeDiggerAnalysis();
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus();
     updateTreeDiggerResults();
@@ -40,11 +40,11 @@ export const startTreeDiggerAnalysis = async (): Promise<void> => {
 /**
  * Stop tree digger analysis
  */
-export const stopTreeDiggerAnalysis = (): void => {
-  log("Stop button clicked - calling stopBestLinesAnalysis");
+export const stopTreeDiggerAnalysisFromManager = (): void => {
+  log("Stop button clicked - calling stopTreeDiggerAnalysis");
   try {
-    stopBestLinesAnalysis();
-    log("BestLines.stopBestLinesAnalysis() completed");
+          stopTreeDiggerAnalysis();
+          log("TreeDigger.stopTreeDiggerAnalysis() completed");
     clearTreeNodeDOMMap(); // Clear tracked DOM elements
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus("Analysis stopped");
@@ -57,9 +57,9 @@ export const stopTreeDiggerAnalysis = (): void => {
 /**
  * Clear tree digger analysis
  */
-export const clearTreeDiggerAnalysis = (): void => {
+export const clearTreeDiggerAnalysisFromManager = (): void => {
   try {
-    clearBestLinesAnalysis();
+    clearTreeDiggerAnalysis();
     clearTreeNodeDOMMap(); // Clear tracked DOM elements
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus("Ready");
@@ -104,7 +104,7 @@ export const updateTreeDiggerButtonStates = (): void => {
  */
 export const updateTreeNodeElement = (
   element: HTMLElement,
-  node: BestLineNode,
+  node: TreeDiggerNode,
   analysis: TreeDiggerAnalysis,
 ): void => {
   const moveInfo = element.querySelector(".move-info") as HTMLElement;
@@ -321,7 +321,7 @@ export const updateTreeDiggerTreeIncrementally = (
  * Render a tree node recursively
  */
 export const renderTreeNode = (
-  node: BestLineNode,
+  node: TreeDiggerNode,
   depth: number,
   analysis: TreeDiggerAnalysis,
 ): string => {
@@ -377,7 +377,7 @@ export const renderTreeNode = (
 /**
  * Render a tree digger node
  */
-export const renderTreeDiggerNode = (node: BestLineNode): string => {
+export const renderTreeDiggerNode = (node: TreeDiggerNode): string => {
   const moveText = moveToNotation(node.move);
   const scoreText = formatNodeScore(node);
   const depthText = node.depth > 0 ? ` [depth: ${node.depth}]` : "";

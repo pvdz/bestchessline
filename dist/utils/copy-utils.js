@@ -1,6 +1,6 @@
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { moveToNotation } from "./notation-utils.js";
-import * as BestLines from "../tree-digger.js";
+import * as TreeDigger from "../tree-digger.js";
 /**
  * Copy and Export Utility Functions
  *
@@ -42,7 +42,7 @@ export function initializeCopyButton() {
     const copyBtn = document.getElementById("copy-tree-digger-tree");
     if (copyBtn) {
         copyBtn.addEventListener("click", () => {
-            const analysis = BestLines.getCurrentAnalysis();
+            const analysis = TreeDigger.getCurrentAnalysis();
             if (analysis && analysis.nodes.length > 0) {
                 const treeText = generateAllLines(analysis.nodes);
                 // Debug: Log the generated text to see if it's complete
@@ -98,7 +98,7 @@ export function generateAllLines(nodes) {
         if (node.children.length === 0) {
             // Check if this is a transposed node (not a real leaf)
             const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-            const analysis = BestLines.getCurrentAnalysis();
+            const analysis = TreeDigger.getCurrentAnalysis();
             const isTransposition = analysis && analysis.analyzedPositions.has(positionAfterMove);
             if (!isTransposition) {
                 // This is a real leaf node - output the complete line

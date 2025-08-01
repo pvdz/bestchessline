@@ -1,4 +1,4 @@
-import { BestLineNode, ChessMove } from "../types.js";
+import { TreeDiggerNode, ChessMove } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import * as Board from "../chess-board.js";
 import { getAppState, clearBranch, updateAppState } from "../main.js";
@@ -17,13 +17,13 @@ import { updateMoveList } from "./game-navigation.js";
  * @returns Array of nodes representing the path from root to target
  */
 export function getPathToNode(
-  targetNode: BestLineNode,
-  rootNodes: BestLineNode[],
-): BestLineNode[] {
+  targetNode: TreeDiggerNode,
+  rootNodes: TreeDiggerNode[],
+): TreeDiggerNode[] {
   const findPath = (
-    nodes: BestLineNode[],
-    path: BestLineNode[] = [],
-  ): BestLineNode[] | null => {
+    nodes: TreeDiggerNode[],
+    path: TreeDiggerNode[] = [],
+  ): TreeDiggerNode[] | null => {
     for (const node of nodes) {
       const currentPath = [...path, node];
 
@@ -46,13 +46,13 @@ export function getPathToNode(
 
 /**
  * Apply a sequence of moves to the board, replacing the current game
- * @param moves Array of BestLineNode moves to apply
+ * @param moves Array of TreeDiggerNode moves to apply
  */
-export function applyMovesToBoard(moves: BestLineNode[]): void {
+export function applyMovesToBoard(moves: TreeDiggerNode[]): void {
   // Clear any existing branch
   clearBranch();
 
-  // Convert BestLineNode moves to ChessMove array
+  // Convert TreeDiggerNode moves to ChessMove array
   const chessMoves: ChessMove[] = moves.map((node) => node.move);
 
   // Get the initial FEN from the first node, or use current board FEN

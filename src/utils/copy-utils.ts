@@ -1,7 +1,7 @@
-import { BestLineNode } from "../types.js";
+import { TreeDiggerNode } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { moveToNotation } from "./notation-utils.js";
-import * as BestLines from "../tree-digger.js";
+import * as TreeDigger from "../tree-digger.js";
 
 /**
  * Copy and Export Utility Functions
@@ -14,7 +14,7 @@ import * as BestLines from "../tree-digger.js";
  * @param moves Array of moves to format
  * @returns Formatted line string
  */
-export function formatLineWithMoveNumbers(moves: BestLineNode[]): string {
+export function formatLineWithMoveNumbers(moves: TreeDiggerNode[]): string {
   if (moves.length === 0) return "";
 
   let result = "";
@@ -49,7 +49,7 @@ export function initializeCopyButton(): void {
   const copyBtn = document.getElementById("copy-tree-digger-tree");
   if (copyBtn) {
     copyBtn.addEventListener("click", () => {
-      const analysis = BestLines.getCurrentAnalysis();
+      const analysis = TreeDigger.getCurrentAnalysis();
       if (analysis && analysis.nodes.length > 0) {
         const treeText = generateAllLines(analysis.nodes);
 
@@ -98,13 +98,13 @@ export function initializeCopyButton(): void {
  * @param nodes Array of root nodes to generate lines from
  * @returns String containing all complete lines
  */
-export function generateAllLines(nodes: BestLineNode[]): string {
+export function generateAllLines(nodes: TreeDiggerNode[]): string {
   let result = "";
   let lineCount = 0;
 
   const traverseNode = (
-    node: BestLineNode,
-    currentLine: BestLineNode[] = [],
+    node: TreeDiggerNode,
+    currentLine: TreeDiggerNode[] = [],
   ): void => {
     // Add current node to the line
     const newLine = [...currentLine, node];
@@ -112,7 +112,7 @@ export function generateAllLines(nodes: BestLineNode[]): string {
     if (node.children.length === 0) {
       // Check if this is a transposed node (not a real leaf)
       const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-      const analysis = BestLines.getCurrentAnalysis();
+      const analysis = TreeDigger.getCurrentAnalysis();
       const isTransposition =
         analysis && analysis.analyzedPositions.has(positionAfterMove);
 

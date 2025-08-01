@@ -52,7 +52,7 @@ const getAnalysisOptions = (analysis) => {
 /**
  * Initialize a new tree digger analysis
  */
-const initializeBestLinesAnalysis = () => {
+const initializeTreeDiggerAnalysis = () => {
     // Use current board position instead of hardcoded starting position
     const boardFEN = getFEN();
     // Get current move index from global state
@@ -152,7 +152,7 @@ const analyzePositionFromFen = async (fen, analysis) => {
 /**
  * Start the tree digger analysis
  */
-export const startBestLinesAnalysis = async () => {
+export const startTreeDiggerAnalysis = async () => {
     log("Starting tree digger analysis...");
     // Add debugging info
     console.log("=== Tree Digger Debug Info ===");
@@ -170,7 +170,7 @@ export const startBestLinesAnalysis = async () => {
         log("Stopping existing analysis before starting tree digger...");
         stopAnalysis();
     }
-    const analysis = initializeBestLinesAnalysis();
+    const analysis = initializeTreeDiggerAnalysis();
     updateTreeDiggerState({
         isAnalyzing: true,
         currentAnalysis: analysis,
@@ -566,18 +566,18 @@ const processResponderMovesInTree = async (fen, analysis, parentNode, depth) => 
 /**
  * Stop the tree digger analysis
  */
-export const stopBestLinesAnalysis = () => {
+export const stopTreeDiggerAnalysis = () => {
     log("TreeDigger: Stopping tree digger analysis...");
     log("Stopping tree digger analysis...");
     updateTreeDiggerState({
         isAnalyzing: false,
     });
-    log("BestLines: Analysis stopped, isAnalyzing set to false");
+    log("TreeDigger: Analysis stopped, isAnalyzing set to false");
 };
 /**
  * Clear the tree digger analysis
  */
-export const clearBestLinesAnalysis = () => {
+export const clearTreeDiggerAnalysis = () => {
     log("Clearing tree digger analysis...");
     updateTreeDiggerState({
         isAnalyzing: false,

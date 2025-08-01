@@ -1,4 +1,4 @@
-import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { formatLineWithMoveNumbers } from "./copy-utils.js";
 import { moveToNotation } from "./notation-utils.js";
@@ -16,7 +16,7 @@ import { moveToNotation } from "./notation-utils.js";
  * @returns HTML string describing the line completion
  */
 export function getLineCompletion(
-  node: BestLineNode,
+  node: TreeDiggerNode,
   analysis: TreeDiggerAnalysis,
 ): string {
   const positionAfterMove = applyMoveToFEN(node.fen, node.move);
@@ -48,8 +48,8 @@ export function findExistingLine(
   analysis: TreeDiggerAnalysis,
 ): string | null {
   const searchNode = (
-    nodes: BestLineNode[],
-    path: BestLineNode[],
+    nodes: TreeDiggerNode[],
+    path: TreeDiggerNode[],
   ): string | null => {
     for (const node of nodes) {
       const newPath = [...path, node];
@@ -73,9 +73,9 @@ export function findExistingLine(
  * @param node The node to get the complete line for
  * @returns Formatted line string
  */
-export function getCompleteLine(node: BestLineNode): string {
-  const moves: BestLineNode[] = [];
-  let current: BestLineNode | undefined = node;
+export function getCompleteLine(node: TreeDiggerNode): string {
+  const moves: TreeDiggerNode[] = [];
+  let current: TreeDiggerNode | undefined = node;
 
   // Walk up the tree to collect moves
   while (current) {

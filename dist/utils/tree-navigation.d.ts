@@ -1,4 +1,4 @@
-import { BestLineNode } from "../types.js";
+import { TreeDiggerNode } from "../types.js";
 /**
  * Tree Navigation Utility Functions
  *
@@ -10,9 +10,9 @@ import { BestLineNode } from "../types.js";
  * @param rootNodes Array of root nodes to search in
  * @returns Array of nodes representing the path from root to target
  */
-export declare function getPathToNode(targetNode: BestLineNode, rootNodes: BestLineNode[]): BestLineNode[];
+export declare function getPathToNode(targetNode: TreeDiggerNode, rootNodes: TreeDiggerNode[]): TreeDiggerNode[];
 /**
  * Apply a sequence of moves to the board, replacing the current game
- * @param moves Array of BestLineNode moves to apply
+ * @param moves Array of TreeDiggerNode moves to apply
  */
-export declare function applyMovesToBoard(moves: BestLineNode[]): void;
+export declare function applyMovesToBoard(moves: TreeDiggerNode[]): void;

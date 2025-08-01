@@ -1,4 +1,4 @@
-import { BestLineNode } from "../types.js";
+import { TreeDiggerNode } from "../types.js";
 /**
  * Copy and Export Utility Functions
  *
@@ -9,7 +9,7 @@ import { BestLineNode } from "../types.js";
  * @param moves Array of moves to format
  * @returns Formatted line string
  */
-export declare function formatLineWithMoveNumbers(moves: BestLineNode[]): string;
+export declare function formatLineWithMoveNumbers(moves: TreeDiggerNode[]): string;
 /**
  * Initialize copy button functionality
  */
@@ -19,4 +19,4 @@ export declare function initializeCopyButton(): void;
  * @param nodes Array of root nodes to generate lines from
  * @returns String containing all complete lines
  */
-export declare function generateAllLines(nodes: BestLineNode[]): string;
+export declare function generateAllLines(nodes: TreeDiggerNode[]): string;

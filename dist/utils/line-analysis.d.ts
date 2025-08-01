@@ -1,4 +1,4 @@
-import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
 /**
  * Line Analysis Utility Functions
  *
@@ -10,7 +10,7 @@ import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
  * @param analysis The current analysis
  * @returns HTML string describing the line completion
  */
-export declare function getLineCompletion(node: BestLineNode, analysis: TreeDiggerAnalysis): string;
+export declare function getLineCompletion(node: TreeDiggerNode, analysis: TreeDiggerAnalysis): string;
 /**
  * Find an existing line that leads to the given position
  * @param targetFen The target FEN position to search for
@@ -23,4 +23,4 @@ export declare function findExistingLine(targetFen: string, analysis: TreeDigger
  * @param node The node to get the complete line for
  * @returns Formatted line string
  */
-export declare function getCompleteLine(node: BestLineNode): string;
+export declare function getCompleteLine(node: TreeDiggerNode): string;

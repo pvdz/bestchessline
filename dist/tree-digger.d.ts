@@ -1,16 +1,16 @@
-import { BestLineNode, TreeDiggerAnalysis, TreeDiggerState } from "./types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis, TreeDiggerState } from "./types.js";
 /**
  * Start the tree digger analysis
  */
-export declare const startBestLinesAnalysis: () => Promise<void>;
+export declare const startTreeDiggerAnalysis: () => Promise<void>;
 /**
  * Stop the tree digger analysis
  */
-export declare const stopBestLinesAnalysis: () => void;
+export declare const stopTreeDiggerAnalysis: () => void;
 /**
  * Clear the tree digger analysis
  */
-export declare const clearBestLinesAnalysis: () => void;
+export declare const clearTreeDiggerAnalysis: () => void;
 /**
  * Get the current analysis results
  */
@@ -26,8 +26,8 @@ export declare const getProgress: () => TreeDiggerState["progress"];
 /**
  * Calculate total leaf nodes in the tree
  */
-export declare const calculateTotalLeafs: (nodes: BestLineNode[]) => number;
+export declare const calculateTotalLeafs: (nodes: TreeDiggerNode[]) => number;
 /**
  * Calculate number of unique positions analyzed
  */
-export declare const calculateUniquePositions: (nodes: BestLineNode[], analysis: TreeDiggerAnalysis) => number;
+export declare const calculateUniquePositions: (nodes: TreeDiggerNode[], analysis: TreeDiggerAnalysis) => number;

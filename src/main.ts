@@ -54,15 +54,15 @@ import {
   handleMakeEngineMove,
 } from "./utils/analysis-manager.js";
 import {
-  startTreeDiggerAnalysis,
-  stopTreeDiggerAnalysis,
-  clearTreeDiggerAnalysis,
+  startTreeDiggerAnalysisFromManager,
+  stopTreeDiggerAnalysisFromManager,
+  clearTreeDiggerAnalysisFromManager,
   updateTreeDiggerButtonStates,
 } from "./utils/tree-digger-manager.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
-import * as BestLines from "./tree-digger.js";
+import * as TreeDigger from "./tree-digger.js";
 import { hideMoveArrow } from "./utils/arrow-utils.js";
 
 // ============================================================================
@@ -317,20 +317,20 @@ const initializeEventListeners = (): void => {
 
   if (startTreeDiggerBtn) {
     startTreeDiggerBtn.addEventListener("click", () =>
-      startTreeDiggerAnalysis(),
+      startTreeDiggerAnalysisFromManager(),
     );
   }
 
   if (stopTreeDiggerBtn) {
     stopTreeDiggerBtn.addEventListener("click", () => {
       console.log("USER PRESSED STOP BUTTON - Analysis manually stopped");
-      stopTreeDiggerAnalysis();
+      stopTreeDiggerAnalysisFromManager();
     });
   }
 
   if (clearTreeDiggerBtn) {
     clearTreeDiggerBtn.addEventListener("click", () =>
-      clearTreeDiggerAnalysis(),
+      clearTreeDiggerAnalysisFromManager(),
     );
   }
 
@@ -416,8 +416,8 @@ const initializeEventListeners = (): void => {
 
     // Update the status immediately with PV count
     const statusElement = document.getElementById("tree-digger-status");
-    if (statusElement && BestLines.isAnalyzing()) {
-      const progress = BestLines.getProgress();
+    if (statusElement && TreeDigger.isAnalyzing()) {
+      const progress = TreeDigger.getProgress();
       const progressPercent =
         progress.totalPositions > 0
           ? Math.round(
@@ -439,8 +439,8 @@ const initializeEventListeners = (): void => {
     // log(`Stockfish PV line: depth=${depth}, multipv=${multipv}, score=${score}, moves=${pvMoves}`);
 
     // Increment the PV lines counter in tree digger state
-    if (BestLines.isAnalyzing()) {
-      const progress = BestLines.getProgress();
+    if (TreeDigger.isAnalyzing()) {
+      const progress = TreeDigger.getProgress();
       progress.pvLinesReceived++;
 
       // Update the status immediately
@@ -508,7 +508,7 @@ const initializeEventListeners = (): void => {
 
   const debouncedTreeDiggerUpdate = () => {
     // Reset event rate when analysis stops
-    if (BestLines.isAnalyzing()) {
+    if (TreeDigger.isAnalyzing()) {
       eventTrackingState.totalCount++;
     } else {
       eventTrackingState.recentCount = 0;

@@ -283,15 +283,15 @@ export type AnalysisStatus = "analyzing" | "complete" | "error";
 // TREE DIGGER ANALYSIS TYPES
 // ============================================================================
 
-export interface BestLineNode {
+export interface TreeDiggerNode {
   fen: string;
   move: ChessMove;
   score: number;
   depth: number;
-  children: BestLineNode[];
+  children: TreeDiggerNode[];
   isWhiteMove: boolean;
   moveNumber: number;
-  parent?: BestLineNode;
+  parent?: TreeDiggerNode;
   analysisResult?: AnalysisResult;
   mateIn?: number; // Actual number of moves required for mate (different from depth)
   needsEvaluation?: boolean; // Flag for predefined moves that need evaluation
@@ -299,7 +299,7 @@ export interface BestLineNode {
 
 export interface TreeDiggerAnalysis {
   rootFen: string;
-  nodes: BestLineNode[];
+  nodes: TreeDiggerNode[];
   maxDepth: number;
   responderResponses: number; // 5 responses
   isComplete: boolean;

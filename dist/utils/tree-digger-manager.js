@@ -11,7 +11,7 @@ import { clearTreeNodeDOMMap } from "./debug-utils.js";
 import { buildShadowTree, findNodeById } from "./tree-building.js";
 import { updateTreeFontSize } from "./ui-utils.js";
 import { handleTreeNodeClick } from "./tree-debug-utils.js";
-import { startBestLinesAnalysis, stopBestLinesAnalysis, clearBestLinesAnalysis, isAnalyzing } from "../tree-digger.js";
+import { startTreeDiggerAnalysis, stopTreeDiggerAnalysis, clearTreeDiggerAnalysis, isAnalyzing } from "../tree-digger.js";
 /**
  * Tree Digger Analysis Management Utility Functions
  *
@@ -20,11 +20,11 @@ import { startBestLinesAnalysis, stopBestLinesAnalysis, clearBestLinesAnalysis, 
 /**
  * Start tree digger analysis
  */
-export const startTreeDiggerAnalysis = async () => {
+export const startTreeDiggerAnalysisFromManager = async () => {
     try {
         // Clear any previous analysis results first
-        clearBestLinesAnalysis();
-        await startBestLinesAnalysis();
+        clearTreeDiggerAnalysis();
+        await startTreeDiggerAnalysis();
         updateTreeDiggerButtonStates();
         updateTreeDiggerStatus();
         updateTreeDiggerResults();
@@ -37,11 +37,11 @@ export const startTreeDiggerAnalysis = async () => {
 /**
  * Stop tree digger analysis
  */
-export const stopTreeDiggerAnalysis = () => {
-    log("Stop button clicked - calling stopBestLinesAnalysis");
+export const stopTreeDiggerAnalysisFromManager = () => {
+    log("Stop button clicked - calling stopTreeDiggerAnalysis");
     try {
-        stopBestLinesAnalysis();
-        log("BestLines.stopBestLinesAnalysis() completed");
+        stopTreeDiggerAnalysis();
+        log("TreeDigger.stopTreeDiggerAnalysis() completed");
         clearTreeNodeDOMMap(); // Clear tracked DOM elements
         updateTreeDiggerButtonStates();
         updateTreeDiggerStatus("Analysis stopped");
@@ -54,9 +54,9 @@ export const stopTreeDiggerAnalysis = () => {
 /**
  * Clear tree digger analysis
  */
-export const clearTreeDiggerAnalysis = () => {
+export const clearTreeDiggerAnalysisFromManager = () => {
     try {
-        clearBestLinesAnalysis();
+        clearTreeDiggerAnalysis();
         clearTreeNodeDOMMap(); // Clear tracked DOM elements
         updateTreeDiggerButtonStates();
         updateTreeDiggerStatus("Ready");

@@ -212,22 +212,22 @@ export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
 export type NotationFormat = "short" | "long";
 export type PieceFormat = "unicode" | "english";
 export type AnalysisStatus = "analyzing" | "complete" | "error";
-export interface BestLineNode {
+export interface TreeDiggerNode {
     fen: string;
     move: ChessMove;
     score: number;
     depth: number;
-    children: BestLineNode[];
+    children: TreeDiggerNode[];
     isWhiteMove: boolean;
     moveNumber: number;
-    parent?: BestLineNode;
+    parent?: TreeDiggerNode;
     analysisResult?: AnalysisResult;
     mateIn?: number;
     needsEvaluation?: boolean;
 }
 export interface TreeDiggerAnalysis {
     rootFen: string;
-    nodes: BestLineNode[];
+    nodes: TreeDiggerNode[];
     maxDepth: number;
     responderResponses: number;
     isComplete: boolean;

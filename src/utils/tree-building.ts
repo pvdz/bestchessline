@@ -1,4 +1,4 @@
-import { BestLineNode, TreeDiggerAnalysis } from "../types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
 import { generateNodeId, formatNodeScore } from "./node-utils.js";
 import { moveToNotation } from "./notation-utils.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
@@ -23,7 +23,7 @@ export interface UITreeNode {
  * Build the shadow tree from the data tree
  */
 export function buildShadowTree(
-  nodes: BestLineNode[],
+  nodes: TreeDiggerNode[],
   analysis: TreeDiggerAnalysis,
   parent: UITreeNode | null = null,
   depth: number = 0,
@@ -62,8 +62,8 @@ export function buildShadowTree(
  */
 export function findNodeById(
   nodeId: string,
-  nodes: BestLineNode[],
-): BestLineNode | null {
+  nodes: TreeDiggerNode[],
+): TreeDiggerNode | null {
   for (const node of nodes) {
     if (generateNodeId(node) === nodeId) {
       return node;
@@ -80,7 +80,7 @@ export function findNodeById(
  * Create a DOM element for a tree node
  */
 function createTreeNodeElement(
-  node: BestLineNode,
+  node: TreeDiggerNode,
   depth: number,
   analysis: TreeDiggerAnalysis,
 ): HTMLElement {

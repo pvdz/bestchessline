@@ -33,12 +33,12 @@ export function getPathToNode(targetNode, rootNodes) {
 }
 /**
  * Apply a sequence of moves to the board, replacing the current game
- * @param moves Array of BestLineNode moves to apply
+ * @param moves Array of TreeDiggerNode moves to apply
  */
 export function applyMovesToBoard(moves) {
     // Clear any existing branch
     clearBranch();
-    // Convert BestLineNode moves to ChessMove array
+    // Convert TreeDiggerNode moves to ChessMove array
     const chessMoves = moves.map((node) => node.move);
     // Get the initial FEN from the first node, or use current board FEN
     const initialFEN = moves.length > 0 ? moves[0].fen : Board.getFEN();

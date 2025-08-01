@@ -1,5 +1,5 @@
 import { formatScoreWithMateIn } from "./formatting-utils.js";
-import { BestLineNode } from "../types.js";
+import { TreeDiggerNode } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 
 /**
@@ -13,7 +13,7 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
  * @param node The node to generate an ID for
  * @returns A unique string identifier for the node
  */
-export function generateNodeId(node: BestLineNode): string {
+export function generateNodeId(node: TreeDiggerNode): string {
   const positionAfterMove = applyMoveToFEN(node.fen, node.move);
   const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
   return `node-${cleanFen}-${node.move.from}-${node.move.to}`;
@@ -24,7 +24,7 @@ export function generateNodeId(node: BestLineNode): string {
  * @param nodes Array of nodes to count
  * @returns Total number of nodes including all children
  */
-export function countNodesRecursive(nodes: BestLineNode[]): number {
+export function countNodesRecursive(nodes: TreeDiggerNode[]): number {
   let count = 0;
   for (const node of nodes) {
     count += 1 + countNodesRecursive(node.children);
@@ -37,7 +37,7 @@ export function countNodesRecursive(nodes: BestLineNode[]): number {
  * @param node The node to format the score for
  * @returns Formatted score string with delta information
  */
-export function formatNodeScore(node: BestLineNode): string {
+export function formatNodeScore(node: TreeDiggerNode): string {
   if (node.needsEvaluation) {
     return " (?)";
   }
