@@ -1,4 +1,4 @@
-# Best Chess Lines Analysis App - Development Memory
+# Tree Digger Chess Analysis App - Development Memory
 
 This file serves as the AI memory/description for this application. It should reflect the current project status such that an AI can take a task for this project and complete it without having to analyze every file in detail.
 
@@ -41,9 +41,9 @@ interface BoardState {
 }
 
 // Tree digger analysis state
-interface BestLinesState {
+interface TreeDiggerState {
   isAnalyzing: boolean;
-  currentAnalysis: BestLinesAnalysis | null;
+  currentAnalysis: TreeDiggerAnalysis | null;
   progress: {
     totalPositions: number;
     analyzedPositions: number;
@@ -91,7 +91,7 @@ interface DragState {
 - **Analysis Management**: MultiPV, depth control, result parsing
 - **Real-time Updates**: Live analysis results with formatting
 
-#### 4. Tree Digger (`src/best-lines.ts`)
+#### 4. Tree Digger (`src/tree-digger.ts`)
 
 - **Deep Analysis**: Recursive tree building for position analysis
 - **Dynamic White Moves**: User-defined first two white moves with Stockfish fallback
@@ -105,14 +105,12 @@ interface DragState {
 
 #### Drag-and-Drop System
 
-```typescript
-// Critical implementation details:
-// - Uses originalPiece and originalSquare for reliable move handling
-// - Event delegation with target.closest('.piece')
-// - Re-attaches listeners after board re-rendering
-// - Proper ghost element positioning and styling
-// - Arrow cleanup when board is re-rendered
-```
+**Critical implementation details:**
+- Uses originalPiece and originalSquare for reliable move handling
+- Event delegation with target.closest('.piece')
+- Re-attaches listeners after board re-rendering
+- Proper ghost element positioning and styling
+- Arrow cleanup when board is re-rendered
 
 **Edge Cases Handled:**
 
@@ -133,14 +131,12 @@ interface DragState {
 
 #### Color-Coded Arrows
 
-```typescript
-// Arrow color logic based on move quality:
-// - Mate moves: Pastel green (#90EE90)
-// - Moves preventing mate: Bright red (#FF4444)
-// - Small deviations (0.1-0.2): Light green (#98FB98)
-// - Medium deviations (0.3-1.0): Linear gradient yellow to tomato red
-// - Large deviations (>1.0): Tomato red (#FF6347)
-```
+**Arrow color logic based on move quality:**
+- Mate moves: Pastel green (#90EE90)
+- Moves preventing mate: Bright red (#FF4444)
+- Small deviations (0.1-0.2): Light green (#98FB98)
+- Medium deviations (0.3-1.0): Linear gradient yellow to tomato red
+- Large deviations (>1.0): Tomato red (#FF6347)
 
 **Implementation Details:**
 
@@ -151,14 +147,12 @@ interface DragState {
 
 #### Score Labels
 
-```typescript
-// Label text logic:
-// - Mate: "+#" or "-#" (who's getting mated)
-// - Mate-in-X: "+Mx" or "-Mx"
-// - Best move is mate but current isn't: "!?"
-// - Delta vs best: "+x.y" or "-x.y" (forced decimal for <10)
-// - Large differences: Rounded to integer
-```
+**Label text logic:**
+- Mate: "+#" or "-#" (who's getting mated)
+- Mate-in-X: "+Mx" or "-Mx"
+- Best move is mate but current isn't: "!?"
+- Delta vs best: "+x.y" or "-x.y" (forced decimal for <10)
+- Large differences: Rounded to integer
 
 **Visual Features:**
 
@@ -171,13 +165,11 @@ interface DragState {
 
 #### Analysis Status Indicator
 
-```typescript
-// Status calculation:
-// - Min depth of visible non-mating moves
-// - Max depth of mating moves (if only mating moves visible)
-// - "Analyzing..." vs "Analysis complete"
-// - Real-time updates during analysis
-```
+**Status calculation:**
+- Min depth of visible non-mating moves
+- Max depth of mating moves (if only mating moves visible)
+- "Analyzing..." vs "Analysis complete"
+- Real-time updates during analysis
 
 **Features:**
 
@@ -188,13 +180,11 @@ interface DragState {
 
 #### Results Filtering & Sorting
 
-```typescript
-// Filtering logic:
-// - While analyzing: Show deepest developed lines with highest scores
-// - When complete: Hide lines not ending in mate and not reaching target depth
-// - Mate lines always shown first
-// - Sort by depth, then score, then multipv
-```
+**Filtering logic:**
+- While analyzing: Show deepest developed lines with highest scores
+- When complete: Hide lines not ending in mate and not reaching target depth
+- Mate lines always shown first
+- Sort by depth, then score, then multipv
 
 **UI Integration:**
 
@@ -225,13 +215,11 @@ interface DragState {
 
 #### Format Controls
 
-```typescript
-// Format options moved to controls section:
-// - Algebraic: Short/Long (values: algebraic-short/algebraic-long)
-// - Notation: Symbols/Letters (values: symbols/letters)
-// - Styled as vertical button groups
-// - Consistent with current player control styling
-```
+**Format options moved to controls section:**
+- Algebraic: Short/Long (values: algebraic-short/algebraic-long)
+- Notation: Symbols/Letters (values: symbols/letters)
+- Styled as vertical button groups
+- Consistent with current player control styling
 
 **Implementation:**
 
@@ -242,26 +230,22 @@ interface DragState {
 
 #### Button States
 
-```typescript
-// Button state management:
-// - Start button: Disabled when analyzing
-// - Stop button: Disabled when not analyzing
-// - Visual feedback: Dimmed appearance when disabled
-// - State synchronization: Updates on analysis start/stop
-```
+**Button state management:**
+- Start button: Disabled when analyzing
+- Stop button: Disabled when not analyzing
+- Visual feedback: Dimmed appearance when disabled
+- State synchronization: Updates on analysis start/stop
 
 ### 5. Game Import & Navigation
 
 #### PGN-like Notation Parsing
 
-```typescript
-// Parsing approach:
-// 1. Clean input (remove comments, annotations, move numbers)
-// 2. Split into individual moves
-// 3. Apply moves sequentially to maintain board context
-// 4. Use board-aware move finding for accurate from-square determination
-// 5. Determine move effects (capture, check, mate) during parsing
-```
+**Parsing approach:**
+1. Clean input (remove comments, annotations, move numbers)
+2. Split into individual moves
+3. Apply moves sequentially to maintain board context
+4. Use board-aware move finding for accurate from-square determination
+5. Determine move effects (capture, check, mate) during parsing
 
 **Complexities Handled:**
 
@@ -274,13 +258,11 @@ interface DragState {
 
 #### Clickable Move Navigation
 
-```typescript
-// Enhanced move list with clickable navigation:
-// - Each move is a clickable element with hover effects
-// - Clicking a move navigates to that position
-// - Visual feedback shows current position and clickable moves
-// - Immediate board updates when moves are clicked
-```
+**Enhanced move list with clickable navigation:**
+- Each move is a clickable element with hover effects
+- Clicking a move navigates to that position
+- Visual feedback shows current position and clickable moves
+- Immediate board updates when moves are clicked
 
 **Features:**
 
@@ -291,13 +273,11 @@ interface DragState {
 
 #### Branching System
 
-```typescript
-// Temporary move branches for exploring variations:
-// - Clicking PV moves creates branches at correct positions
-// - Branches show alternative moves with visual distinction
-// - Clicking different moves clears previous branches
-// - Branches appear at original analysis position, not current position
-```
+**Temporary move branches for exploring variations:**
+- Clicking PV moves creates branches at correct positions
+- Branches show alternative moves with visual distinction
+- Clicking different moves clears previous branches
+- Branches appear at original analysis position, not current position
 
 **Branch Features:**
 
@@ -311,13 +291,11 @@ interface DragState {
 
 #### Move Validator System (`src/move-validator.ts`)
 
-```typescript
-// Comprehensive move validation with effect detection:
-// - Validates move legality according to chess rules
-// - Determines move effects (capture, check, mate, en-passant)
-// - Provides detailed error messages for invalid moves
-// - Integrates with existing application structure
-```
+**Comprehensive move validation with effect detection:**
+- Validates move legality according to chess rules
+- Determines move effects (capture, check, mate, en-passant)
+- Provides detailed error messages for invalid moves
+- Integrates with existing application structure
 
 **Key Functions:**
 
@@ -337,11 +315,9 @@ interface DragState {
 
 #### WebAssembly Worker Setup
 
-```typescript
-// Uses stockfish-nnue-16.wasm for multi-threaded performance
-// Worker communication via postMessage/onmessage
-// UCI protocol for engine communication
-```
+**Uses stockfish-nnue-16.wasm for multi-threaded performance**
+**Worker communication via postMessage/onmessage**
+**UCI protocol for engine communication**
 
 #### Analysis Features
 
@@ -354,24 +330,20 @@ interface DragState {
 
 #### Result Processing
 
-```typescript
-// Parses Stockfish info messages:
-// - depth, nodes, time, score
-// - principal variation (PV)
-// - multiple variations (MultiPV)
-// - mate sequences and evaluations
-// - Move effects determined for each analysis move
-```
+**Parses Stockfish info messages:**
+- depth, nodes, time, score
+- principal variation (PV)
+- multiple variations (MultiPV)
+- mate sequences and evaluations
+- Move effects determined for each analysis move
 
 #### Enhanced PV Display
 
-```typescript
-// PV moves with effects and clickability:
-// - Each PV move is validated against the correct position
-// - Move effects (capture, check, mate) are determined sequentially
-// - PV moves are clickable for temporary board visualization
-// - Move numbering continues from current game position
-```
+**PV moves with effects and clickability:**
+- Each PV move is validated against the correct position
+- Move effects (capture, check, mate) are determined sequentially
+- PV moves are clickable for temporary board visualization
+- Move numbering continues from current game position
 
 **PV Features:**
 
@@ -389,7 +361,7 @@ The tree digger performs comprehensive analysis of chess positions by building a
 
 ```typescript
 // Tree digger analysis structure:
-interface BestLinesAnalysis {
+interface TreeDiggerAnalysis {
   rootFen: string; // Starting position (current board FEN)
   maxDepth: number; // Maximum analysis depth
   nodes: TreeDiggerNode[]; // Root nodes of the analysis tree
@@ -415,8 +387,8 @@ interface TreeDiggerNode {
 
 The tree digger allows users to specify the first two white moves, with automatic fallback to Stockfish analysis:
 
+**White move input handling:**
 ```typescript
-// White move input handling:
 const getWhiteMoves = (): string[] => {
   const whiteMove1Input = document.getElementById(
     "tree-digger-white-move-1",
@@ -447,8 +419,8 @@ const getWhiteMoves = (): string[] => {
 
 The tree digger efficiently handles transpositions by tracking previously analyzed positions:
 
+**Transposition detection:**
 ```typescript
-// Transposition detection:
 if (analysis.analyzedPositions.has(fen)) {
   log(`Transposition detected at depth ${depth}, skipping: ${fen}`);
   return;
@@ -468,28 +440,28 @@ analysis.analyzedPositions.add(fen);
 
 The tree digger provides comprehensive progress tracking and statistics:
 
+**Progress tracking:**
 ```typescript
-// Progress tracking:
-interface BestLinesProgress {
+interface TreeDiggerProgress {
   totalPositions: number;    // Total positions to analyze
   analyzedPositions: number; // Positions completed
   currentPosition: string;   // Currently analyzing position
   pvLinesReceived: number;   // PV lines received from Stockfish
 }
+```
 
-// Statistics displayed:
+**Statistics displayed:**
 - Total Positions: Number of positions to analyze
 - Analyzed: Number of positions completed
 - Total Leafs: Number of leaf nodes in the tree
 - Unique Positions: Number of distinct positions analyzed
-```
 
 #### Tree Visualization with Shadow DOM System
 
 The analysis results are displayed using a clean, predictable shadow DOM system that ensures accurate tree representation:
 
+**Shadow tree structure for UI management:**
 ```typescript
-// Shadow tree structure for UI management:
 interface UITreeNode {
   id: string; // Unique node identifier
   element: HTMLElement; // DOM element for this node
@@ -508,8 +480,8 @@ let shadowTree: UITreeNode | null = null;
 3. **Incremental Updates**: Add new nodes, remove old ones, update existing ones
 4. **Predictable IDs**: Each node has unique ID based on position and move
 
+**Node ID generation for predictable identification:**
 ```typescript
-// Node ID generation for predictable identification:
 const generateNodeId = (node: TreeDiggerNode): string => {
   const positionAfterMove = applyMoveToFEN(node.fen, node.move);
   const cleanFen = positionAfterMove.replace(/[^a-zA-Z0-9]/g, "");
@@ -519,7 +491,7 @@ const generateNodeId = (node: TreeDiggerNode): string => {
 // Shadow tree building:
 const buildShadowTree = (
   nodes: TreeDiggerNode[],
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): UITreeNode[] => {
   const uiNodes: UITreeNode[] = [];
 
@@ -553,12 +525,12 @@ const buildShadowTree = (
 
 **DOM Synchronization:**
 
+**Sync DOM with shadow tree:**
 ```typescript
-// Sync DOM with shadow tree:
 const syncDOMWithShadowTree = (
   container: HTMLElement,
   shadowNodes: UITreeNode[],
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
 ): void => {
   // Get existing DOM nodes
   const existingNodes = Array.from(container.children) as HTMLElement[];
@@ -620,13 +592,11 @@ const syncDOMWithShadowTree = (
 
 The tree digger provides comprehensive analysis controls:
 
-```typescript
-// Analysis parameters:
+**Analysis parameters:**
 - Max Depth: Maximum analysis depth (1-20)
 - Black Moves: Number of black responses to analyze (1-10)
 - Threads: Number of CPU threads for analysis (1-10)
 - Font Size: Tree display font size (8-16)
-```
 
 **Control Features:**
 
@@ -651,7 +621,7 @@ The tree digger follows a recursive analysis process:
 ```typescript
 const buildAnalysisTree = async (
   fen: string,
-  analysis: BestLinesAnalysis,
+  analysis: TreeDiggerAnalysis,
   parentNode: TreeDiggerNode | null,
   depth: number,
 ): Promise<void> => {
@@ -679,13 +649,11 @@ const buildAnalysisTree = async (
 
 #### Arrow Creation & Cleanup
 
-```typescript
-// Arrow lifecycle:
-// - showMoveArrow(): Creates arrow with color, z-index, and label
-// - hideMoveArrow(): Removes arrow and associated label
-// - Board re-rendering: Clears all arrows before re-rendering
-// - Z-index ordering: Higher-ranked moves on top
-```
+**Arrow lifecycle:**
+- showMoveArrow(): Creates arrow with color, z-index, and label
+- hideMoveArrow(): Removes arrow and associated label
+- Board re-rendering: Clears all arrows before re-rendering
+- Z-index ordering: Higher-ranked moves on top
 
 **Key Features:**
 
@@ -696,25 +664,21 @@ const buildAnalysisTree = async (
 
 #### Label Positioning
 
-```typescript
-// Label positioning logic:
-// - Anchored to arrow connection point (shaft meets head)
-// - Text shadow with black border + colored glow
-// - Fixed width/height for consistent centering
-// - Z-index matches arrow for proper layering
-```
+**Label positioning logic:**
+- Anchored to arrow connection point (shaft meets head)
+- Text shadow with black border + colored glow
+- Fixed width/height for consistent centering
+- Z-index matches arrow for proper layering
 
 ### 2. State Synchronization
 
 #### FEN ↔ UI Controls ↔ Board State
 
-```typescript
-// Bidirectional synchronization:
-// - FEN input updates board and controls
-// - Board changes update FEN and controls
-// - Control changes update FEN and board
-// - Game navigation updates all three
-```
+**Bidirectional synchronization:**
+- FEN input updates board and controls
+- Board changes update FEN and controls
+- Control changes update FEN and board
+- Game navigation updates all three
 
 **Synchronization Points:**
 
@@ -727,11 +691,9 @@ const buildAnalysisTree = async (
 
 #### Event Delegation
 
-```typescript
-// Uses target.closest('.piece') for reliable piece selection
-// Handles clicks on piece children (spans, etc.)
-// Re-attaches listeners after DOM updates
-```
+**Uses target.closest('.piece') for reliable piece selection**
+**Handles clicks on piece children (spans, etc.)**
+**Re-attaches listeners after DOM updates**
 
 #### Listener Management
 
@@ -743,23 +705,19 @@ const buildAnalysisTree = async (
 
 #### Status Calculation
 
-```typescript
-// Status logic:
-// - Visible non-mating moves: Show min depth
-// - Only mating moves: Show max depth
-// - Real-time updates during analysis
-// - Proper completion detection
-```
+**Status logic:**
+- Visible non-mating moves: Show min depth
+- Only mating moves: Show max depth
+- Real-time updates during analysis
+- Proper completion detection
 
 #### Button State Management
 
-```typescript
-// Button states:
-// - Start: Disabled when isAnalyzing = true
-// - Stop: Disabled when isAnalyzing = false
-// - Visual feedback: Dimmed appearance
-// - State updates: Called on analysis start/stop
-```
+**Button states:**
+- Start: Disabled when isAnalyzing = true
+- Stop: Disabled when isAnalyzing = false
+- Visual feedback: Dimmed appearance
+- State updates: Called on analysis start/stop
 
 ## Edge Cases & Problem Solutions
 
@@ -926,7 +884,7 @@ The application relies heavily on TypeScript compilation for error detection:
 
 - `src/main.ts`: Main application logic
 - `src/chess-board.ts`: Board interactions and rendering
-- `src/best-lines.ts`: Tree digger analysis
+- `src/tree-digger.ts`: Tree digger analysis
 - `src/move-validator.ts`: Move validation logic
 - `src/utils.ts`: Utility functions
 - `styles.css`: Visual styling
@@ -950,10 +908,77 @@ The application relies heavily on TypeScript compilation for error detection:
 - **`src/main.ts`** (2897 lines): Main application logic with enhanced navigation, branching system, analysis management, and tree digger controls
 - **`src/chess-board.ts`** (855 lines): Interactive board component with arrow system and color coding
 - **`src/stockfish-client.ts`**: Engine integration
-- **`src/best-lines.ts`** (946 lines): Tree digger analysis with recursive tree building, transposition detection, and progress tracking
+- **`src/tree-digger.ts`** (946 lines): Tree digger analysis with recursive tree building, transposition detection, and progress tracking
 - **`src/move-validator.ts`** (435 lines): Move validation and effect detection
 - **`src/types.ts`** (246 lines): TypeScript interfaces with effect support
 - **`src/utils.ts`** (435 lines): Utility functions with enhanced notation
+
+### Utility Modules
+
+The application has been refactored into modular utility files for better organization:
+
+#### Analysis Management
+- **`src/utils/analysis-manager.ts`**: Stockfish analysis management, results display, and move interaction logic
+- **`src/utils/tree-digger-manager.ts`**: Tree digger analysis management, UI updates, and tree rendering logic
+
+#### Game Navigation
+- **`src/utils/game-navigation.ts`**: Game history and navigation logic (addMove, importGame, previousMove, nextMove, updateMoveList)
+
+#### Position Controls
+- **`src/utils/position-controls.ts`**: FEN input and position controls management
+
+#### Tree Digger Results
+- **`src/utils/tree-digger-results.ts`**: Tree digger results display and progress management
+
+#### Status Management
+- **`src/utils/status-management.ts`**: Status message display for various analysis states
+
+#### UI Utilities
+- **`src/utils/ui-utils.ts`**: UI interaction utilities (font size controls, etc.)
+- **`src/utils/button-utils.ts`**: Button state management utilities
+
+#### Tree Building & Navigation
+- **`src/utils/tree-building.ts`**: Tree structure building utilities
+- **`src/utils/tree-navigation.ts`**: Tree navigation utilities
+- **`src/utils/tree-debug-utils.ts`**: Tree debugging and verification utilities
+
+#### Node Utilities
+- **`src/utils/node-utils.ts`**: Tree node manipulation utilities
+- **`src/utils/line-analysis.ts`**: Chess line analysis utilities
+
+#### Copy & Debug Utilities
+- **`src/utils/copy-utils.ts`**: Copy functionality for analysis results
+- **`src/utils/debug-utils.ts`**: Debugging utilities for tree structures
+
+#### Board & Rendering Utilities
+- **`src/utils/board-rendering.ts`**: Board rendering utilities
+- **`src/utils/board-utils.ts`**: Board manipulation utilities
+- **`src/utils/arrow-utils.ts`**: Arrow system utilities
+- **`src/utils/dom-helpers.ts`**: DOM manipulation utilities
+
+#### Formatting & Notation
+- **`src/utils/formatting-utils.ts`**: Text formatting utilities
+- **`src/utils/notation-utils.ts`**: Chess notation utilities
+- **`src/utils/move-parser.ts`**: Move parsing utilities
+- **`src/utils/move-parsing.ts`**: Advanced move parsing utilities
+
+#### FEN & Position Utilities
+- **`src/utils/fen-manipulation.ts`**: FEN string manipulation
+- **`src/utils/fen-utils.ts`**: FEN utility functions
+- **`src/utils/pv-utils.ts**`: Principal variation utilities
+
+#### Configuration & Analysis
+- **`src/utils/analysis-config.ts`**: Analysis configuration utilities
+- **`src/utils/analysis-utils.ts`**: Analysis utility functions
+- **`src/utils/line-analysis.ts`**: Line analysis utilities
+
+#### Thread & Navigation Utilities
+- **`src/utils/thread-utils.ts`**: Thread management utilities
+- **`src/utils/navigation-utils.ts`**: Navigation utility functions
+
+#### Toast & Status Utilities
+- **`src/utils/toast-utils.ts`**: Toast notification utilities
+- **`src/utils/status-utils.ts`**: Status management utilities
 
 ### Test Files
 
@@ -971,5 +996,6 @@ The application relies heavily on TypeScript compilation for error detection:
 5. **Tree Digger**: Recursive analysis with user-defined white moves provides deep position understanding
 6. **TypeScript Compilation**: The human handles watch mode and notifies of compilation errors
 7. **Memory Management**: Clean up event listeners, DOM elements, and avoid circular references
+8. **Modular Architecture**: The application has been refactored into focused utility modules for better maintainability
 
 The application provides a comprehensive chess analysis platform with advanced move validation, interactive navigation, enhanced notation display, color-coded analysis arrows, real-time status updates, and deep position analysis through the tree digger. The modular architecture allows for easy extension and enhancement of features.
