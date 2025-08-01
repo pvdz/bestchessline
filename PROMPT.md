@@ -106,6 +106,7 @@ interface DragState {
 #### Drag-and-Drop System
 
 **Critical implementation details:**
+
 - Uses originalPiece and originalSquare for reliable move handling
 - Event delegation with target.closest('.piece')
 - Re-attaches listeners after board re-rendering
@@ -132,6 +133,7 @@ interface DragState {
 #### Color-Coded Arrows
 
 **Arrow color logic based on move quality:**
+
 - Mate moves: Pastel green (#90EE90)
 - Moves preventing mate: Bright red (#FF4444)
 - Small deviations (0.1-0.2): Light green (#98FB98)
@@ -148,6 +150,7 @@ interface DragState {
 #### Score Labels
 
 **Label text logic:**
+
 - Mate: "+#" or "-#" (who's getting mated)
 - Mate-in-X: "+Mx" or "-Mx"
 - Best move is mate but current isn't: "!?"
@@ -166,6 +169,7 @@ interface DragState {
 #### Analysis Status Indicator
 
 **Status calculation:**
+
 - Min depth of visible non-mating moves
 - Max depth of mating moves (if only mating moves visible)
 - "Analyzing..." vs "Analysis complete"
@@ -181,6 +185,7 @@ interface DragState {
 #### Results Filtering & Sorting
 
 **Filtering logic:**
+
 - While analyzing: Show deepest developed lines with highest scores
 - When complete: Hide lines not ending in mate and not reaching target depth
 - Mate lines always shown first
@@ -216,6 +221,7 @@ interface DragState {
 #### Format Controls
 
 **Format options moved to controls section:**
+
 - Algebraic: Short/Long (values: algebraic-short/algebraic-long)
 - Notation: Symbols/Letters (values: symbols/letters)
 - Styled as vertical button groups
@@ -231,6 +237,7 @@ interface DragState {
 #### Button States
 
 **Button state management:**
+
 - Start button: Disabled when analyzing
 - Stop button: Disabled when not analyzing
 - Visual feedback: Dimmed appearance when disabled
@@ -241,6 +248,7 @@ interface DragState {
 #### PGN-like Notation Parsing
 
 **Parsing approach:**
+
 1. Clean input (remove comments, annotations, move numbers)
 2. Split into individual moves
 3. Apply moves sequentially to maintain board context
@@ -259,6 +267,7 @@ interface DragState {
 #### Clickable Move Navigation
 
 **Enhanced move list with clickable navigation:**
+
 - Each move is a clickable element with hover effects
 - Clicking a move navigates to that position
 - Visual feedback shows current position and clickable moves
@@ -274,6 +283,7 @@ interface DragState {
 #### Branching System
 
 **Temporary move branches for exploring variations:**
+
 - Clicking PV moves creates branches at correct positions
 - Branches show alternative moves with visual distinction
 - Clicking different moves clears previous branches
@@ -292,6 +302,7 @@ interface DragState {
 #### Move Validator System (`src/move-validator.ts`)
 
 **Comprehensive move validation with effect detection:**
+
 - Validates move legality according to chess rules
 - Determines move effects (capture, check, mate, en-passant)
 - Provides detailed error messages for invalid moves
@@ -331,6 +342,7 @@ interface DragState {
 #### Result Processing
 
 **Parses Stockfish info messages:**
+
 - depth, nodes, time, score
 - principal variation (PV)
 - multiple variations (MultiPV)
@@ -340,6 +352,7 @@ interface DragState {
 #### Enhanced PV Display
 
 **PV moves with effects and clickability:**
+
 - Each PV move is validated against the correct position
 - Move effects (capture, check, mate) are determined sequentially
 - PV moves are clickable for temporary board visualization
@@ -388,6 +401,7 @@ interface TreeDiggerNode {
 The tree digger allows users to specify the first two white moves, with automatic fallback to Stockfish analysis:
 
 **White move input handling:**
+
 ```typescript
 const getWhiteMoves = (): string[] => {
   const whiteMove1Input = document.getElementById(
@@ -420,6 +434,7 @@ const getWhiteMoves = (): string[] => {
 The tree digger efficiently handles transpositions by tracking previously analyzed positions:
 
 **Transposition detection:**
+
 ```typescript
 if (analysis.analyzedPositions.has(fen)) {
   log(`Transposition detected at depth ${depth}, skipping: ${fen}`);
@@ -441,16 +456,18 @@ analysis.analyzedPositions.add(fen);
 The tree digger provides comprehensive progress tracking and statistics:
 
 **Progress tracking:**
+
 ```typescript
 interface TreeDiggerProgress {
-  totalPositions: number;    // Total positions to analyze
+  totalPositions: number; // Total positions to analyze
   analyzedPositions: number; // Positions completed
-  currentPosition: string;   // Currently analyzing position
-  pvLinesReceived: number;   // PV lines received from Stockfish
+  currentPosition: string; // Currently analyzing position
+  pvLinesReceived: number; // PV lines received from Stockfish
 }
 ```
 
 **Statistics displayed:**
+
 - Total Positions: Number of positions to analyze
 - Analyzed: Number of positions completed
 - Total Leafs: Number of leaf nodes in the tree
@@ -461,6 +478,7 @@ interface TreeDiggerProgress {
 The analysis results are displayed using a clean, predictable shadow DOM system that ensures accurate tree representation:
 
 **Shadow tree structure for UI management:**
+
 ```typescript
 interface UITreeNode {
   id: string; // Unique node identifier
@@ -481,6 +499,7 @@ let shadowTree: UITreeNode | null = null;
 4. **Predictable IDs**: Each node has unique ID based on position and move
 
 **Node ID generation for predictable identification:**
+
 ```typescript
 const generateNodeId = (node: TreeDiggerNode): string => {
   const positionAfterMove = applyMoveToFEN(node.fen, node.move);
@@ -526,6 +545,7 @@ const buildShadowTree = (
 **DOM Synchronization:**
 
 **Sync DOM with shadow tree:**
+
 ```typescript
 const syncDOMWithShadowTree = (
   container: HTMLElement,
@@ -593,6 +613,7 @@ const syncDOMWithShadowTree = (
 The tree digger provides comprehensive analysis controls:
 
 **Analysis parameters:**
+
 - Max Depth: Maximum analysis depth (1-20)
 - Black Moves: Number of black responses to analyze (1-10)
 - Threads: Number of CPU threads for analysis (1-10)
@@ -650,6 +671,7 @@ const buildAnalysisTree = async (
 #### Arrow Creation & Cleanup
 
 **Arrow lifecycle:**
+
 - showMoveArrow(): Creates arrow with color, z-index, and label
 - hideMoveArrow(): Removes arrow and associated label
 - Board re-rendering: Clears all arrows before re-rendering
@@ -665,6 +687,7 @@ const buildAnalysisTree = async (
 #### Label Positioning
 
 **Label positioning logic:**
+
 - Anchored to arrow connection point (shaft meets head)
 - Text shadow with black border + colored glow
 - Fixed width/height for consistent centering
@@ -675,6 +698,7 @@ const buildAnalysisTree = async (
 #### FEN ↔ UI Controls ↔ Board State
 
 **Bidirectional synchronization:**
+
 - FEN input updates board and controls
 - Board changes update FEN and controls
 - Control changes update FEN and board
@@ -706,6 +730,7 @@ const buildAnalysisTree = async (
 #### Status Calculation
 
 **Status logic:**
+
 - Visible non-mating moves: Show min depth
 - Only mating moves: Show max depth
 - Real-time updates during analysis
@@ -714,6 +739,7 @@ const buildAnalysisTree = async (
 #### Button State Management
 
 **Button states:**
+
 - Start: Disabled when isAnalyzing = true
 - Stop: Disabled when isAnalyzing = false
 - Visual feedback: Dimmed appearance
@@ -918,65 +944,80 @@ The application relies heavily on TypeScript compilation for error detection:
 The application has been refactored into modular utility files for better organization:
 
 #### Analysis Management
+
 - **`src/utils/analysis-manager.ts`**: Stockfish analysis management, results display, and move interaction logic
 - **`src/utils/tree-digger-manager.ts`**: Tree digger analysis management, UI updates, and tree rendering logic
 
 #### Game Navigation
+
 - **`src/utils/game-navigation.ts`**: Game history and navigation logic (addMove, importGame, previousMove, nextMove, updateMoveList)
 
 #### Position Controls
+
 - **`src/utils/position-controls.ts`**: FEN input and position controls management
 
 #### Tree Digger Results
+
 - **`src/utils/tree-digger-results.ts`**: Tree digger results display and progress management
 
 #### Status Management
+
 - **`src/utils/status-management.ts`**: Status message display for various analysis states
 
 #### UI Utilities
+
 - **`src/utils/ui-utils.ts`**: UI interaction utilities (font size controls, etc.)
 - **`src/utils/button-utils.ts`**: Button state management utilities
 
 #### Tree Building & Navigation
+
 - **`src/utils/tree-building.ts`**: Tree structure building utilities
 - **`src/utils/tree-navigation.ts`**: Tree navigation utilities
 - **`src/utils/tree-debug-utils.ts`**: Tree debugging and verification utilities
 
 #### Node Utilities
+
 - **`src/utils/node-utils.ts`**: Tree node manipulation utilities
 - **`src/utils/line-analysis.ts`**: Chess line analysis utilities
 
 #### Copy & Debug Utilities
+
 - **`src/utils/copy-utils.ts`**: Copy functionality for analysis results
 - **`src/utils/debug-utils.ts`**: Debugging utilities for tree structures
 
 #### Board & Rendering Utilities
+
 - **`src/utils/board-rendering.ts`**: Board rendering utilities
 - **`src/utils/board-utils.ts`**: Board manipulation utilities
 - **`src/utils/arrow-utils.ts`**: Arrow system utilities
 - **`src/utils/dom-helpers.ts`**: DOM manipulation utilities
 
 #### Formatting & Notation
+
 - **`src/utils/formatting-utils.ts`**: Text formatting utilities
 - **`src/utils/notation-utils.ts`**: Chess notation utilities
 - **`src/utils/move-parser.ts`**: Move parsing utilities
 - **`src/utils/move-parsing.ts`**: Advanced move parsing utilities
 
 #### FEN & Position Utilities
+
 - **`src/utils/fen-manipulation.ts`**: FEN string manipulation
 - **`src/utils/fen-utils.ts`**: FEN utility functions
 - **`src/utils/pv-utils.ts**`: Principal variation utilities
 
 #### Configuration & Analysis
+
 - **`src/utils/analysis-config.ts`**: Analysis configuration utilities
 - **`src/utils/analysis-utils.ts`**: Analysis utility functions
 - **`src/utils/line-analysis.ts`**: Line analysis utilities
 
 #### Thread & Navigation Utilities
+
 - **`src/utils/thread-utils.ts`**: Thread management utilities
 - **`src/utils/navigation-utils.ts`**: Navigation utility functions
 
 #### Toast & Status Utilities
+
 - **`src/utils/toast-utils.ts`**: Toast notification utilities
 - **`src/utils/status-utils.ts`**: Status management utilities
 

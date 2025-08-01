@@ -1,86 +1,319 @@
-import { TreeDiggerNode } from "../types.js";
+import {
+  getCurrentAnalysis,
+  isAnalyzing,
+  getProgress,
+} from "../tree-digger.js";
+import { log } from "./logging.js";
+import { parseFEN } from "./fen-utils.js";
 import { moveToNotation } from "./notation-utils.js";
-import { getGlobalCurrentMoveIndex } from "../utils.js";
-import * as Board from "../chess-board.js";
-import * as TreeDigger from "../tree-digger.js";
 
 /**
- * Debug Utility Functions
- *
- * Provides functions for debugging and logging tree structures.
+ * Debug panel state
  */
-
-// Global map to track DOM elements for tree nodes
-const treeNodeDOMMap = new Map<string, HTMLElement>();
+let debugPanelVisible = false;
+let debugUpdateInterval: number | null = null;
 
 /**
- * Clear the tree node DOM map
+ * Toggle debug panel visibility
  */
-export function clearTreeNodeDOMMap(): void {
-  treeNodeDOMMap.clear();
-}
+export const toggleDebugPanel = (): void => {
+  const debugPanel = document.getElementById("debug-panel");
+  const toggleBtn = document.getElementById("toggle-debug-panel");
+
+  if (!debugPanel || !toggleBtn) {
+    log("Debug panel elements not found");
+    return;
+  }
+
+  debugPanelVisible = !debugPanelVisible;
+
+  if (debugPanelVisible) {
+    debugPanel.style.display = "block";
+    toggleBtn.textContent = "🔍 Debug (ON)";
+    startDebugUpdates();
+  } else {
+    debugPanel.style.display = "none";
+    toggleBtn.textContent = "🔍 Debug";
+    stopDebugUpdates();
+  }
+};
 
 /**
- * Debug function to log tree structure
- * @param nodes Array of nodes to log
- * @param depth Current depth in the tree (default: 0)
+ * Close debug panel
  */
-export function logTreeStructure(
-  nodes: TreeDiggerNode[],
-  depth: number = 0,
-): void {
-  for (const node of nodes) {
-    const indent = "  ".repeat(depth);
-    const moveText = moveToNotation(node.move);
-    const parentText = node.parent
-      ? ` (parent: ${moveToNotation(node.parent.move)})`
-      : " (root)";
-    console.log(
-      `${indent}${moveText}${parentText} [${node.children.length} children]`,
-    );
+export const closeDebugPanel = (): void => {
+  const debugPanel = document.getElementById("debug-panel");
+  const toggleBtn = document.getElementById("toggle-debug-panel");
 
-    if (node.children.length > 0) {
-      logTreeStructure(node.children, depth + 1);
+  if (!debugPanel || !toggleBtn) {
+    return;
+  }
+
+  debugPanelVisible = false;
+  debugPanel.style.display = "none";
+  toggleBtn.textContent = "🔍 Debug";
+  stopDebugUpdates();
+};
+
+/**
+ * Start debug updates
+ */
+const startDebugUpdates = (): void => {
+  if (debugUpdateInterval) {
+    clearInterval(debugUpdateInterval);
+  }
+
+  // Update immediately
+  updateDebugInfo();
+
+  // Update every 2 seconds
+  debugUpdateInterval = window.setInterval(updateDebugInfo, 2000);
+};
+
+/**
+ * Stop debug updates
+ */
+const stopDebugUpdates = (): void => {
+  if (debugUpdateInterval) {
+    clearInterval(debugUpdateInterval);
+    debugUpdateInterval = null;
+  }
+};
+
+/**
+ * Update debug information
+ */
+const updateDebugInfo = (): void => {
+  if (!debugPanelVisible) return;
+
+  updateQueueInfo();
+  updateStateInfo();
+  updateTreeInfo();
+};
+
+/**
+ * Update queue information
+ */
+const updateQueueInfo = (): void => {
+  const element = document.getElementById("debug-queue-info");
+  if (!element) return;
+
+  const analysis = getCurrentAnalysis();
+  if (!analysis) {
+    element.innerHTML = "<p>No analysis loaded</p>";
+    return;
+  }
+
+  const queueLength = analysis.analysisQueue.length;
+  const isComplete = analysis.isComplete;
+
+  let html = `
+    <h4>Analysis Queue</h4>
+    <p><strong>Queue Length:</strong> ${queueLength}</p>
+    <p><strong>Status:</strong> ${isComplete ? "Complete" : "In Progress"}</p>
+  `;
+
+  if (queueLength > 0) {
+    html += "<h5>Top 5 Queue Items:</h5><ul>";
+
+    // Show top 5 queue items with move notation
+    const topItems = analysis.analysisQueue.slice(0, 5);
+    topItems.forEach((fen: string, index: number) => {
+      const moveNotation = getMoveNotationFromFen(fen, analysis);
+      html += `<li><strong>${index + 1}.</strong> ${moveNotation}</li>`;
+    });
+
+    html += "</ul>";
+  } else {
+    html += "<p>Queue is empty</p>";
+  }
+
+  element.innerHTML = html;
+};
+
+/**
+ * Update state information
+ */
+const updateStateInfo = (): void => {
+  const element = document.getElementById("debug-state-info");
+  if (!element) return;
+
+  const analysis = getCurrentAnalysis();
+  const analyzing = isAnalyzing();
+  const progress = getProgress();
+
+  if (!analysis) {
+    element.textContent = "No analysis loaded";
+    return;
+  }
+
+  let info = `Analyzing: ${analyzing}\n`;
+  info += `Nodes count: ${analysis.nodes.length}\n`;
+  info += `Max depth: ${analysis.maxDepth}\n`;
+  info += `Threads: ${analysis.config.threads}\n`;
+  info += `Analyzed positions: ${analysis.analyzedPositions.size}\n\n`;
+  info += `Progress:\n`;
+  info += `  Total positions: ${progress.totalPositions}\n`;
+  info += `  Analyzed positions: ${progress.analyzedPositions}\n`;
+  info += `  Current position: ${progress.currentPosition.substring(0, 30)}...\n`;
+  info += `  PV lines received: ${progress.pvLinesReceived}`;
+
+  element.textContent = info;
+};
+
+/**
+ * Update tree statistics
+ */
+const updateTreeInfo = (): void => {
+  const element = document.getElementById("debug-tree-info");
+  if (!element) return;
+
+  const analysis = getCurrentAnalysis();
+  if (!analysis) {
+    element.textContent = "No analysis loaded";
+    return;
+  }
+
+  const stats = calculateTreeStats(analysis.nodes);
+
+  let info = `Total nodes: ${stats.totalNodes}\n`;
+  info += `Leaf nodes: ${stats.leafNodes}\n`;
+  info += `Max depth: ${stats.maxDepth}\n`;
+  info += `Average depth: ${stats.avgDepth.toFixed(2)}\n`;
+  info += `Nodes with analysis: ${stats.nodesWithAnalysis}\n`;
+  info += `Nodes without analysis: ${stats.nodesWithoutAnalysis}`;
+
+  element.textContent = info;
+};
+
+/**
+ * Get the complete move sequence for a FEN position
+ */
+const getMoveNotationFromFen = (fen: string, analysis: any): string => {
+  try {
+    // Find the node that corresponds to this FEN
+    const findNodeByFen = (nodes: any[], targetFen: string): any | null => {
+      for (const node of nodes) {
+        if (node.fen === targetFen) {
+          return node;
+        }
+        const found = findNodeByFen(node.children, targetFen);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
+    };
+
+    const node = findNodeByFen(analysis.nodes, fen);
+    if (node) {
+      return getCompleteMoveSequence(node);
+    }
+
+    // If we can't find the node, show a truncated FEN
+    return `Position: ${fen.substring(0, 20)}...`;
+  } catch (error) {
+    log("Error getting move notation from FEN:", error);
+    return `FEN: ${fen.substring(0, 20)}...`;
+  }
+};
+
+/**
+ * Get the complete move sequence for a node
+ */
+const getCompleteMoveSequence = (node: any): string => {
+  const moves: string[] = [];
+  let currentNode = node;
+
+  // Walk up the tree to build the complete sequence
+  while (currentNode && currentNode.move) {
+    moves.unshift(moveToNotation(currentNode.move));
+    currentNode = currentNode.parent;
+  }
+
+  // Format as a move sequence
+  if (moves.length === 0) {
+    return "Initial position";
+  }
+
+  // Group moves into pairs (white move + black move)
+  let sequence = "";
+  for (let i = 0; i < moves.length; i++) {
+    if (i % 2 === 0) {
+      // White move
+      const moveNumber = Math.floor(i / 2) + 1;
+      sequence += `${moveNumber}.${moves[i]}`;
+    } else {
+      // Black move
+      sequence += moves[i];
+    }
+
+    // Add space between move pairs
+    if (i % 2 === 1 && i < moves.length - 1) {
+      sequence += " ";
     }
   }
-}
+
+  return sequence;
+};
 
 /**
- * Count total nodes in the tree recursively
- * @param nodes Array of nodes to count
- * @returns Total number of nodes including all children
+ * Calculate tree statistics
  */
-export function countTotalNodes(nodes: TreeDiggerNode[]): number {
-  let count = 0;
-  const countRecursive = (nodeList: TreeDiggerNode[]): void => {
+const calculateTreeStats = (
+  nodes: any[],
+): {
+  totalNodes: number;
+  leafNodes: number;
+  maxDepth: number;
+  avgDepth: number;
+  nodesWithAnalysis: number;
+  nodesWithoutAnalysis: number;
+} => {
+  let totalNodes = 0;
+  let leafNodes = 0;
+  let maxDepth = 0;
+  let totalDepth = 0;
+  let nodesWithAnalysis = 0;
+  let nodesWithoutAnalysis = 0;
+
+  const traverse = (nodeList: any[], depth: number): void => {
     for (const node of nodeList) {
-      count++;
-      if (node.children.length > 0) {
-        countRecursive(node.children);
+      totalNodes++;
+      totalDepth += depth;
+      maxDepth = Math.max(maxDepth, depth);
+
+      if (node.analysisResult) {
+        nodesWithAnalysis++;
+      } else {
+        nodesWithoutAnalysis++;
+      }
+
+      if (node.children.length === 0) {
+        leafNodes++;
+      } else {
+        traverse(node.children, depth + 1);
       }
     }
   };
-  countRecursive(nodes);
-  return count;
-}
+
+  traverse(nodes, 0);
+
+  return {
+    totalNodes,
+    leafNodes,
+    maxDepth,
+    avgDepth: totalNodes > 0 ? totalDepth / totalNodes : 0,
+    nodesWithAnalysis,
+    nodesWithoutAnalysis,
+  };
+};
 
 /**
- * Debug function to log tree digger initialization info
+ * Clear tracked DOM elements for tree nodes
  */
-export function debugTreeDiggerStart(): void {
-  console.log("=== Tree Digger Debug Info ===");
-  console.log("Current board FEN:", Board.getFEN());
-  console.log("Current move index:", getGlobalCurrentMoveIndex());
-  console.log("Board position:", Board.getPosition());
-
-  const analysis = TreeDigger.getCurrentAnalysis();
-  if (analysis) {
-    console.log("Analysis root FEN:", analysis.rootFen);
-    console.log("Analysis nodes count:", analysis.nodes.length);
-    console.log("Analysis max depth:", analysis.maxDepth);
-    console.log("Analysis config:", analysis.config);
-  } else {
-    console.log("No current analysis found");
-  }
-  console.log("=== End Debug Info ===");
-}
+export const clearTreeNodeDOMMap = (): void => {
+  // This function is used to clear any tracked DOM elements
+  // Currently a placeholder - can be expanded if needed
+  log("Clearing tree node DOM map");
+};

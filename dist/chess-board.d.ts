@@ -2,11 +2,18 @@ import { ChessPosition, ChessMove, AnalysisMove } from "./types.js";
 /**
  * Initialize chess board
  */
-export declare const initializeBoard: (element: HTMLElement, initialFEN?: string) => void;
+export declare const initializeBoard: (
+  element: HTMLElement,
+  initialFEN?: string,
+) => void;
 /**
  * Make a move on the board
  */
-export declare const makeMove: (from: string, to: string, piece: string) => void;
+export declare const makeMove: (
+  from: string,
+  to: string,
+  piece: string,
+) => void;
 /**
  * Set board position
  */
@@ -22,15 +29,28 @@ export declare const getFEN: () => string;
 /**
  * Set position change callback
  */
-export declare const setOnPositionChange: (callback: (position: ChessPosition) => void) => void;
+export declare const setOnPositionChange: (
+  callback: (position: ChessPosition) => void,
+) => void;
 /**
  * Set move made callback
  */
-export declare const setOnMoveMade: (callback: (move: ChessMove) => void) => void;
+export declare const setOnMoveMade: (
+  callback: (move: ChessMove) => void,
+) => void;
 /**
  * Show move arrow
  */
-export declare const showMoveArrow: (from: string, to: string, piece: string, score?: number, allMoves?: AnalysisMove[], index?: number, customArrowId?: string, mateIn?: number) => void;
+export declare const showMoveArrow: (
+  from: string,
+  to: string,
+  piece: string,
+  score?: number,
+  allMoves?: AnalysisMove[],
+  index?: number,
+  customArrowId?: string,
+  mateIn?: number,
+) => void;
 /**
  * Clear last move highlight
  */

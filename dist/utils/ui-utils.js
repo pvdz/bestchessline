@@ -11,21 +11,21 @@
  * @param duration How long to show (ms, default: 4000)
  */
 export function showToast(message, background = "#333", duration = 4000) {
-    const toast = document.createElement("div");
-    toast.textContent = message;
-    toast.style.position = "fixed";
-    toast.style.bottom = "64px";
-    toast.style.left = "50%";
-    toast.style.transform = "translateX(-50%)";
-    toast.style.background = background;
-    toast.style.color = "#fff";
-    toast.style.padding = "8px 16px";
-    toast.style.borderRadius = "6px";
-    toast.style.zIndex = "9999";
-    toast.style.fontWeight = "bold";
-    toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), duration);
+  const toast = document.createElement("div");
+  toast.textContent = message;
+  toast.style.position = "fixed";
+  toast.style.bottom = "64px";
+  toast.style.left = "50%";
+  toast.style.transform = "translateX(-50%)";
+  toast.style.background = background;
+  toast.style.color = "#fff";
+  toast.style.padding = "8px 16px";
+  toast.style.borderRadius = "6px";
+  toast.style.zIndex = "9999";
+  toast.style.fontWeight = "bold";
+  toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), duration);
 }
 /**
  * Create a debounced function that delays invoking the provided function
@@ -35,36 +35,38 @@ export function showToast(message, background = "#333", duration = 4000) {
  * @returns A debounced version of the function
  */
 export function debounce(func, wait) {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), wait);
-    };
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
 }
 /**
  * Clear the initiator move input fields
  */
 export function clearInitiatorMoveInputs() {
-    const initiatorMove1Input = document.getElementById("tree-digger-initiator-move-1");
-    const initiatorMove2Input = document.getElementById("tree-digger-initiator-move-2");
-    if (initiatorMove1Input)
-        initiatorMove1Input.value = "";
-    if (initiatorMove2Input)
-        initiatorMove2Input.value = "";
+  const initiatorMove1Input = document.getElementById(
+    "tree-digger-initiator-move-1",
+  );
+  const initiatorMove2Input = document.getElementById(
+    "tree-digger-initiator-move-2",
+  );
+  if (initiatorMove1Input) initiatorMove1Input.value = "";
+  if (initiatorMove2Input) initiatorMove2Input.value = "";
 }
 /**
  * Update tree font size
  * @param fontSize The font size in pixels
  */
 export function updateTreeFontSize(fontSize) {
-    const treeSection = document.querySelector(".tree-digger-tree");
-    if (treeSection) {
-        treeSection.style.fontSize = `${fontSize}px`;
-    }
-    // Also update the initial font size when the control is first loaded
-    const treeFontSizeInput = document.getElementById("tree-font-size");
-    if (treeFontSizeInput) {
-        treeFontSizeInput.value = fontSize.toString();
-    }
+  const treeSection = document.querySelector(".tree-digger-tree");
+  if (treeSection) {
+    treeSection.style.fontSize = `${fontSize}px`;
+  }
+  // Also update the initial font size when the control is first loaded
+  const treeFontSizeInput = document.getElementById("tree-font-size");
+  if (treeFontSizeInput) {
+    treeFontSizeInput.value = fontSize.toString();
+  }
 }
 //# sourceMappingURL=ui-utils.js.map

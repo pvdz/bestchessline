@@ -123,6 +123,49 @@ const updateStockfishState = (updates: Partial<StockfishState>): void => {
 export const isFallbackMode = (): boolean => stockfishState.fallbackMode;
 
 // ============================================================================
+// GLOBAL ERROR HANDLING
+// ============================================================================
+
+/**
+ * Set up global error handlers for crash detection
+ */
+const setupGlobalErrorHandlers = (): void => {
+  // Handle unhandled promise rejections
+  window.addEventListener("unhandledrejection", (event) => {
+    const error = event.reason;
+    const errorMessage = error?.message || String(error);
+
+    // Check for Stockfish-related crashes
+    if (
+      errorMessage.includes("Maximum call stack size exceeded") ||
+      errorMessage.includes("stockfish") ||
+      errorMessage.includes("Stockfish")
+    ) {
+      logError("Unhandled promise rejection (Stockfish crash):", error);
+      event.preventDefault(); // Prevent default handling
+      handleStockfishCrash();
+    }
+  });
+
+  // Handle global errors
+  window.addEventListener("error", (event) => {
+    const error = event.error;
+    const errorMessage = error?.message || event.message || String(error);
+
+    // Check for Stockfish-related crashes
+    if (
+      errorMessage.includes("Maximum call stack size exceeded") ||
+      errorMessage.includes("stockfish") ||
+      errorMessage.includes("Stockfish")
+    ) {
+      logError("Global error (Stockfish crash):", error);
+      event.preventDefault(); // Prevent default handling
+      handleStockfishCrash();
+    }
+  });
+};
+
+// ============================================================================
 // STOCKFISH INITIALIZATION
 // ============================================================================
 
@@ -131,6 +174,9 @@ export const isFallbackMode = (): boolean => stockfishState.fallbackMode;
  */
 export const initializeStockfish = (): void => {
   try {
+    // Set up global error handlers for crash detection
+    setupGlobalErrorHandlers();
+
     // Dispatch loading event
     window.dispatchEvent(
       new CustomEvent("stockfish-loading", {
@@ -171,6 +217,21 @@ export const initializeStockfish = (): void => {
     worker.onerror = (error: ErrorEvent) => {
       logError("Stockfish worker error:", error);
 
+      // Check for specific crash conditions
+      const errorMessage = error?.message || "";
+      const isStackOverflow = errorMessage.includes(
+        "Maximum call stack size exceeded",
+      );
+      const isMemoryError =
+        errorMessage.includes("out of memory") ||
+        errorMessage.includes("memory");
+
+      if (isStackOverflow || isMemoryError) {
+        logError("Stockfish crash detected:", errorMessage);
+        handleStockfishCrash();
+        return;
+      }
+
       // Only switch to fallback mode if we're not already in fallback mode
       // and this is an initialization error (not a runtime analysis error)
       if (!stockfishState.fallbackMode && !stockfishState.isReady) {
@@ -187,9 +248,10 @@ export const initializeStockfish = (): void => {
           "Stockfish engine encountered an error during analysis: " +
             (error?.message ?? error),
         );
-        // Optionally restart the current analysis or handle gracefully
+        // Handle crash by resetting UI state
         if (stockfishState.isAnalyzing) {
-          log("Analysis error occurred - continuing with current results");
+          log("Analysis error occurred - resetting UI state");
+          handleStockfishCrash();
         }
       }
     };
@@ -727,7 +789,43 @@ export const stopAnalysis = (): void => {
 };
 
 /**
+ * Handle Stockfish crash and reset UI state
+ */
+export const handleStockfishCrash = (): void => {
+  logError("Stockfish crash detected, resetting UI state...");
+
+  // Reset Stockfish state
+  updateStockfishState({
+    isReady: false,
+    isAnalyzing: false,
+    currentAnalysis: null,
+    analysisCallbacks: [],
+    engineStatus: {
+      engineLoaded: false,
+      engineReady: false,
+    },
+    waitingForReady: false,
+    pendingAnalysis: null,
+  });
+
+  // Terminate existing worker if it exists
+  if (stockfishState.worker) {
+    try {
+      stockfishState.worker.terminate();
+    } catch (error) {
+      logError("Error terminating Stockfish worker:", error);
+    }
+    updateStockfishState({ worker: null });
+  }
+
+  // Show error notification
+  showErrorToast("Stockfish crashed. Please refresh the page to restart.");
+
+  // Dispatch crash event for UI components to handle
+  window.dispatchEvent(new CustomEvent("stockfish-crash"));
+};
+
+/**
  * Check if currently analyzing
  */
 export const isAnalyzingPosition = (): boolean => stockfishState.isAnalyzing;
-stockfishState.currentAnalysis;

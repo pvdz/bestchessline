@@ -1,4 +1,10 @@
-import { getCurrentAnalysis, isAnalyzing, getProgress, calculateTotalLeafs, calculateUniquePositions } from "../tree-digger.js";
+import {
+  getCurrentAnalysis,
+  isAnalyzing,
+  getProgress,
+  calculateTotalLeafs,
+  calculateUniquePositions,
+} from "../tree-digger.js";
 import { getStartingPlayer } from "../utils.js";
 import {
   getThreadCount,
@@ -7,16 +13,36 @@ import {
   getSecondReplyOverride,
   getResponderMovesCount,
 } from "./ui-getters.js";
-import { TreeDiggerAnalysis } from "../types.js";
+import type { TreeDiggerAnalysis } from "../types.js";
 import { getEventTrackingState } from "../main.js";
 import { updateTreeDiggerTreeIncrementally } from "./tree-digger-manager.js";
 import { renderProgressBoard } from "./board-rendering.js";
+import {
+  getPaginatedTreeNodes,
+  renderPaginationControls,
+  renderLargeTreeProgress,
+  handlePaginationClick,
+  DEFAULT_PAGINATION_CONFIG,
+  type TreePaginationConfig,
+} from "./tree-digger-pagination.js";
 
 /**
  * Tree Digger Results Management Utility Functions
  *
  * Provides functions for managing tree digger results display and progress.
  */
+
+// Pagination state for tree digger results
+let currentPaginationConfig: TreePaginationConfig = {
+  ...DEFAULT_PAGINATION_CONFIG,
+};
+
+/**
+ * Reset tree digger pagination state
+ */
+export const resetTreeDiggerPaginationState = (): void => {
+  currentPaginationConfig = { ...DEFAULT_PAGINATION_CONFIG };
+};
 
 /**
  * Update tree digger results display
@@ -34,8 +60,60 @@ export function updateTreeDiggerResults(): void {
   // Update progress section
   updateTreeDiggerProgress(resultsElement, analysis);
 
-  // Update tree section incrementally
-  updateTreeDiggerTreeIncrementally(resultsElement, analysis);
+  // Get paginated tree state
+  const paginationState = getPaginatedTreeNodes(
+    analysis,
+    currentPaginationConfig,
+  );
+
+  if (paginationState.isLargeTree) {
+    // For large trees, show progress summary instead of full tree
+    const progressHTML = renderLargeTreeProgress(analysis);
+
+    // Find or create tree section
+    let treeSection = resultsElement.querySelector(".tree-digger-tree-section");
+    if (!treeSection) {
+      treeSection = document.createElement("div");
+      treeSection.className = "tree-digger-tree-section";
+      resultsElement.appendChild(treeSection);
+    }
+
+    treeSection.innerHTML = progressHTML;
+  } else {
+    // Update tree section incrementally
+    updateTreeDiggerTreeIncrementally(resultsElement, analysis);
+
+    // Add pagination controls if needed
+    if (paginationState.totalPages > 1) {
+      const paginationHTML = renderPaginationControls(
+        paginationState,
+        (page: number) => {
+          currentPaginationConfig.currentPage = page;
+          updateTreeDiggerResults();
+        },
+      );
+
+      // Find or create pagination section
+      let paginationSection = resultsElement.querySelector(
+        ".tree-digger-pagination-section",
+      );
+      if (!paginationSection) {
+        paginationSection = document.createElement("div");
+        paginationSection.className = "tree-digger-pagination-section";
+        resultsElement.appendChild(paginationSection);
+      }
+
+      paginationSection.innerHTML = paginationHTML;
+
+      // Add event listeners for pagination buttons
+      paginationSection.addEventListener("click", (event) => {
+        handlePaginationClick(event, (page: number) => {
+          currentPaginationConfig.currentPage = page;
+          updateTreeDiggerResults();
+        });
+      });
+    }
+  }
 }
 
 /**
@@ -57,10 +135,7 @@ export function updateTreeDiggerProgress(
   const currentlyAnalyzing = isAnalyzing();
   const progress = getProgress();
   const totalLeafs = calculateTotalLeafs(analysis.nodes);
-  const uniquePositions = calculateUniquePositions(
-    analysis.nodes,
-    analysis,
-  );
+  const uniquePositions = calculateUniquePositions(analysis.nodes, analysis);
   const eventTrackingState = getEventTrackingState();
 
   // Calculate events per second from recent data

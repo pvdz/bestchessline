@@ -1,303 +1,173 @@
-# Best Chess Line Discovery
+# Best Chess Line Discovery App
 
-A comprehensive web-based chess analysis application with interactive board, Stockfish integration, and (naive/simple) game management features.
+A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, enhanced move validation with effect detection, and a tree digger for deep position analysis.
 
 ## Features
 
-### 🎯 Core Analysis
+### Core Features
 
-- **Interactive Chess Board**: Drag and drop pieces with visual feedback and move arrows
-- **Stockfish Integration**: Multi-threaded analysis using Stockfish 16.0.0 WebAssembly
-- **Real-time Results**: Live analysis with scores, depths, and principal variations
-- **Configurable Analysis**: Set depth, move count, threads, and engine options
-- **Color-Coded Arrows**: Visual analysis arrows with quality-based coloring
-- **Analysis Status**: Real-time status indicator showing analysis progress and depth
-- **Enhanced PV Display**: Clickable principal variations (best engine lines) with move effects
-- **GitHub Pages Compatible**: Automatic fallback to single-threaded mode for environments without SharedArrayBuffer support
+- **Interactive Chess Board**: Drag-and-drop piece movement with visual feedback
+- **Stockfish Integration**: WebAssembly-based engine with multi-threading support
+- **Game Import/Navigation**: PGN-like notation parsing with clickable move navigation
+- **Move Validation**: Comprehensive move validation with effect detection
+- **Analysis Arrows**: Color-coded analysis arrows with score labels
+- **Real-time Analysis**: Live analysis results with status updates
 
-### 🎮 Game Management
+### Tree Digger Analysis
 
-- **Game Import**: Import games using PGN-like notation with comments and annotations
-- **Move Navigation**: Previous/Next buttons with move highlighting and state management
-- **Game History**: Complete move list with proper formatting and current move indication
-- **Position Controls**: FEN input, current player, castling rights, and en passant
+- **Deep Position Analysis**: Recursive tree building for comprehensive position analysis
+- **Dynamic White Moves**: User-defined first two white moves with Stockfish fallback
+- **Transposition Detection**: Efficient reuse of previously analyzed positions
+- **Progress Tracking**: Real-time analysis progress and statistics
+- **Tree Visualization**: Hierarchical display of analysis results
 
-### 🎨 User Experience
+### State Persistence & Resumption (NEW!)
 
-- **Format Controls**: Dynamic notation (Short/Long Algebraic) and piece format (Symbols/Letters)
-- **Visual Feedback**: Hover effects, move arrows, square highlighting, and last move indication
-- **Responsive Design**: Optimized for desktop and mobile devices
-- **Modern UI**: Clean interface with smooth animations and intuitive controls
-- **Branching System**: Explore variations by clicking on analysis moves
-- **Enhanced Navigation**: Improved layout with Game Moves, Controls, and Analysis Results sections
+- **State Export/Import**: Save and load analysis state as JSON files
+- **State Validation**: Comprehensive validation of imported states
+- **Progress Resumption**: Continue unfinished analysis from saved state
+- **Transposition Handling**: Maintain transposition data across sessions
+- **UI Optimization**: Pagination for large trees and progress reporting
+- **Memory Management**: Efficient handling of large analysis states
 
-### 🔧 Technical Features
+## Tree Digger State Management
 
-- **Functional Architecture**: Clean, maintainable code using functional programming principles
-- **State Management**: Robust state synchronization between board, controls, and analysis
-- **Move Validation**: Comprehensive chess logic with disambiguation and special moves
-- **Event Handling**: Robust drag-and-drop with proper event delegation
+### Export State
 
-## Getting Started
+- Click "Export State" button to save current analysis to JSON file
+- Includes all analysis data, configuration, and progress
+- File includes metadata (timestamp, version, statistics)
+- Automatic file naming with timestamp
 
-### Prerequisites
+### Import State
 
-- Node.js (for TypeScript compilation)
-- A modern web browser with WebAssembly support
+- Click "Import State" to load previously saved analysis
+- Validates state compatibility with current board position
+- Shows warnings for configuration mismatches
+- Displays state statistics and validation results
 
-### Installation
+### State Information Display
 
-1. Clone the repository:
+- Shows current analysis statistics
+- Displays estimated file size
+- Indicates state validation status
+- Provides warnings for compatibility issues
 
-```bash
-git clone <repository-url>
-cd chessmovescoach
-```
+### Large Tree Handling
 
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Build the application:
-
-```bash
-npm run build
-```
-
-4. Start the development server:
-
-```bash
-npm run serve
-# or
-npm run serve:single
-```
-
-5. Open your browser and navigate to `http://localhost:9876`
-
-### Development
-
-For development with auto-recompilation:
-
-```bash
-npm run dev
-```
-
-### Testing Different Modes
-
-The application supports different modes for testing:
-
-#### Full Performance Mode (Default)
-
-```bash
-npm run serve
-```
-
-- Uses SharedArrayBuffer http headers
-- Multi-threaded Stockfish analysis
-- Optimal performance
-
-#### GitHub Pages Compatibility Mode
-
-```bash
-npm run serve:single
-```
-
-- Disables SharedArrayBuffer headers
-- Single-threaded analysis
-- Simulates GitHub Pages environment
-- Tests fallback mode functionality
+- Automatic pagination for trees with >1000 nodes
+- Progress summary display for very large analyses
+- Memory-efficient rendering with virtual scrolling
+- Configurable page sizes and thresholds
 
 ## Usage
 
-### Setting Up Positions
+### Basic Analysis
 
-1. **Drag and Drop**: Click and drag pieces to move them on the board
-2. **FEN Input**: Enter a FEN string and click "Load FEN"
-3. **Position Controls**: Use the current player toggle, castling checkboxes, and en passant input
-4. **Reset/Clear**: Use buttons to reset to starting position or clear the board
+1. Set up the board position
+2. Configure analysis parameters (depth, moves, threads)
+3. Click "Start Analysis" for regular analysis
+4. Click "Dig Tree" for deep tree analysis
 
-### Game Import
+### State Management
 
-1. **Import Games**: Paste PGN-like notation in the textarea
-2. **Navigate Moves**: Use Previous/Next buttons to step through the game
-3. **Move Highlighting**: Current move is highlighted in the move list
-4. **Board Synchronization**: Board state updates with move navigation
+1. **Export**: Run analysis → Click "Export State" → Save JSON file
+2. **Import**: Click "Import State" → Select JSON file → Review validation
+3. **Resume**: Load state → Continue analysis from saved progress
 
-### Analysis Configuration
+### Tree Digger Configuration
 
-- **Max Depth**: Maximum search depth for Stockfish (1-50)
-- **White/Black Moves**: Number of top moves to analyze for each side (1-20)
-- **Threads**: Number of CPU threads for Stockfish (1-8, forced to 1 in single-threaded mode)
-- **Format Options**: Choose notation format (Short/Long Algebraic) and piece format (Symbols/Letters)
-
-### Running Analysis
-
-1. Set up your desired position on the board
-2. Configure analysis parameters
-3. Click "Start Analysis" to begin
-4. Monitor real-time progress and results
-5. Use "Stop" to end the analysis
-6. View color-coded arrows on the board showing move quality
-7. Click on analysis moves to explore variations
-
-### Understanding Results
-
-Each move result shows:
-
-- **Move Notation**: The move in selected notation format with effects (captures, checks, mates)
-- **Score**: Evaluation in centipawns or mate notation
-- **Depth**: Search depth reached
-- **Nodes**: Number of positions evaluated
-- **Time**: Analysis time for this move
-- **Principal Variation**: Best line of play following this move
-- **Color-Coded Arrows**: Visual indication of move quality on the board
-- **Analysis Status**: Real-time progress and depth information
+- **Depth Scaler**: Maximum analysis depth (1-15)
+- **Responder Moves**: Number of responses to analyze (1-30)
+- **Threads**: CPU threads for analysis (1-16)
+- **Initiator Moves**: Predefined first two white moves
+- **Overrides**: Custom responder counts for specific depths
 
 ## Technical Details
 
-### Architecture
+### State File Format
 
-- **Frontend**: Functional TypeScript with modular components
-- **Chess Engine**: Stockfish 16.0.0 WebAssembly with automatic fallback to single-threaded mode
-- **Styling**: Modern CSS with Grid and Flexbox
-- **State Management**: Global state objects with pure functions
-- **Mobile Support**: Touch events and responsive design
-- **Environment Detection**: Automatic SharedArrayBuffer support detection and graceful degradation
+```json
+{
+  "metadata": {
+    "version": "1.0.0",
+    "timestamp": 1234567890,
+    "boardPosition": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "configuration": { ... },
+    "progress": { ... },
+    "statistics": { ... }
+  },
+  "analysis": {
+    "rootFen": "...",
+    "nodes": [ ... ],
+    "maxDepth": 5,
+    "analyzedPositions": [ ... ],
+    "config": { ... }
+  },
+  "state": {
+    "isAnalyzing": false,
+    "progress": { ... }
+  }
+}
+```
 
-### Key Components
+### Pagination Configuration
 
-- **`main.ts`**: Main application logic and state management with branching system and analysis management
-- **`chess-board.ts`**: Interactive board with drag & drop, color-coded arrows, and score labels
-- **`stockfish-client.ts`**: Engine integration and analysis
-- **`types.ts`**: TypeScript interfaces and type definitions
-- **`utils.ts`**: Chess utilities and notation functions
+- **Page Size**: 50 nodes per page (configurable)
+- **Progress Threshold**: 1000 nodes (show progress instead of tree)
+- **Memory Optimization**: Virtual scrolling for large trees
+- **Performance**: Efficient rendering with DOM recycling
+
+### Transposition Handling
+
+- **Detection**: Automatic detection of repeated positions
+- **Sharing**: Analysis results shared across transpositions
+- **Efficiency**: Significant performance improvement for complex positions
+- **Persistence**: Transposition data preserved in state files
+
+## Development
+
+### Building
+
+```bash
+npm install
+npm run build
+npm run serve
+```
 
 ### File Structure
 
-```
-chessmovescoach/
-├── index.html                    # Main HTML structure (Game Moves, Controls, Analysis Results)
-├── styles.css                    # Modern responsive CSS (1052 lines)
-├── favicon.svg                   # Custom chess piece icon
-├── src/
-│   ├── main.ts                   # Main application logic (2021 lines)
-│   ├── chess-board.ts            # Board component with drag & drop and arrow system
-│   ├── stockfish-client.ts       # Engine integration
-│   ├── types.ts                  # TypeScript definitions (246 lines)
-│   └── utils.ts                  # Utility functions (435 lines)
-├── dist/
-│   ├── stockfish.js              # Stockfish WebAssembly worker (multi-threaded)
-│   ├── stockfish-single.js       # Stockfish WebAssembly worker (single-threaded)
-│   ├── stockfish-nnue-16.wasm   # Stockfish binary (multi-threaded)
-│   └── stockfish-nnue-16-single.wasm # Stockfish binary (single-threaded)
-├── tsconfig.json                 # TypeScript configuration
-├── package.json                  # Dependencies and scripts
-├── server.js                     # Node.js development server
-└── README.md                     # This file
-```
+- `src/main.ts`: Main application logic
+- `src/chess-board.ts`: Interactive board component
+- `src/tree-digger.ts`: Tree digger analysis engine
+- `src/utils/tree-digger-persistence.ts`: State serialization
+- `src/utils/tree-digger-pagination.ts`: Pagination system
+- `src/utils/tree-digger-manager.ts`: State management UI
 
-## Key Features
+### Key Technologies
 
-### Functional Programming
+- **TypeScript**: Type-safe development
+- **WebAssembly**: Stockfish engine integration
+- **HTML5 Drag & Drop**: Interactive board
+- **CSS Grid/Flexbox**: Responsive layout
+- **Event-driven Architecture**: Real-time updates
 
-- **Global State Objects**: Clean state management with `appState`, `boardState`, `stockfishState`
-- **Pure Functions**: Modular, testable code with clear separation of concerns
-- **Event Handling**: Robust event delegation and listener management
-- **Type Safety**: Comprehensive TypeScript interfaces and type checking
+## Browser Compatibility
 
-### Chess Logic
+- Modern browsers with WebAssembly support
+- Chrome, Firefox, Safari, Edge
+- Mobile browsers (limited functionality)
 
-- **Move Validation**: Comprehensive piece movement rules with path blocking
-- **Disambiguation**: Smart piece selection for ambiguous moves
-- **Special Moves**: Castling and en passant handling
-- **Game Import**: PGN-like notation parsing with comments and annotations
+## Performance Considerations
 
-### UI/UX
+- **Large Trees**: Automatic pagination and progress reporting
+- **Memory Management**: Efficient state serialization
+- **Transposition Optimization**: Avoid redundant analysis
+- **UI Responsiveness**: Debounced updates and virtual scrolling
 
-- **Drag-and-Drop**: Reliable piece movement with visual feedback
-- **Format Controls**: Dynamic notation and piece format selection
-- **Move Navigation**: Game replay with proper state management
-- **Visual Feedback**: Hover effects, move arrows, and highlighting
-- **Color-Coded Analysis**: Visual arrows showing move quality with score labels
-- **Branching System**: Explore variations by clicking analysis moves
-- **Analysis Status**: Real-time progress and depth information
+## Future Enhancements
 
-## Browser Support
-
-### Full Support (Multi-threaded)
-
-- Chrome/Chromium 67+ (HTTPS)
-- Firefox 60+ (HTTPS)
-- Safari 11.1+ (HTTPS)
-- Edge 79+ (HTTPS)
-
-### Limited Support (Single-threaded)
-
-- GitHub Pages
-- HTTP sites
-- Older browsers
-
-Requires WebAssembly support for Stockfish engine.
-
-## Performance Tips
-
-1. **Lower Depth**: Use depth 10-15 for faster analysis
-2. **Fewer Moves**: Analyze 3-5 moves per side for quicker results
-3. **Single Thread**: Use 1 thread for mobile devices
-4. **Game Import**: Large games may take a moment to parse
-
-## Troubleshooting
-
-### Stockfish Not Loading
-
-The application automatically detects SharedArrayBuffer support and falls back to single-threaded mode when needed.
-
-- Check that `dist/stockfish.js` and `dist/stockfish-nnue-16.wasm` exist
-- Check that `dist/stockfish-single.js` and `dist/stockfish-nnue-16-single.wasm` exist
-- Ensure browser supports WebAssembly
-- Try refreshing the page
-- Check browser console for fallback mode notifications
-
-### Analysis Not Starting
-
-- Verify position is valid
-- Check browser console for errors
-- Ensure all configuration values are valid
-
-### Drag-and-Drop Issues
-
-- Ensure you're clicking directly on pieces
-- Try refreshing the page if issues persist
-- Check browser console for errors
-
-### Game Import Problems
-
-- Verify PGN notation is valid
-- Check for proper move syntax
-- Ensure game starts from a valid position
-
-## Development Commands
-
-```bash
-# Development
-npm run dev          # TypeScript watch mode
-npm run build        # Build and copy Stockfish files
-npm run serve        # Start development server (full performance mode)
-npm run serve:single # Start server in GitHub Pages compatibility mode
-npm run format       # Run Prettier on the code
-
-# Stockfish files
-npm run copy-stockfish  # Copy both multi-threaded and single-threaded Stockfish files
-```
-
-## Author
-
-Peter van der Zee
-(c) http://pvdz.ee
-July 2025
-
-## Acknowledgments
-
-- [Stockfish](https://stockfishchess.org/) - Chess engine
+- **Cloud Storage**: Save states to cloud storage
+- **Collaborative Analysis**: Share analysis states
+- **Advanced Pagination**: More sophisticated tree navigation
+- **Performance Profiling**: Detailed analysis performance metrics

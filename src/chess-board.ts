@@ -186,12 +186,24 @@ const createPieceElement = (piece: string, square: string): HTMLElement => {
   pieceElement.className = "piece";
   pieceElement.dataset.square = square;
 
-  const pieceNotation = createPieceNotation(piece);
-  const type = getPieceTypeFromNotation(pieceNotation);
-  const color = getColorFromNotation(pieceNotation);
+  // Validate piece string before creating notation
+  if (!piece || typeof piece !== "string" || piece.length !== 1) {
+    console.error(`Invalid piece: ${piece}`);
+    pieceElement.innerHTML = "?";
+    return pieceElement;
+  }
 
-  pieceElement.classList.add(color, type.toLowerCase());
-  pieceElement.innerHTML = getPieceSymbol(type, color);
+  try {
+    const pieceNotation = createPieceNotation(piece);
+    const type = getPieceTypeFromNotation(pieceNotation);
+    const color = getColorFromNotation(pieceNotation);
+
+    pieceElement.classList.add(color, type.toLowerCase());
+    pieceElement.innerHTML = getPieceSymbol(type, color);
+  } catch (error) {
+    console.error(`Error creating piece element for ${piece}:`, error);
+    pieceElement.innerHTML = "?";
+  }
 
   return pieceElement;
 };

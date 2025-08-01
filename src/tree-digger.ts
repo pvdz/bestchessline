@@ -30,8 +30,12 @@ import {
   getSecondReplyOverride,
 } from "./utils/ui-getters.js";
 import { log, logError } from "./utils/logging.js";
-import { getFEN, getPosition }  from "./chess-board.js";
-import { analyzePosition, stopAnalysis, isAnalyzingPosition } from "./stockfish-client.js";
+import { getFEN, getPosition } from "./chess-board.js";
+import {
+  analyzePosition,
+  stopAnalysis,
+  isAnalyzingPosition,
+} from "./stockfish-client.js";
 
 // ============================================================================
 // TREE DIGGER STATE MANAGEMENT
@@ -462,10 +466,7 @@ const processInitiatorMoveInTree = async (
       // For the first move, we need to establish the baseline from the initial position
       if (moveNumber === 1 && analysis.initialPositionScore === undefined) {
         try {
-          const initialAnalysis = await analyzePosition(
-            fen,
-            evaluationOptions,
-          );
+          const initialAnalysis = await analyzePosition(fen, evaluationOptions);
           if (initialAnalysis && initialAnalysis.moves.length > 0) {
             // Use the best move's score as the baseline for the initial position
             analysis.initialPositionScore = initialAnalysis.moves[0].score;
@@ -477,10 +478,7 @@ const processInitiatorMoveInTree = async (
 
       try {
         // Evaluate the position AFTER the move is made (newFen), not the initial position
-        analysisResult = await analyzePosition(
-          newFen,
-          evaluationOptions,
-        );
+        analysisResult = await analyzePosition(newFen, evaluationOptions);
 
         if (analysisResult && analysisResult.moves.length > 0) {
           // Find the predefined move in the analysis results
@@ -855,6 +853,255 @@ export const clearTreeDiggerAnalysis = (): void => {
       pvLinesReceived: 0,
     },
   });
+};
+
+/**
+ * Restore tree digger state from imported data
+ */
+export const restoreTreeDiggerState = (
+  importedState: TreeDiggerState,
+): void => {
+  log("Restoring tree digger state from imported data...");
+  updateTreeDiggerState(importedState);
+  log("Tree digger state restored successfully");
+};
+
+/**
+ * Process the analysis queue for continuing analysis
+ */
+const processAnalysisQueue = async (
+  analysis: TreeDiggerAnalysis,
+): Promise<void> => {
+  log(
+    `Processing analysis queue with ${analysis.analysisQueue.length} positions...`,
+  );
+
+  while (analysis.analysisQueue.length > 0 && treeDiggerState.isAnalyzing) {
+    const fen = analysis.analysisQueue.shift()!;
+
+    // Update progress
+    updateTreeDiggerState({
+      progress: {
+        ...treeDiggerState.progress,
+        currentPosition: fen,
+        analyzedPositions: treeDiggerState.progress.analyzedPositions + 1,
+      },
+    });
+
+    log(`Analyzing position: ${fen}`);
+
+    // Find the node for this position
+    const node = findNodeByFen(analysis.nodes, fen);
+    if (!node) {
+      log(`Node not found for position: ${fen}`);
+      continue;
+    }
+
+    // Analyze the position
+    const result = await analyzePositionFromFen(fen, analysis);
+    if (result) {
+      node.analysisResult = result;
+
+      // Add new positions to the queue based on the analysis
+      await addNewPositionsToQueue(analysis, node, result);
+    }
+
+    // Check if we should stop
+    if (!treeDiggerState.isAnalyzing) {
+      log("Analysis stopped by user");
+      break;
+    }
+  }
+
+  // Mark as complete if queue is empty
+  if (analysis.analysisQueue.length === 0) {
+    analysis.isComplete = true;
+    updateTreeDiggerState({
+      isAnalyzing: false,
+      currentAnalysis: analysis,
+    });
+    log("Analysis queue completed");
+  } else {
+    updateTreeDiggerState({
+      isAnalyzing: false,
+    });
+    log(
+      `Analysis paused with ${analysis.analysisQueue.length} positions remaining`,
+    );
+  }
+};
+
+/**
+ * Find a node by FEN position
+ */
+const findNodeByFen = (
+  nodes: TreeDiggerNode[],
+  fen: string,
+): TreeDiggerNode | null => {
+  for (const node of nodes) {
+    if (node.fen === fen) {
+      return node;
+    }
+    const found = findNodeByFen(node.children, fen);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
+/**
+ * Add new positions to the analysis queue based on analysis results
+ */
+const addNewPositionsToQueue = async (
+  analysis: TreeDiggerAnalysis,
+  node: TreeDiggerNode,
+  result: AnalysisResult,
+): Promise<void> => {
+  // Add positions for the best moves
+  for (const move of result.moves) {
+    const newFen = applyMoveToFEN(node.fen, move.move);
+
+    // Check if we should analyze this position
+    if (shouldAnalyzePosition(analysis, newFen, node.depth + 1)) {
+      if (!analysis.analyzedPositions.has(newFen)) {
+        analysis.analysisQueue.push(newFen);
+        analysis.analyzedPositions.add(newFen);
+      }
+    }
+  }
+};
+
+/**
+ * Determine if a position should be analyzed based on depth and configuration
+ */
+const shouldAnalyzePosition = (
+  analysis: TreeDiggerAnalysis,
+  fen: string,
+  depth: number,
+): boolean => {
+  // Don't analyze beyond max depth
+  if (depth >= analysis.maxDepth) {
+    return false;
+  }
+
+  // Don't analyze if already analyzed
+  if (analysis.analyzedPositions.has(fen)) {
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Rebuild analysis queue from existing tree nodes
+ */
+const rebuildAnalysisQueue = (analysis: TreeDiggerAnalysis): void => {
+  log("Rebuilding analysis queue from existing tree...");
+
+  // Clear existing queue
+  analysis.analysisQueue = [];
+
+  // Find all nodes that can be expanded further
+  const findExpandableNodes = (nodes: TreeDiggerNode[]): void => {
+    for (const node of nodes) {
+      // Check if this node can be expanded (has analysis result but no children)
+      if (
+        node.analysisResult &&
+        node.children.length === 0 &&
+        node.depth < analysis.maxDepth
+      ) {
+        const fen = node.fen;
+        if (!analysis.analyzedPositions.has(fen)) {
+          analysis.analysisQueue.push(fen);
+          analysis.analyzedPositions.add(fen);
+          log(
+            `Added analyzed node to queue for expansion: ${fen} (depth ${node.depth})`,
+          );
+        }
+      }
+
+      // Also check nodes without analysis results
+      if (!node.analysisResult && node.depth < analysis.maxDepth) {
+        const fen = node.fen;
+        if (!analysis.analyzedPositions.has(fen)) {
+          analysis.analysisQueue.push(fen);
+          analysis.analyzedPositions.add(fen);
+          log(`Added unanalyzed node to queue: ${fen} (depth ${node.depth})`);
+        }
+      }
+
+      // Recursively check children
+      if (node.children.length > 0) {
+        findExpandableNodes(node.children);
+      }
+    }
+  };
+
+  findExpandableNodes(analysis.nodes);
+
+  log(`Rebuilt analysis queue with ${analysis.analysisQueue.length} positions`);
+
+  // Reset completion status if we have positions to analyze
+  if (analysis.analysisQueue.length > 0) {
+    analysis.isComplete = false;
+    log("Reset analysis completion status to false");
+  } else {
+    log("No positions found to analyze - analysis may be complete");
+  }
+};
+
+/**
+ * Continue tree digger analysis from current state
+ */
+export const continueTreeDiggerAnalysis = async (): Promise<void> => {
+  const currentAnalysis = getCurrentAnalysis();
+  if (!currentAnalysis) {
+    throw new Error("No analysis to continue");
+  }
+
+  if (isAnalyzing()) {
+    throw new Error("Analysis is already running");
+  }
+
+  log("Continuing tree digger analysis from current state...");
+  log(
+    `Current analysis state: queue=${currentAnalysis.analysisQueue.length}, isComplete=${currentAnalysis.isComplete}, nodes=${currentAnalysis.nodes.length}`,
+  );
+
+  // Update thread count from UI if it has changed
+  const newThreadCount = getThreadCount();
+  if (currentAnalysis.config.threads !== newThreadCount) {
+    log(
+      `Updating thread count from ${currentAnalysis.config.threads} to ${newThreadCount}`,
+    );
+    currentAnalysis.config.threads = newThreadCount;
+  }
+
+  // Rebuild analysis queue if it's empty (e.g., after import)
+  if (currentAnalysis.analysisQueue.length === 0) {
+    log("Analysis queue is empty, rebuilding from existing tree...");
+    rebuildAnalysisQueue(currentAnalysis);
+    log(
+      `After rebuild: queue=${currentAnalysis.analysisQueue.length}, isComplete=${currentAnalysis.isComplete}`,
+    );
+  }
+
+  // Set analyzing state to true
+  updateTreeDiggerState({
+    isAnalyzing: true,
+  });
+
+  try {
+    // Continue processing the analysis queue
+    await processAnalysisQueue(currentAnalysis);
+  } catch (error) {
+    logError("Error continuing analysis:", error);
+    updateTreeDiggerState({
+      isAnalyzing: false,
+    });
+    throw error;
+  }
 };
 
 /**

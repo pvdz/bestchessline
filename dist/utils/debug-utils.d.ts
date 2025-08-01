@@ -1,21 +1,12 @@
-import { TreeDiggerNode } from "../types.js";
 /**
- * Clear the tree node DOM map
+ * Toggle debug panel visibility
  */
-export declare function clearTreeNodeDOMMap(): void;
+export declare const toggleDebugPanel: () => void;
 /**
- * Debug function to log tree structure
- * @param nodes Array of nodes to log
- * @param depth Current depth in the tree (default: 0)
+ * Close debug panel
  */
-export declare function logTreeStructure(nodes: TreeDiggerNode[], depth?: number): void;
+export declare const closeDebugPanel: () => void;
 /**
- * Count total nodes in the tree recursively
- * @param nodes Array of nodes to count
- * @returns Total number of nodes including all children
+ * Clear tracked DOM elements for tree nodes
  */
-export declare function countTotalNodes(nodes: TreeDiggerNode[]): number;
-/**
- * Debug function to log tree digger initialization info
- */
-export declare function debugTreeDiggerStart(): void;
+export declare const clearTreeNodeDOMMap: () => void;

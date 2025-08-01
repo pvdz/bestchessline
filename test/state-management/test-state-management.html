@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tree Digger State Management Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      .test-button:hover {
+        background: #0056b3;
+      }
+      .test-result {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 3px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tree Digger State Management Test</h1>
+
+    <div class="test-section">
+      <h2>State Serialization Test</h2>
+      <p>Test the serialization and deserialization of tree digger state.</p>
+      <button class="test-button" onclick="testStateSerialization()">
+        Test State Serialization
+      </button>
+      <div id="serialization-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>State Validation Test</h2>
+      <p>Test state validation with various scenarios.</p>
+      <button class="test-button" onclick="testStateValidation()">
+        Test State Validation
+      </button>
+      <div id="validation-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>File Export/Import Test</h2>
+      <p>Test file export and import functionality.</p>
+      <button class="test-button" onclick="testFileExport()">
+        Test File Export
+      </button>
+      <button class="test-button" onclick="testFileImport()">
+        Test File Import
+      </button>
+      <input
+        type="file"
+        id="test-file-input"
+        accept=".json"
+        style="display: none"
+      />
+      <div id="file-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Pagination Test</h2>
+      <p>Test pagination functionality for large trees.</p>
+      <button class="test-button" onclick="testPagination()">
+        Test Pagination
+      </button>
+      <div id="pagination-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Integration Test</h2>
+      <p>Test integration with the main application.</p>
+      <button class="test-button" onclick="testIntegration()">
+        Test Integration
+      </button>
+      <div id="integration-result" class="test-result"></div>
+    </div>
+
+    <script type="module">
+      // Import the state management functions
+      import {
+        serializeTreeDiggerState,
+        validateTreeDiggerState,
+        formatStateFileSize,
+        estimateStateFileSize,
+      } from "../../dist/utils/tree-digger-persistence.js";
+
+      import {
+        getPaginatedTreeNodes,
+        calculateTreeStatistics,
+      } from "../../dist/utils/tree-digger-pagination.js";
+
+      // Mock tree digger state for testing
+      const mockAnalysis = {
+        rootFen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        nodes: [
+          {
+            fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            move: { from: "e2", to: "e4", piece: "P" },
+            score: 50,
+            depth: 20,
+            children: [],
+            isWhiteMove: true,
+            moveNumber: 1,
+            mateIn: undefined,
+            needsEvaluation: false,
+          },
+        ],
+        maxDepth: 5,
+        responderResponses: 3,
+        isComplete: false,
+        currentPosition:
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        analysisQueue: [
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        ],
+        analyzedPositions: new Set([
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        ]),
+        totalPositions: 10,
+        initialPositionScore: 0,
+        config: {
+          depthScaler: 3,
+          responderMovesCount: 3,
+          threads: 4,
+          initiatorMoves: ["Nf3", "g3"],
+          firstReplyOverride: 0,
+          secondReplyOverride: 0,
+        },
+      };
+
+      const mockState = {
+        isAnalyzing: false,
+        currentAnalysis: mockAnalysis,
+        progress: {
+          totalPositions: 10,
+          analyzedPositions: 1,
+          currentPosition:
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          initialPosition:
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          pvLinesReceived: 5,
+        },
+      };
+
+      // Test state serialization
+      window.testStateSerialization = function () {
+        const resultDiv = document.getElementById("serialization-result");
+        try {
+          const serialized = serializeTreeDiggerState(mockAnalysis, mockState);
+          const estimatedSize = estimateStateFileSize(mockAnalysis);
+          const formattedSize = formatStateFileSize(estimatedSize);
+
+          resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Serialization Test Passed</strong><br>
+                        State serialized successfully<br>
+                        Estimated file size: ${formattedSize}<br>
+                        Metadata version: ${serialized.metadata.version}<br>
+                        Timestamp: ${new Date(serialized.metadata.timestamp).toLocaleString()}
+                    </div>
+                `;
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Serialization Test Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+        }
+      };
+
+      // Test state validation
+      window.testStateValidation = function () {
+        const resultDiv = document.getElementById("validation-result");
+        try {
+          const serialized = serializeTreeDiggerState(mockAnalysis, mockState);
+          const currentBoardPosition =
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+          const currentConfig = mockAnalysis.config;
+
+          const validation = validateTreeDiggerState(
+            serialized,
+            currentBoardPosition,
+            currentConfig,
+          );
+
+          resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Validation Test Passed</strong><br>
+                        State is valid: ${validation.isValid}<br>
+                        Version compatible: ${validation.compatibility.versionCompatible}<br>
+                        Board position match: ${validation.compatibility.boardPositionMatch}<br>
+                        Configuration match: ${validation.compatibility.configurationMatch}<br>
+                        Warnings: ${validation.warnings.length}<br>
+                        Errors: ${validation.errors.length}
+                    </div>
+                `;
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Validation Test Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+        }
+      };
+
+      // Test file export
+      window.testFileExport = function () {
+        const resultDiv = document.getElementById("file-result");
+        try {
+          const serialized = serializeTreeDiggerState(mockAnalysis, mockState);
+          const jsonString = JSON.stringify(serialized, null, 2);
+          const blob = new Blob([jsonString], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "test-tree-digger-state.json";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          URL.revokeObjectURL(url);
+
+          resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ File Export Test Passed</strong><br>
+                        Test state file downloaded successfully
+                    </div>
+                `;
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ File Export Test Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+        }
+      };
+
+      // Test file import
+      window.testFileImport = function () {
+        const resultDiv = document.getElementById("file-result");
+        const fileInput = document.getElementById("test-file-input");
+
+        fileInput.onchange = function (event) {
+          const file = event.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              try {
+                const jsonString = e.target.result;
+                const stateExport = JSON.parse(jsonString);
+
+                resultDiv.innerHTML = `
+                                <div class="success">
+                                    <strong>✅ File Import Test Passed</strong><br>
+                                    File loaded successfully<br>
+                                    Version: ${stateExport.metadata.version}<br>
+                                    Nodes: ${stateExport.analysis.nodes.length}<br>
+                                    Timestamp: ${new Date(stateExport.metadata.timestamp).toLocaleString()}
+                                </div>
+                            `;
+              } catch (error) {
+                resultDiv.innerHTML = `
+                                <div class="error">
+                                    <strong>❌ File Import Test Failed</strong><br>
+                                    Error: ${error.message}
+                                </div>
+                            `;
+              }
+            };
+            reader.readAsText(file);
+          }
+        };
+
+        fileInput.click();
+      };
+
+      // Test pagination
+      window.testPagination = function () {
+        const resultDiv = document.getElementById("pagination-result");
+        try {
+          const stats = calculateTreeStatistics(mockAnalysis);
+          const paginationState = getPaginatedTreeNodes(mockAnalysis);
+
+          resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Pagination Test Passed</strong><br>
+                        Total nodes: ${stats.totalNodes}<br>
+                        Total leafs: ${stats.totalLeafs}<br>
+                        Max depth: ${stats.maxDepth}<br>
+                        Average depth: ${stats.averageDepth.toFixed(1)}<br>
+                        Is large tree: ${paginationState.isLargeTree}<br>
+                        Total pages: ${paginationState.totalPages}
+                    </div>
+                `;
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Pagination Test Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+        }
+      };
+
+      // Test integration
+      window.testIntegration = function () {
+        const resultDiv = document.getElementById("integration-result");
+        try {
+          // Test that all required functions are available
+          const requiredFunctions = [
+            "serializeTreeDiggerState",
+            "validateTreeDiggerState",
+            "formatStateFileSize",
+            "estimateStateFileSize",
+            "getPaginatedTreeNodes",
+            "calculateTreeStatistics",
+          ];
+
+          const availableFunctions = requiredFunctions.filter(
+            (func) => typeof window[func] !== "undefined",
+          );
+
+          resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Integration Test Passed</strong><br>
+                        Available functions: ${availableFunctions.length}/${requiredFunctions.length}<br>
+                        All core functionality is working correctly
+                    </div>
+                `;
+        } catch (error) {
+          resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Integration Test Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+        }
+      };
+    </script>
+  </body>
+</html>

@@ -5,14 +5,40 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
 import { getButtonElement } from "./dom-helpers.js";
 import { log, logError } from "./logging.js";
 import { updateTreeDiggerStatus } from "./status-management.js";
-import { updateTreeDiggerResults } from "./tree-digger-results.js";
+import {
+  updateTreeDiggerResults,
+  resetTreeDiggerPaginationState,
+} from "./tree-digger-results.js";
 import { formatNodeScore } from "./node-utils.js";
 import { getLineCompletion } from "./line-analysis.js";
 import { clearTreeNodeDOMMap } from "./debug-utils.js";
 import { buildShadowTree, findNodeById, UITreeNode } from "./tree-building.js";
 import { updateTreeFontSize } from "./ui-utils.js";
 import { handleTreeNodeClick } from "./tree-debug-utils.js";
-import { startTreeDiggerAnalysis, stopTreeDiggerAnalysis, clearTreeDiggerAnalysis, isAnalyzing } from "../tree-digger.js";
+import {
+  startTreeDiggerAnalysis,
+  stopTreeDiggerAnalysis,
+  clearTreeDiggerAnalysis,
+  continueTreeDiggerAnalysis,
+  restoreTreeDiggerState,
+  isAnalyzing,
+  getCurrentAnalysis,
+  getProgress,
+} from "../tree-digger.js";
+import { initializeStockfish } from "../stockfish-client.js";
+import { updateButtonStates } from "./analysis-config.js";
+import {
+  exportTreeDiggerState,
+  copyTreeDiggerStateToClipboard,
+  importTreeDiggerState,
+  importTreeDiggerStateFromClipboard,
+  deserializeTreeDiggerState,
+  validateTreeDiggerState,
+  formatStateFileSize,
+  estimateStateFileSize,
+} from "./tree-digger-persistence.js";
+import { DEFAULT_PAGINATION_CONFIG } from "./tree-digger-pagination.js";
+import { getFEN } from "../chess-board.js";
 /**
  * Tree Digger Analysis Management Utility Functions
  *
@@ -27,10 +53,14 @@ export const startTreeDiggerAnalysisFromManager = async (): Promise<void> => {
     // Clear any previous analysis results first
     clearTreeDiggerAnalysis();
 
+    // Reset pagination state for new analysis
+    resetTreeDiggerPagination();
+
     await startTreeDiggerAnalysis();
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus();
     updateTreeDiggerResults();
+    updateTreeDiggerStateInfo();
   } catch (error) {
     logError("Failed to start tree digger analysis:", error);
     updateTreeDiggerStatus("Error starting analysis");
@@ -43,8 +73,8 @@ export const startTreeDiggerAnalysisFromManager = async (): Promise<void> => {
 export const stopTreeDiggerAnalysisFromManager = (): void => {
   log("Stop button clicked - calling stopTreeDiggerAnalysis");
   try {
-          stopTreeDiggerAnalysis();
-          log("TreeDigger.stopTreeDiggerAnalysis() completed");
+    stopTreeDiggerAnalysis();
+    log("TreeDigger.stopTreeDiggerAnalysis() completed");
     clearTreeNodeDOMMap(); // Clear tracked DOM elements
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus("Analysis stopped");
@@ -64,8 +94,70 @@ export const clearTreeDiggerAnalysisFromManager = (): void => {
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus("Ready");
     updateTreeDiggerResults();
+    updateTreeDiggerStateInfo();
   } catch (error) {
     logError("Failed to clear tree digger analysis:", error);
+  }
+};
+
+/**
+ * Continue tree digger analysis from current state
+ */
+export const continueTreeDiggerAnalysisFromManager =
+  async (): Promise<void> => {
+    try {
+      // Update button states immediately when continue is pressed
+      updateTreeDiggerButtonStates();
+      updateTreeDiggerStatus("Continuing analysis...");
+
+      await continueTreeDiggerAnalysis();
+
+      // Update again after completion
+      updateTreeDiggerButtonStates();
+      updateTreeDiggerStatus();
+      updateTreeDiggerResults();
+      updateTreeDiggerStateInfo();
+    } catch (error) {
+      logError("Failed to continue tree digger analysis:", error);
+      updateTreeDiggerStatus("Continue failed");
+      // Update button states on error too
+      updateTreeDiggerButtonStates();
+    }
+  };
+
+/**
+ * Recover from Stockfish crash
+ */
+export const recoverFromCrash = (): void => {
+  try {
+    log("Recovering from Stockfish crash...");
+
+    // Reset all analysis states
+    updateAppState({
+      isAnalyzing: false,
+      currentResults: null,
+    });
+
+    // Reset tree digger state
+    clearTreeDiggerAnalysis();
+
+    // Reset Stockfish state by reinitializing
+    initializeStockfish();
+
+    // Update UI
+    updateTreeDiggerButtonStates();
+    updateTreeDiggerStatus("Recovered from crash - ready");
+
+    // Hide recovery button
+    const recoveryBtn = document.getElementById("recover-from-crash");
+    if (recoveryBtn) {
+      recoveryBtn.style.display = "none";
+    }
+
+    log("Recovery completed successfully");
+  } catch (error) {
+    logError("Failed to recover from crash:", error);
+    updateTreeDiggerStatus("Recovery failed - please refresh page");
   }
 };
 
@@ -76,11 +168,18 @@ export const updateTreeDiggerButtonStates = (): void => {
   const startBtn = getButtonElement("start-tree-digger");
   const stopBtn = getButtonElement("stop-tree-digger");
   const clearBtn = getButtonElement("clear-tree-digger");
+  const continueBtn = getButtonElement("continue-tree-digger");
+  const exportBtn = getButtonElement("export-tree-digger-state");
+  const copyBtn = getButtonElement("copy-tree-digger-state");
+  const importBtn = getButtonElement("import-tree-digger-state");
+  const pasteBtn = getButtonElement("paste-tree-digger-state");
+  const recoveryBtn = document.getElementById("recover-from-crash");
 
   const appState = getAppState();
   const currentlyAnalyzing = isAnalyzing();
   const isStockfishBusy =
     appState.isAnalyzing || appState.positionEvaluation.isAnalyzing;
+  const hasAnalysis = getCurrentAnalysis() !== null;
 
   if (startBtn) {
     startBtn.disabled = currentlyAnalyzing || isStockfishBusy;
@@ -97,6 +196,37 @@ export const updateTreeDiggerButtonStates = (): void => {
   } else {
     logError("Clear button not found!");
   }
+  if (continueBtn) {
+    continueBtn.disabled = currentlyAnalyzing || !hasAnalysis;
+  } else {
+    logError("Continue button not found!");
+  }
+  if (exportBtn) {
+    exportBtn.disabled = !hasAnalysis; // Only disable if no analysis exists
+  } else {
+    logError("Export button not found!");
+  }
+  if (copyBtn) {
+    copyBtn.disabled = !hasAnalysis; // Only disable if no analysis exists
+  } else {
+    logError("Copy button not found!");
+  }
+  if (importBtn) {
+    importBtn.disabled = currentlyAnalyzing;
+  } else {
+    logError("Import button not found!");
+  }
+  if (pasteBtn) {
+    pasteBtn.disabled = currentlyAnalyzing;
+  } else {
+    logError("Paste button not found!");
+  }
+  if (recoveryBtn) {
+    // Recovery button is only shown when needed, not disabled
+  }
+
+  // Also update main analysis control buttons
+  updateButtonStates();
 };
 
 /**
@@ -405,4 +535,260 @@ export const renderTreeDiggerNode = (node: TreeDiggerNode): string => {
 
   html += "</div>";
   return html;
+};
+
+// ============================================================================
+// STATE MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Export current tree digger state
+ */
+export const exportTreeDiggerStateFromManager = (): void => {
+  try {
+    const analysis = getCurrentAnalysis();
+    const progress = getProgress();
+
+    if (!analysis) {
+      log("No analysis to export");
+      return;
+    }
+
+    // Create a proper TreeDiggerState object
+    const state = {
+      isAnalyzing: isAnalyzing(),
+      currentAnalysis: analysis,
+      progress: progress,
+    };
+
+    exportTreeDiggerState(analysis, state);
+    updateTreeDiggerStatus("State exported successfully");
+    updateTreeDiggerStateInfo();
+  } catch (error) {
+    logError("Failed to export tree digger state:", error);
+    updateTreeDiggerStatus("Export failed");
+  }
+};
+
+/**
+ * Copy tree digger state to clipboard
+ */
+export const copyTreeDiggerStateToClipboardFromManager =
+  async (): Promise<void> => {
+    try {
+      const analysis = getCurrentAnalysis();
+      const progress = getProgress();
+
+      if (!analysis) {
+        log("No analysis to copy");
+        updateTreeDiggerStatus("No analysis to copy");
+        return;
+      }
+
+      // Create a proper TreeDiggerState object
+      const state = {
+        isAnalyzing: isAnalyzing(),
+        currentAnalysis: analysis,
+        progress: progress,
+      };
+
+      updateTreeDiggerStatus("Copying to clipboard...");
+      await copyTreeDiggerStateToClipboard(analysis, state);
+      updateTreeDiggerStatus("State copied to clipboard");
+    } catch (error) {
+      logError("Failed to copy tree digger state to clipboard:", error);
+      updateTreeDiggerStatus("Copy failed");
+    }
+  };
+
+/**
+ * Import tree digger state from file
+ */
+export const importTreeDiggerStateFromManager = async (
+  file: File,
+): Promise<void> => {
+  try {
+    updateTreeDiggerStatus("Importing state...");
+
+    const stateExport = await importTreeDiggerState(file);
+    const { analysis, state } = deserializeTreeDiggerState(stateExport);
+
+    // Validate against current board position and configuration
+    const currentBoardPosition = getFEN();
+    const currentConfig = analysis.config;
+    const validation = validateTreeDiggerState(
+      stateExport,
+      currentBoardPosition,
+      currentConfig,
+    );
+
+    if (!validation.isValid) {
+      throw new Error(`Invalid state: ${validation.errors.join(", ")}`);
+    }
+
+    // Restore the tree digger state with imported data
+    restoreTreeDiggerState(state);
+
+    // Update UI to reflect the restored state
+    updateTreeDiggerButtonStates();
+    updateTreeDiggerStatus();
+    updateTreeDiggerResults();
+    updateTreeDiggerStateInfo(stateExport, validation);
+
+    if (validation.warnings.length > 0) {
+      updateTreeDiggerStatus(
+        `State imported with warnings: ${validation.warnings.join(", ")}`,
+      );
+    } else {
+      updateTreeDiggerStatus("State imported successfully");
+    }
+  } catch (error) {
+    logError("Failed to import tree digger state:", error);
+    updateTreeDiggerStatus("Import failed");
+  }
+};
+
+/**
+ * Import tree digger state from clipboard
+ */
+export const importTreeDiggerStateFromClipboardFromManager =
+  async (): Promise<void> => {
+    try {
+      updateTreeDiggerStatus("Reading from clipboard...");
+
+      const stateExport = await importTreeDiggerStateFromClipboard();
+      const { analysis, state } = deserializeTreeDiggerState(stateExport);
+
+      // Validate against current board position and configuration
+      const currentBoardPosition = getFEN();
+      const currentConfig = analysis.config;
+      const validation = validateTreeDiggerState(
+        stateExport,
+        currentBoardPosition,
+        currentConfig,
+      );
+
+      if (!validation.isValid) {
+        throw new Error(`Invalid state: ${validation.errors.join(", ")}`);
+      }
+
+      // Restore the tree digger state with imported data
+      restoreTreeDiggerState(state);
+
+      // Update UI to reflect the restored state
+      updateTreeDiggerButtonStates();
+      updateTreeDiggerStatus();
+      updateTreeDiggerResults();
+      updateTreeDiggerStateInfo(stateExport, validation);
+
+      if (validation.warnings.length > 0) {
+        updateTreeDiggerStatus(
+          `State pasted with warnings: ${validation.warnings.join(", ")}`,
+        );
+      } else {
+        updateTreeDiggerStatus("State pasted successfully");
+      }
+    } catch (error) {
+      logError("Failed to import tree digger state from clipboard:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      updateTreeDiggerStatus(`Paste failed: ${errorMessage}`);
+    }
+  };
+
+/**
+ * Update tree digger state information display
+ */
+export const updateTreeDiggerStateInfo = (
+  stateExport?: any,
+  validation?: any,
+): void => {
+  const stateInfoElement = document.getElementById("tree-digger-state-info");
+  if (!stateInfoElement) {
+    logError("State info element not found");
+    return;
+  }
+
+  const analysis = getCurrentAnalysis();
+  const progress = getProgress();
+
+  if (!analysis) {
+    stateInfoElement.innerHTML = "<p>No analysis loaded</p>";
+    return;
+  }
+
+  // Calculate statistics
+  const totalNodes = analysis.nodes.reduce((count, node) => {
+    const countNodesRecursive = (n: TreeDiggerNode): number => {
+      return (
+        1 +
+        n.children.reduce((sum, child) => sum + countNodesRecursive(child), 0)
+      );
+    };
+    return count + countNodesRecursive(node);
+  }, 0);
+
+  const estimatedSize = estimateStateFileSize(analysis);
+  const formattedSize = formatStateFileSize(estimatedSize);
+
+  let html = `
+    <div class="state-stat">
+      <span class="state-stat-label">Total Nodes:</span>
+      <span class="state-stat-value">${totalNodes}</span>
+    </div>
+    <div class="state-stat">
+      <span class="state-stat-label">Analyzed Positions:</span>
+      <span class="state-stat-value">${progress.analyzedPositions}/${progress.totalPositions}</span>
+    </div>
+    <div class="state-stat">
+      <span class="state-stat-label">Max Depth:</span>
+      <span class="state-stat-value">${analysis.maxDepth}</span>
+    </div>
+    <div class="state-stat">
+      <span class="state-stat-label">Estimated File Size:</span>
+      <span class="state-stat-value">${formattedSize}</span>
+    </div>
+  `;
+
+  // Add validation warnings/errors if available
+  if (validation) {
+    if (validation.warnings.length > 0) {
+      html += `
+        <div class="state-warning">
+          Warnings: ${validation.warnings.join(", ")}
+        </div>
+      `;
+    }
+    if (validation.errors.length > 0) {
+      html += `
+        <div class="state-error">
+          Errors: ${validation.errors.join(", ")}
+        </div>
+      `;
+    }
+  }
+
+  stateInfoElement.innerHTML = html;
+};
+
+/**
+ * Reset tree digger pagination state
+ */
+export const resetTreeDiggerPagination = (): void => {
+  resetTreeDiggerPaginationState();
+  log("Tree digger pagination state reset");
+};
+
+/**
+ * Handle file input change for state import
+ */
+export const handleStateFileInput = (event: Event): void => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+
+  if (file) {
+    importTreeDiggerStateFromManager(file);
+    // Clear the input so the same file can be selected again
+    input.value = "";
+  }
 };

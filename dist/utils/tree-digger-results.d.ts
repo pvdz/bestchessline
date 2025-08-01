@@ -1,9 +1,8 @@
-import { TreeDiggerAnalysis } from "../types.js";
+import type { TreeDiggerAnalysis } from "../types.js";
 /**
- * Tree Digger Results Management Utility Functions
- *
- * Provides functions for managing tree digger results display and progress.
+ * Reset tree digger pagination state
  */
+export declare const resetTreeDiggerPaginationState: () => void;
 /**
  * Update tree digger results display
  */
@@ -11,4 +10,7 @@ export declare function updateTreeDiggerResults(): void;
 /**
  * Update tree digger progress section
  */
-export declare function updateTreeDiggerProgress(resultsElement: HTMLElement, analysis: TreeDiggerAnalysis): void;
+export declare function updateTreeDiggerProgress(
+  resultsElement: HTMLElement,
+  analysis: TreeDiggerAnalysis,
+): void;

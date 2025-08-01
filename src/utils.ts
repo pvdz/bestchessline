@@ -7,10 +7,7 @@ import {
   createColorNotation,
   PlayerColor,
 } from "./types.js";
-import {
-  parseFEN,
-  toFEN,
-} from "./utils/fen-utils.js";
+import { parseFEN, toFEN } from "./utils/fen-utils.js";
 
 export function getPieceColor(piece: PieceNotation): ColorNotation {
   return piece === piece.toUpperCase()

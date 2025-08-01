@@ -15,48 +15,47 @@
  * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
  */
 export function compareAnalysisMoves(a, b, direction = "desc") {
-    // Determine if moves are mate moves (|score| > 9000 indicates mate)
-    const aIsMate = Math.abs(a.score) > 9000;
-    const bIsMate = Math.abs(b.score) > 9000;
-    // Handle mate moves with highest priority
-    if (aIsMate && !bIsMate)
-        return -1; // a is mate, b is not
-    if (!aIsMate && bIsMate)
-        return 1; // b is mate, a is not
-    if (aIsMate && bIsMate) {
-        // Both are mate moves, prefer shorter mates (lower mateIn value)
-        return a.mateIn - b.mateIn;
-    }
-    // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.
-    if (a.depth !== b.depth)
-        return b.depth - a.depth;
-    // Both are non-mate moves, sort by score based on direction
-    if (direction === "asc") {
-        // Ascending order: low to high scores (good for black's turn)
-        return a.score - b.score;
-    }
-    else {
-        // Descending order: high to low scores (good for white's turn)
-        return b.score - a.score;
-    }
+  // Determine if moves are mate moves (|score| > 9000 indicates mate)
+  const aIsMate = Math.abs(a.score) > 9000;
+  const bIsMate = Math.abs(b.score) > 9000;
+  // Handle mate moves with highest priority
+  if (aIsMate && !bIsMate) return -1; // a is mate, b is not
+  if (!aIsMate && bIsMate) return 1; // b is mate, a is not
+  if (aIsMate && bIsMate) {
+    // Both are mate moves, prefer shorter mates (lower mateIn value)
+    return a.mateIn - b.mateIn;
+  }
+  // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.
+  if (a.depth !== b.depth) return b.depth - a.depth;
+  // Both are non-mate moves, sort by score based on direction
+  if (direction === "asc") {
+    // Ascending order: low to high scores (good for black's turn)
+    return a.score - b.score;
+  } else {
+    // Descending order: high to low scores (good for white's turn)
+    return b.score - a.score;
+  }
 }
 /**
  * Calculate total positions with overrides
  */
-export function calculateTotalPositionsWithOverrides(maxDepth, responderResponses, firstReplyOverride = 0, secondReplyOverride = 0) {
-    if (responderResponses === 1) {
-        // Special case: if n=1, it's just maxDepth + 1
-        return maxDepth + 1;
-    }
-    let total = 1; // Start with root node
-    for (let i = 1; i <= maxDepth; i++) {
-        let nextN = responderResponses;
-        if (i === 0)
-            nextN = firstReplyOverride || responderResponses;
-        else if (i === 1)
-            nextN = secondReplyOverride || responderResponses;
-        total += 2 * Math.pow(nextN, i);
-    }
-    return total;
+export function calculateTotalPositionsWithOverrides(
+  maxDepth,
+  responderResponses,
+  firstReplyOverride = 0,
+  secondReplyOverride = 0,
+) {
+  if (responderResponses === 1) {
+    // Special case: if n=1, it's just maxDepth + 1
+    return maxDepth + 1;
+  }
+  let total = 1; // Start with root node
+  for (let i = 1; i <= maxDepth; i++) {
+    let nextN = responderResponses;
+    if (i === 0) nextN = firstReplyOverride || responderResponses;
+    else if (i === 1) nextN = secondReplyOverride || responderResponses;
+    total += 2 * Math.pow(nextN, i);
+  }
+  return total;
 }
 //# sourceMappingURL=analysis-utils.js.map

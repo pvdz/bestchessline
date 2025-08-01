@@ -477,11 +477,136 @@ export function getPieceNotation(
 export function getPieceTypeFromNotation(
   piece: PieceNotation,
 ): PieceTypeNotation {
-  return piece.toUpperCase() as PieceTypeNotation;
+  // Runtime validation
+  if (!piece || typeof piece !== "string") {
+    throw new Error(`Invalid piece notation: ${piece}`);
+  }
+
+  const upperPiece = piece.toUpperCase();
+  if (!isPieceTypeNotation(upperPiece)) {
+    throw new Error(`Invalid piece type: ${upperPiece} from ${piece}`);
+  }
+
+  return createPieceTypeNotation(upperPiece);
 }
 
 export function getColorFromNotation(piece: PieceNotation): ColorNotation {
-  return piece === piece.toUpperCase()
-    ? COLOR_NOTATIONS.WHITE
-    : COLOR_NOTATIONS.BLACK;
+  // Runtime validation
+  if (!piece || typeof piece !== "string") {
+    throw new Error(`Invalid piece notation: ${piece}`);
+  }
+
+  if (!isPieceNotation(piece)) {
+    throw new Error(`Invalid piece notation: ${piece}`);
+  }
+
+  const isWhite = piece === piece.toUpperCase();
+  return createColorNotation(isWhite ? "w" : "b");
+}
+
+// ============================================================================
+// TREE DIGGER STATE PERSISTENCE TYPES
+// ============================================================================
+
+/**
+ * Version tracking for state format compatibility
+ */
+export const TREE_DIGGER_STATE_VERSION = "1.0.0";
+
+/**
+ * Metadata for tree digger state exports
+ */
+export interface TreeDiggerStateMetadata {
+  version: string;
+  timestamp: number;
+  boardPosition: string; // FEN at time of export
+  configuration: {
+    depthScaler: number;
+    responderMovesCount: number;
+    threads: number;
+    initiatorMoves: string[];
+    firstReplyOverride: number;
+    secondReplyOverride: number;
+  };
+  progress: {
+    totalPositions: number;
+    analyzedPositions: number;
+    currentPosition: string;
+    initialPosition: string;
+    pvLinesReceived: number;
+  };
+  statistics: {
+    totalNodes: number;
+    totalLeafs: number;
+    uniquePositions: number;
+    maxDepth: number;
+  };
+}
+
+/**
+ * Serialized tree digger node for JSON export
+ */
+export interface SerializedTreeDiggerNode {
+  fen: string;
+  move: ChessMove;
+  score: number;
+  depth: number;
+  children: SerializedTreeDiggerNode[];
+  isWhiteMove: boolean;
+  moveNumber: number;
+  mateIn?: number;
+  needsEvaluation?: boolean;
+  // Note: parent is not serialized to avoid circular references
+  // Note: analysisResult is not serialized to reduce file size
+}
+
+/**
+ * Complete tree digger state export format
+ */
+export interface TreeDiggerStateExport {
+  metadata: TreeDiggerStateMetadata;
+  analysis: {
+    rootFen: string;
+    nodes: SerializedTreeDiggerNode[];
+    maxDepth: number;
+    responderResponses: number;
+    isComplete: boolean;
+    currentPosition: string;
+    analysisQueue: string[];
+    analyzedPositions: string[]; // Converted from Set<string>
+    totalPositions: number;
+    initialPositionScore?: number;
+    config: {
+      depthScaler: number;
+      responderMovesCount: number;
+      threads: number;
+      initiatorMoves: string[];
+      firstReplyOverride: number;
+      secondReplyOverride: number;
+    };
+  };
+  state: {
+    isAnalyzing: boolean;
+    progress: {
+      totalPositions: number;
+      analyzedPositions: number;
+      currentPosition: string;
+      initialPosition: string;
+      pvLinesReceived: number;
+    };
+  };
+}
+
+/**
+ * Validation result for imported state
+ */
+export interface TreeDiggerStateValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  compatibility: {
+    versionCompatible: boolean;
+    boardPositionMatch: boolean;
+    configurationMatch: boolean;
+  };
 }

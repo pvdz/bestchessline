@@ -30,4 +30,7 @@ export declare const calculateTotalLeafs: (nodes: TreeDiggerNode[]) => number;
 /**
  * Calculate number of unique positions analyzed
  */
-export declare const calculateUniquePositions: (nodes: TreeDiggerNode[], analysis: BestLinesAnalysis) => number;
+export declare const calculateUniquePositions: (
+  nodes: TreeDiggerNode[],
+  analysis: BestLinesAnalysis,
+) => number;

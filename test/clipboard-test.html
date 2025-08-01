@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clipboard Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        background: #007bff;
+        color: white;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .result {
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Clipboard Functionality Test</h1>
+
+    <div class="test-section">
+      <h2>Test 1: Modern Clipboard API</h2>
+      <button onclick="testModernClipboard()">Test Modern Clipboard API</button>
+      <div id="modern-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: Fallback Clipboard Method</h2>
+      <button onclick="testFallbackClipboard()">Test Fallback Clipboard</button>
+      <div id="fallback-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 3: Sample Tree Digger State</h2>
+      <button onclick="testTreeDiggerState()">
+        Test Tree Digger State Copy
+      </button>
+      <div id="tree-digger-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 4: Clipboard Paste Functionality</h2>
+      <button onclick="testClipboardPaste()">Test Clipboard Paste</button>
+      <div id="paste-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 5: Complete Copy-Paste Workflow</h2>
+      <button onclick="testCompleteWorkflow()">Test Complete Workflow</button>
+      <div id="workflow-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 6: Continue Analysis Simulation</h2>
+      <button onclick="testContinueAnalysis()">Test Continue Analysis</button>
+      <div id="continue-result" class="result"></div>
+    </div>
+
+    <script>
+      async function testModernClipboard() {
+        const resultDiv = document.getElementById("modern-result");
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            const testText =
+              "Test clipboard content - " + new Date().toISOString();
+            await navigator.clipboard.writeText(testText);
+            resultDiv.className = "result success";
+            resultDiv.textContent =
+              "✅ Modern clipboard API works!\nCopied: " + testText;
+          } else {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ Modern clipboard API not available\nSecure context: " +
+              window.isSecureContext +
+              "\nClipboard API: " +
+              !!navigator.clipboard;
+          }
+        } catch (error) {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            "❌ Modern clipboard API failed:\n" + error.message;
+        }
+      }
+
+      function testFallbackClipboard() {
+        const resultDiv = document.getElementById("fallback-result");
+
+        try {
+          const testText =
+            "Test fallback clipboard content - " + new Date().toISOString();
+          const textArea = document.createElement("textarea");
+          textArea.value = testText;
+          textArea.style.position = "fixed";
+          textArea.style.left = "-999999px";
+          textArea.style.top = "-999999px";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+
+          const success = document.execCommand("copy");
+          document.body.removeChild(textArea);
+
+          if (success) {
+            resultDiv.className = "result success";
+            resultDiv.textContent =
+              "✅ Fallback clipboard method works!\nCopied: " + testText;
+          } else {
+            resultDiv.className = "result error";
+            resultDiv.textContent = "❌ Fallback clipboard method failed";
+          }
+        } catch (error) {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            "❌ Fallback clipboard method error:\n" + error.message;
+        }
+      }
+
+      async function testTreeDiggerState() {
+        const resultDiv = document.getElementById("tree-digger-result");
+
+        try {
+          // Create a sample tree digger state
+          const sampleState = {
+            metadata: {
+              version: "1.0.0",
+              timestamp: Date.now(),
+              boardPosition:
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              configuration: {
+                depthScaler: 2,
+                responderMovesCount: 3,
+                threads: 16,
+                initiatorMoves: ["Nf3", "g3"],
+                firstReplyOverride: 0,
+                secondReplyOverride: 0,
+              },
+              progress: {
+                totalPositions: 10,
+                analyzedPositions: 5,
+                currentPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                initialPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                pvLinesReceived: 3,
+              },
+              statistics: {
+                totalNodes: 15,
+                totalLeafs: 8,
+                uniquePositions: 12,
+                maxDepth: 3,
+              },
+            },
+            analysis: {
+              rootFen:
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              nodes: [
+                {
+                  fen: "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                  move: { from: "g1", to: "f3", piece: "N" },
+                  score: 0.5,
+                  depth: 15,
+                  children: [],
+                  isWhiteMove: true,
+                  moveNumber: 1,
+                },
+              ],
+              maxDepth: 3,
+              responderResponses: 3,
+              isComplete: false,
+              currentPosition:
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              analysisQueue: [
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              ],
+              analyzedPositions: [
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              ],
+              totalPositions: 10,
+              config: {
+                depthScaler: 2,
+                responderMovesCount: 3,
+                threads: 16,
+                initiatorMoves: ["Nf3", "g3"],
+                firstReplyOverride: 0,
+                secondReplyOverride: 0,
+              },
+            },
+            state: {
+              isAnalyzing: false,
+              progress: {
+                totalPositions: 10,
+                analyzedPositions: 5,
+                currentPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                initialPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                pvLinesReceived: 3,
+              },
+            },
+          };
+
+          const jsonString = JSON.stringify(sampleState, null, 2);
+
+          // Try modern clipboard API first
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(jsonString);
+            resultDiv.className = "result success";
+            resultDiv.textContent =
+              "✅ Tree digger state copied to clipboard (modern API)!\nState size: " +
+              jsonString.length +
+              " characters";
+          } else {
+            // Fallback method
+            const textArea = document.createElement("textarea");
+            textArea.value = jsonString;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            const success = document.execCommand("copy");
+            document.body.removeChild(textArea);
+
+            if (success) {
+              resultDiv.className = "result success";
+              resultDiv.textContent =
+                "✅ Tree digger state copied to clipboard (fallback)!\nState size: " +
+                jsonString.length +
+                " characters";
+            } else {
+              resultDiv.className = "result error";
+              resultDiv.textContent = "❌ Failed to copy tree digger state";
+            }
+          }
+        } catch (error) {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            "❌ Error copying tree digger state:\n" + error.message;
+        }
+      }
+
+      async function testClipboardPaste() {
+        const resultDiv = document.getElementById("paste-result");
+
+        try {
+          if (!navigator.clipboard || !window.isSecureContext) {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ Clipboard reading requires secure context (HTTPS)\nSecure context: " +
+              window.isSecureContext +
+              "\nClipboard API: " +
+              !!navigator.clipboard;
+            return;
+          }
+
+          resultDiv.className = "result";
+          resultDiv.textContent = "📋 Reading from clipboard...";
+
+          const clipboardText = await navigator.clipboard.readText();
+
+          if (!clipboardText || clipboardText.trim() === "") {
+            resultDiv.className = "result error";
+            resultDiv.textContent = "❌ Clipboard is empty or contains no text";
+            return;
+          }
+
+          // Try to parse as JSON
+          let parsedData;
+          try {
+            parsedData = JSON.parse(clipboardText);
+          } catch (parseError) {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ Invalid JSON format:\n" + parseError.message;
+            return;
+          }
+
+          // Check if it looks like a tree digger state
+          if (parsedData.metadata && parsedData.analysis) {
+            resultDiv.className = "result success";
+            resultDiv.textContent =
+              "✅ Successfully parsed tree digger state from clipboard!\n" +
+              "Version: " +
+              (parsedData.metadata.version || "unknown") +
+              "\n" +
+              "Timestamp: " +
+              new Date(parsedData.metadata.timestamp).toLocaleString() +
+              "\n" +
+              "Total nodes: " +
+              (parsedData.metadata.statistics?.totalNodes || "unknown") +
+              "\n" +
+              "Data size: " +
+              clipboardText.length +
+              " characters";
+          } else {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ Clipboard contains JSON but not a valid tree digger state\n" +
+              "Missing required fields: metadata, analysis";
+          }
+        } catch (error) {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            "❌ Error reading from clipboard:\n" + error.message;
+        }
+      }
+
+      async function testCompleteWorkflow() {
+        const resultDiv = document.getElementById("workflow-result");
+
+        try {
+          if (!navigator.clipboard || !window.isSecureContext) {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ Complete workflow requires secure context (HTTPS)";
+            return;
+          }
+
+          resultDiv.className = "result";
+          resultDiv.textContent = "🔄 Testing complete copy-paste workflow...";
+
+          // Step 1: Create sample state
+          const sampleState = {
+            metadata: {
+              version: "1.0.0",
+              timestamp: Date.now(),
+              boardPosition:
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              configuration: {
+                depthScaler: 2,
+                responderMovesCount: 3,
+                threads: 16,
+                initiatorMoves: ["Nf3", "g3"],
+                firstReplyOverride: 0,
+                secondReplyOverride: 0,
+              },
+              progress: {
+                totalPositions: 10,
+                analyzedPositions: 5,
+                currentPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                initialPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                pvLinesReceived: 3,
+              },
+              statistics: {
+                totalNodes: 15,
+                totalLeafs: 8,
+                uniquePositions: 12,
+                maxDepth: 3,
+              },
+            },
+            analysis: {
+              rootFen:
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              nodes: [
+                {
+                  fen: "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                  move: { from: "g1", to: "f3", piece: "N" },
+                  score: 0.5,
+                  depth: 15,
+                  children: [],
+                  isWhiteMove: true,
+                  moveNumber: 1,
+                },
+              ],
+              maxDepth: 3,
+              responderResponses: 3,
+              isComplete: false,
+              currentPosition:
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              analysisQueue: [
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              ],
+              analyzedPositions: [
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              ],
+              totalPositions: 10,
+              config: {
+                depthScaler: 2,
+                responderMovesCount: 3,
+                threads: 16,
+                initiatorMoves: ["Nf3", "g3"],
+                firstReplyOverride: 0,
+                secondReplyOverride: 0,
+              },
+            },
+            state: {
+              isAnalyzing: false,
+              progress: {
+                totalPositions: 10,
+                analyzedPositions: 5,
+                currentPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                initialPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                pvLinesReceived: 3,
+              },
+            },
+          };
+
+          const jsonString = JSON.stringify(sampleState, null, 2);
+
+          // Step 2: Copy to clipboard
+          await navigator.clipboard.writeText(jsonString);
+          resultDiv.textContent =
+            "📋 Step 1: Copied state to clipboard ✓\n🔄 Step 2: Reading from clipboard...";
+
+          // Step 3: Read from clipboard
+          const clipboardText = await navigator.clipboard.readText();
+
+          if (clipboardText !== jsonString) {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ Clipboard content mismatch!\nExpected: " +
+              jsonString.length +
+              " chars\nGot: " +
+              clipboardText.length +
+              " chars";
+            return;
+          }
+
+          // Step 4: Parse and validate
+          const parsedState = JSON.parse(clipboardText);
+
+          if (
+            parsedState.metadata &&
+            parsedState.analysis &&
+            parsedState.state
+          ) {
+            resultDiv.className = "result success";
+            resultDiv.textContent =
+              "✅ Complete workflow successful!\n" +
+              "✓ Copied state to clipboard\n" +
+              "✓ Read state from clipboard\n" +
+              "✓ Parsed state correctly\n" +
+              "✓ Validated state structure\n" +
+              "State size: " +
+              jsonString.length +
+              " characters\n" +
+              "Version: " +
+              parsedState.metadata.version +
+              "\n" +
+              "Nodes: " +
+              parsedState.metadata.statistics.totalNodes;
+          } else {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ State validation failed\nMissing required fields";
+          }
+        } catch (error) {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            "❌ Complete workflow failed:\n" + error.message;
+        }
+      }
+
+      function testContinueAnalysis() {
+        const resultDiv = document.getElementById("continue-result");
+
+        try {
+          // Simulate a state with an analysis queue
+          const sampleState = {
+            metadata: {
+              version: "1.0.0",
+              timestamp: Date.now(),
+              boardPosition:
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              configuration: {
+                depthScaler: 2,
+                responderMovesCount: 3,
+                threads: 16,
+                initiatorMoves: ["Nf3", "g3"],
+                firstReplyOverride: 0,
+                secondReplyOverride: 0,
+              },
+              progress: {
+                totalPositions: 10,
+                analyzedPositions: 3,
+                currentPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                initialPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                pvLinesReceived: 3,
+              },
+              statistics: {
+                totalNodes: 8,
+                totalLeafs: 5,
+                uniquePositions: 8,
+                maxDepth: 2,
+              },
+            },
+            analysis: {
+              rootFen:
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              nodes: [
+                {
+                  fen: "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                  move: { from: "g1", to: "f3", piece: "N" },
+                  score: 0.5,
+                  depth: 15,
+                  children: [],
+                  isWhiteMove: true,
+                  moveNumber: 1,
+                },
+              ],
+              maxDepth: 3,
+              responderResponses: 3,
+              isComplete: false,
+              currentPosition:
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              analysisQueue: [
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              ],
+              analyzedPositions: [
+                "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+              ],
+              totalPositions: 10,
+              config: {
+                depthScaler: 2,
+                responderMovesCount: 3,
+                threads: 16,
+                initiatorMoves: ["Nf3", "g3"],
+                firstReplyOverride: 0,
+                secondReplyOverride: 0,
+              },
+            },
+            state: {
+              isAnalyzing: false,
+              progress: {
+                totalPositions: 10,
+                analyzedPositions: 3,
+                currentPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+                initialPosition:
+                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                pvLinesReceived: 3,
+              },
+            },
+          };
+
+          // Check if the state has an analysis queue
+          const hasQueue = sampleState.analysis.analysisQueue.length > 0;
+          const isNotComplete = !sampleState.analysis.isComplete;
+          const isNotAnalyzing = !sampleState.state.isAnalyzing;
+
+          if (hasQueue && isNotComplete && isNotAnalyzing) {
+            resultDiv.className = "result success";
+            resultDiv.textContent =
+              "✅ Continue analysis simulation successful!\n" +
+              "✓ Analysis has queue with " +
+              sampleState.analysis.analysisQueue.length +
+              " positions\n" +
+              "✓ Analysis is not complete\n" +
+              "✓ Analysis is not currently running\n" +
+              "✓ Thread count: " +
+              sampleState.analysis.config.threads +
+              "\n" +
+              "✓ Progress: " +
+              sampleState.state.progress.analyzedPositions +
+              "/" +
+              sampleState.state.progress.totalPositions;
+          } else {
+            resultDiv.className = "result error";
+            resultDiv.textContent =
+              "❌ Continue analysis simulation failed\n" +
+              "Has queue: " +
+              hasQueue +
+              "\n" +
+              "Not complete: " +
+              isNotComplete +
+              "\n" +
+              "Not analyzing: " +
+              isNotAnalyzing;
+          }
+        } catch (error) {
+          resultDiv.className = "result error";
+          resultDiv.textContent =
+            "❌ Continue analysis test failed:\n" + error.message;
+        }
+      }
+    </script>
+  </body>
+</html>

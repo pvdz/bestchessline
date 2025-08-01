@@ -32,9 +32,7 @@ import {
   updateThreadsInputForFallbackMode,
   updateTreeDiggerThreadsForFallbackMode,
 } from "./utils/thread-utils.js";
-import {
-  getAnalysisOptions,
-} from "./utils/analysis-config.js";
+import { getAnalysisOptions } from "./utils/analysis-config.js";
 import {
   updateTreeDiggerStatus,
   updateAnalysisStatus,
@@ -57,8 +55,17 @@ import {
   startTreeDiggerAnalysisFromManager,
   stopTreeDiggerAnalysisFromManager,
   clearTreeDiggerAnalysisFromManager,
+  continueTreeDiggerAnalysisFromManager,
+  recoverFromCrash,
   updateTreeDiggerButtonStates,
+  exportTreeDiggerStateFromManager,
+  copyTreeDiggerStateToClipboardFromManager,
+  importTreeDiggerStateFromManager,
+  importTreeDiggerStateFromClipboardFromManager,
+  handleStateFileInput,
+  updateTreeDiggerStateInfo,
 } from "./utils/tree-digger-manager.js";
+import { toggleDebugPanel, closeDebugPanel } from "./utils/debug-utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
@@ -314,6 +321,7 @@ const initializeEventListeners = (): void => {
   const startTreeDiggerBtn = document.getElementById("start-tree-digger");
   const stopTreeDiggerBtn = document.getElementById("stop-tree-digger");
   const clearTreeDiggerBtn = document.getElementById("clear-tree-digger");
+  const continueTreeDiggerBtn = document.getElementById("continue-tree-digger");
 
   if (startTreeDiggerBtn) {
     startTreeDiggerBtn.addEventListener("click", () =>
@@ -332,6 +340,74 @@ const initializeEventListeners = (): void => {
     clearTreeDiggerBtn.addEventListener("click", () =>
       clearTreeDiggerAnalysisFromManager(),
     );
+  }
+
+  if (continueTreeDiggerBtn) {
+    continueTreeDiggerBtn.addEventListener("click", async () => {
+      await continueTreeDiggerAnalysisFromManager();
+    });
+  }
+
+  const recoverFromCrashBtn = document.getElementById("recover-from-crash");
+  if (recoverFromCrashBtn) {
+    recoverFromCrashBtn.addEventListener("click", () => {
+      recoverFromCrash();
+    });
+  }
+
+  // Debug panel controls
+  const toggleDebugBtn = document.getElementById("toggle-debug-panel");
+  if (toggleDebugBtn) {
+    toggleDebugBtn.addEventListener("click", () => {
+      toggleDebugPanel();
+    });
+  }
+
+  const closeDebugBtn = document.getElementById("close-debug-panel");
+  if (closeDebugBtn) {
+    closeDebugBtn.addEventListener("click", () => {
+      closeDebugPanel();
+    });
+  }
+
+  // Tree digger state management controls
+  const exportStateBtn = document.getElementById("export-tree-digger-state");
+  const copyStateBtn = document.getElementById("copy-tree-digger-state");
+  const importStateBtn = document.getElementById("import-tree-digger-state");
+  const pasteStateBtn = document.getElementById("paste-tree-digger-state");
+  const stateFileInput = document.getElementById(
+    "tree-digger-state-file",
+  ) as HTMLInputElement;
+
+  if (exportStateBtn) {
+    exportStateBtn.addEventListener("click", () => {
+      exportTreeDiggerStateFromManager();
+    });
+  }
+
+  if (copyStateBtn) {
+    copyStateBtn.addEventListener("click", async () => {
+      await copyTreeDiggerStateToClipboardFromManager();
+    });
+  }
+
+  if (importStateBtn) {
+    importStateBtn.addEventListener("click", () => {
+      // Trigger the hidden file input
+      if (stateFileInput) {
+        stateFileInput.click();
+      }
+    });
+  }
+
+  if (pasteStateBtn) {
+    pasteStateBtn.addEventListener("click", async () => {
+      await importTreeDiggerStateFromClipboardFromManager();
+    });
+  }
+
+  if (stateFileInput) {
+    stateFileInput.addEventListener("change", handleStateFileInput);
   }
 
   // Tree font size control
@@ -458,6 +534,41 @@ const initializeEventListeners = (): void => {
     }
   }) as EventListener);
 
+  // Handle Stockfish crash events
+  window.addEventListener("stockfish-crash", (() => {
+    log("Stockfish crash event received, resetting UI state...");
+
+    // Reset tree digger state
+    updateTreeDiggerButtonStates();
+    updateTreeDiggerStatus(
+      "Stockfish crashed - click 'Recover from Crash' to restart",
+    );
+    updateAnalysisStatus(
+      "Stockfish crashed - click 'Recover from Crash' to restart",
+    );
+
+    // Reset analysis state
+    updateAppState({
+      isAnalyzing: false,
+      currentResults: null,
+    });
+
+    // Update position evaluation button
+    const evalBtn = document.getElementById("position-evaluation-btn");
+    if (evalBtn) {
+      evalBtn.textContent = "??";
+      evalBtn.className = "evaluation-button";
+    }
+
+    // Show recovery button
+    const recoveryBtn = document.getElementById("recover-from-crash");
+    if (recoveryBtn) {
+      recoveryBtn.style.display = "inline-block";
+    }
+
+    log("UI state reset after Stockfish crash");
+  }) as EventListener);
+
   // Position controls
   initializePositionControls();
 
@@ -534,6 +645,7 @@ const initializeEventListeners = (): void => {
       updateTreeDiggerStatus();
       updateTreeDiggerResults();
       updateTreeDiggerButtonStates();
+      updateTreeDiggerStateInfo();
     }, 200);
   };
 

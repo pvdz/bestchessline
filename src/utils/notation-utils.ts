@@ -107,6 +107,12 @@ export function getPieceSymbol(
     return type;
   }
 
+  // Safety checks for undefined values
+  if (!type || !color) {
+    console.warn("getPieceSymbol: Invalid type or color", { type, color });
+    return "?";
+  }
+
   // Unicode symbols
   const symbols = {
     w: {
@@ -127,10 +133,22 @@ export function getPieceSymbol(
     },
   };
 
-  return (
-    symbols[color as "w" | "b"][type as "K" | "Q" | "R" | "B" | "N" | "P"] ||
-    type
-  );
+  const colorKey = color as "w" | "b";
+  const typeKey = type as "K" | "Q" | "R" | "B" | "N" | "P";
+
+  // Check if both color and type are valid
+  if (symbols[colorKey] && symbols[colorKey][typeKey]) {
+    return symbols[colorKey][typeKey];
+  }
+
+  // Fallback to type if symbol not found
+  console.warn("getPieceSymbol: Symbol not found", {
+    type,
+    color,
+    typeKey,
+    colorKey,
+  });
+  return type;
 }
 
 /**

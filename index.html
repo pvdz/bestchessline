@@ -44,9 +44,20 @@
           <div class="tree-digger-controls">
             <div class="tree-digger-buttons">
               <button id="start-tree-digger">Dig Tree</button>
-              <button id="stop-tree-digger">Stop</button>
+              <button id="stop-tree-digger" disabled>Stop</button>
               <button id="clear-tree-digger">Clear</button>
               <button id="copy-tree-digger-tree">Copy</button>
+              <button id="export-tree-digger-state">Export State</button>
+              <button id="copy-tree-digger-state">Copy to Clipboard</button>
+              <button id="import-tree-digger-state">Import State</button>
+              <button id="paste-tree-digger-state">Paste from Clipboard</button>
+              <button id="continue-tree-digger">Continue Analysis</button>
+              <input
+                type="file"
+                id="tree-digger-state-file"
+                accept=".json"
+                style="display: none"
+              />
               <div
                 class="thread-controls"
                 title="Note: capped to 16 because the wasm throws when trying a value higher than 16 :') In single threaded mode this is forced to 1 (which makes it very slow!)"
@@ -60,6 +71,11 @@
                   value="16"
                 />
                 <span id="tree-digger-threads-value">16</span>
+              </div>
+              <div class="debug-controls">
+                <button id="toggle-debug-panel" class="debug-toggle-btn">
+                  🔍 Debug
+                </button>
               </div>
             </div>
             <div class="tree-digger-initiator-moves">
@@ -152,6 +168,32 @@
           <div class="tree-digger-status">
             <div class="status-title">Analysis Status</div>
             <p id="tree-digger-status">Ready</p>
+          </div>
+          <div class="tree-digger-state-info">
+            <div class="state-info-title">State Information</div>
+            <div id="tree-digger-state-info">
+              <p>No state loaded</p>
+            </div>
+          </div>
+          <div id="debug-panel" class="debug-panel" style="display: none">
+            <div class="debug-panel-header">
+              <h4>Debug Information</h4>
+              <button id="close-debug-panel" class="debug-close-btn">×</button>
+            </div>
+            <div class="debug-content">
+              <div class="debug-section">
+                <h5>Analysis Queue</h5>
+                <div id="debug-queue-info">No queue information</div>
+              </div>
+              <div class="debug-section">
+                <h5>Analysis State</h5>
+                <div id="debug-state-info">No state information</div>
+              </div>
+              <div class="debug-section">
+                <h5>Tree Statistics</h5>
+                <div id="debug-tree-info">No tree information</div>
+              </div>
+            </div>
           </div>
           <div id="tree-digger-results" class="tree-digger-panel"></div>
         </div>
@@ -311,6 +353,13 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
           <div class="analysis-controls">
             <button id="start-analysis">Start</button>
             <button id="stop-analysis" disabled>Stop</button>
+            <button
+              id="recover-from-crash"
+              style="display: inline-block"
+              title="Reset UI state after Stockfish crash. This only resets the interface - Stockfish may still be running in the background."
+            >
+              Recover
+            </button>
           </div>
 
           <div class="format-controls">
