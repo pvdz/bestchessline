@@ -1,4 +1,4 @@
-import { BestLinesAnalysis } from "../types.js";
+import { TreeDiggerAnalysis } from "../types.js";
 /**
  * Best Lines Results Management Utility Functions
  *
@@ -11,7 +11,4 @@ export declare function updateBestLinesResults(): void;
 /**
  * Update progress section
  */
-export declare function updateBestLinesProgress(
-  resultsElement: HTMLElement,
-  analysis: BestLinesAnalysis,
-): void;
+export declare function updateBestLinesProgress(resultsElement: HTMLElement, analysis: TreeDiggerAnalysis): void;

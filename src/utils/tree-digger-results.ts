@@ -1,4 +1,4 @@
-import * as BestLines from "../tree-digger.js";
+import { getCurrentAnalysis, isAnalyzing, getProgress, calculateTotalLeafs, calculateUniquePositions } from "../tree-digger.js";
 import { getStartingPlayer } from "../utils.js";
 import {
   getThreadCount,
@@ -25,7 +25,7 @@ export function updateTreeDiggerResults(): void {
   const resultsElement = document.getElementById("tree-digger-results");
   if (!resultsElement) return;
 
-  const analysis = BestLines.getCurrentAnalysis();
+  const analysis = getCurrentAnalysis();
   if (!analysis) {
     resultsElement.innerHTML = "<p>No analysis results available.</p>";
     return;
@@ -54,10 +54,10 @@ export function updateTreeDiggerProgress(
     resultsElement.appendChild(progressSection);
   }
 
-  const isAnalyzing = BestLines.isAnalyzing();
-  const progress = BestLines.getProgress();
-  const totalLeafs = BestLines.calculateTotalLeafs(analysis.nodes);
-  const uniquePositions = BestLines.calculateUniquePositions(
+  const currentlyAnalyzing = isAnalyzing();
+  const progress = getProgress();
+  const totalLeafs = calculateTotalLeafs(analysis.nodes);
+  const uniquePositions = calculateUniquePositions(
     analysis.nodes,
     analysis,
   );
@@ -68,7 +68,7 @@ export function updateTreeDiggerProgress(
   const timeSinceRecentStart = now - eventTrackingState.recentStartTime;
   const timeWindow = Math.min(timeSinceRecentStart, 1000);
   const eventsPerSecond =
-    !isAnalyzing || analysis?.isComplete
+    !currentlyAnalyzing || analysis?.isComplete
       ? 0
       : timeWindow > 0
         ? Math.round(eventTrackingState.recentCount / (timeWindow / 1000))
@@ -140,7 +140,7 @@ export function updateTreeDiggerProgress(
           </div>
           <div class="setting">
             <div class="setting-label">1st ${(() => {
-              const currentAnalysis = BestLines.getCurrentAnalysis();
+              const currentAnalysis = getCurrentAnalysis();
               const rootFen =
                 currentAnalysis?.rootFen ||
                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -151,7 +151,7 @@ export function updateTreeDiggerProgress(
           </div>
           <div class="setting">
             <div class="setting-label">2nd ${(() => {
-              const currentAnalysis = BestLines.getCurrentAnalysis();
+              const currentAnalysis = getCurrentAnalysis();
               const rootFen =
                 currentAnalysis?.rootFen ||
                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -188,7 +188,7 @@ export function updateTreeDiggerProgress(
             <li><strong>Analyzed</strong>: ${progress.analyzedPositions} positions completed</li>
             <li><strong>Total leafs</strong>: ${totalLeafs} leaf nodes in the tree</li>
             <li><strong>Unique Positions</strong>: ${uniquePositions} distinct positions analyzed</li>
-            <li><strong>Current activity</strong>: ${isAnalyzing ? "🔄 Analyzing position" : "Ready"} ${progress.currentPosition.substring(0, 30)}...</li>
+            <li><strong>Current activity</strong>: ${currentlyAnalyzing ? "🔄 Analyzing position" : "Ready"} ${progress.currentPosition.substring(0, 30)}...</li>
             ${firstReplyOverride > 0 || secondReplyOverride > 0 ? `<li><strong>Computation</strong>: Depth ${depthScaler} × 2 = ${depthScaler * 2} levels, with ${firstReplyOverride > 0 ? `1st reply: ${firstReplyOverride}` : `1st reply: ${responderMovesCount}`} and ${secondReplyOverride > 0 ? `2nd reply: ${secondReplyOverride}` : `2nd reply: ${responderMovesCount}`} responder responses</li>` : ""}
           </ul>
         </div>

@@ -12,8 +12,7 @@ import { clearTreeNodeDOMMap } from "./debug-utils.js";
 import { buildShadowTree, findNodeById, UITreeNode } from "./tree-building.js";
 import { updateTreeFontSize } from "./ui-utils.js";
 import { handleTreeNodeClick } from "./tree-debug-utils.js";
-import * as BestLines from "../tree-digger.js";
-
+import { startBestLinesAnalysis, stopBestLinesAnalysis, clearBestLinesAnalysis, isAnalyzing } from "../tree-digger.js";
 /**
  * Tree Digger Analysis Management Utility Functions
  *
@@ -26,9 +25,9 @@ import * as BestLines from "../tree-digger.js";
 export const startTreeDiggerAnalysis = async (): Promise<void> => {
   try {
     // Clear any previous analysis results first
-    BestLines.clearBestLinesAnalysis();
+    clearBestLinesAnalysis();
 
-    await BestLines.startBestLinesAnalysis();
+    await startBestLinesAnalysis();
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus();
     updateTreeDiggerResults();
@@ -44,7 +43,7 @@ export const startTreeDiggerAnalysis = async (): Promise<void> => {
 export const stopTreeDiggerAnalysis = (): void => {
   log("Stop button clicked - calling stopBestLinesAnalysis");
   try {
-    BestLines.stopBestLinesAnalysis();
+    stopBestLinesAnalysis();
     log("BestLines.stopBestLinesAnalysis() completed");
     clearTreeNodeDOMMap(); // Clear tracked DOM elements
     updateTreeDiggerButtonStates();
@@ -60,7 +59,7 @@ export const stopTreeDiggerAnalysis = (): void => {
  */
 export const clearTreeDiggerAnalysis = (): void => {
   try {
-    BestLines.clearBestLinesAnalysis();
+    clearBestLinesAnalysis();
     clearTreeNodeDOMMap(); // Clear tracked DOM elements
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus("Ready");
@@ -79,22 +78,22 @@ export const updateTreeDiggerButtonStates = (): void => {
   const clearBtn = getButtonElement("clear-tree-digger");
 
   const appState = getAppState();
-  const isAnalyzing = BestLines.isAnalyzing();
+  const currentlyAnalyzing = isAnalyzing();
   const isStockfishBusy =
     appState.isAnalyzing || appState.positionEvaluation.isAnalyzing;
 
   if (startBtn) {
-    startBtn.disabled = isAnalyzing || isStockfishBusy;
+    startBtn.disabled = currentlyAnalyzing || isStockfishBusy;
   } else {
     logError("Start button not found!");
   }
   if (stopBtn) {
-    stopBtn.disabled = !isAnalyzing;
+    stopBtn.disabled = !currentlyAnalyzing;
   } else {
     logError("Stop button not found!");
   }
   if (clearBtn) {
-    clearBtn.disabled = isAnalyzing;
+    clearBtn.disabled = currentlyAnalyzing;
   } else {
     logError("Clear button not found!");
   }

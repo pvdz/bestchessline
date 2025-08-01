@@ -2,8 +2,6 @@ import {
   ChessMove,
   AnalysisResult,
   AnalysisMove,
-  BestLineNode,
-  TreeDiggerAnalysis,
   PLAYER_COLORS,
 } from "./types.js";
 import { setGlobalCurrentMoveIndex } from "./utils.js";
@@ -13,42 +11,29 @@ import { compareAnalysisMoves } from "./utils/analysis-utils.js";
 import { applyMoveToFEN } from "./utils/fen-manipulation.js";
 import { moveToNotation } from "./utils/notation-utils.js";
 import { parseFEN } from "./utils/fen-utils.js";
-import { log, logError } from "./utils/logging.js";
+import { log } from "./utils/logging.js";
 import {
   getInputElement,
   getTextAreaElement,
-  getButtonElement,
   getCheckedRadioByName,
 } from "./utils/dom-helpers.js";
 
-import { formatNodeScore } from "./utils/node-utils.js";
-import { highlightLastMove } from "./utils/board-utils.js";
-import { clearTreeNodeDOMMap } from "./utils/debug-utils.js";
 import { initializeCopyButton } from "./utils/copy-utils.js";
-import { getLineCompletion } from "./utils/line-analysis.js";
 import { formatPVWithEffects, updateResultsPanel } from "./utils/pv-utils.js";
-import { updateStatus } from "./utils/status-utils.js";
 import {
   updateFENInput,
   updateControlsFromPosition,
   updatePositionFromControls,
   resetPositionEvaluation,
   initializePositionEvaluationButton,
-  updatePositionEvaluationDisplay,
 } from "./utils/position-controls.js";
-import {
-  navigateToMove,
-  applyMovesUpToIndex,
-} from "./utils/navigation-utils.js";
 import { updateNavigationButtons } from "./utils/button-utils.js";
-import { handleTreeNodeClick } from "./utils/tree-debug-utils.js";
 import {
   updateThreadsInputForFallbackMode,
   updateTreeDiggerThreadsForFallbackMode,
 } from "./utils/thread-utils.js";
 import {
   getAnalysisOptions,
-  updateButtonStates,
 } from "./utils/analysis-config.js";
 import {
   updateTreeDiggerStatus,
@@ -65,9 +50,7 @@ import {
 import {
   startAnalysis,
   stopAnalysis,
-  updateResults,
   addPVClickListeners,
-  makeAnalysisMove,
   handleMakeEngineMove,
 } from "./utils/analysis-manager.js";
 import {
@@ -75,23 +58,10 @@ import {
   stopTreeDiggerAnalysis,
   clearTreeDiggerAnalysis,
   updateTreeDiggerButtonStates,
-  updateTreeNodeElement,
-  syncDOMWithShadowTree,
-  updateTreeDiggerTreeIncrementally,
-  renderTreeNode,
-  renderTreeDiggerNode,
 } from "./utils/tree-digger-manager.js";
-
-import {
-  buildShadowTree,
-  findNodeById,
-  UITreeNode,
-} from "./utils/tree-building.js";
-
 import * as Board from "./chess-board.js";
-import { clearLastMoveHighlight, makeMove } from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
-import { validateMove, PIECES, PIECE_TYPES } from "./move-validator.js";
+import { validateMove } from "./move-validator.js";
 import * as BestLines from "./tree-digger.js";
 import { hideMoveArrow } from "./utils/arrow-utils.js";
 
@@ -205,7 +175,7 @@ export const initializeApp = (): void => {
   Stockfish.initializeStockfish();
 
   // Set up board callbacks
-  Board.setOnPositionChange((position) => {
+  Board.setOnPositionChange(() => {
     updateFENInput();
     updateControlsFromPosition();
     // Reset position evaluation when board changes
@@ -330,7 +300,6 @@ const initializeEventListeners = (): void => {
     });
   // Analysis controls
   const startBtn = document.getElementById("start-analysis");
-  const pauseBtn = document.getElementById("pause-analysis");
   const stopBtn = document.getElementById("stop-analysis");
 
   if (startBtn) {

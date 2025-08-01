@@ -85,7 +85,7 @@ export const initializeApp = () => {
     // Initialize Stockfish
     Stockfish.initializeStockfish();
     // Set up board callbacks
-    Board.setOnPositionChange((position) => {
+    Board.setOnPositionChange(() => {
         updateFENInput();
         updateControlsFromPosition();
         // Reset position evaluation when board changes
@@ -190,7 +190,6 @@ const initializeEventListeners = () => {
     });
     // Analysis controls
     const startBtn = document.getElementById("start-analysis");
-    const pauseBtn = document.getElementById("pause-analysis");
     const stopBtn = document.getElementById("stop-analysis");
     if (startBtn) {
         startBtn.addEventListener("click", () => startAnalysis());

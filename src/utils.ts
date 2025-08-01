@@ -1,38 +1,16 @@
 import {
   ChessPosition,
-  ChessMove,
-  Square,
-  NotationFormat,
-  PieceFormat,
   PieceTypeNotation,
   ColorNotation,
   PieceNotation,
   createPieceTypeNotation,
   createColorNotation,
-  createPieceNotation,
-  getPieceTypeFromNotation,
-  getColorFromNotation,
-  PLAYER_COLORS,
   PlayerColor,
 } from "./types.js";
-import { logError } from "./utils/logging.js";
 import {
   parseFEN,
   toFEN,
-  squareToCoords,
-  coordsToSquare,
 } from "./utils/fen-utils.js";
-import {
-  canPieceMoveTo,
-  canPawnMoveTo,
-  canRookMoveTo,
-  canKnightMoveTo,
-  canBishopMoveTo,
-  canQueenMoveTo,
-  canKingMoveTo,
-  selectCorrectMove,
-} from "./utils/move-parser.js";
-import { PIECE_TYPES } from "./utils/notation-utils.js";
 
 export function getPieceColor(piece: PieceNotation): ColorNotation {
   return piece === piece.toUpperCase()

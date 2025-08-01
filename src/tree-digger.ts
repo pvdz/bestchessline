@@ -30,8 +30,8 @@ import {
   getSecondReplyOverride,
 } from "./utils/ui-getters.js";
 import { log, logError } from "./utils/logging.js";
-import * as Stockfish from "./stockfish-client.js";
-import * as Board from "./chess-board.js";
+import { getFEN, getPosition }  from "./chess-board.js";
+import { analyzePosition, stopAnalysis, isAnalyzingPosition } from "./stockfish-client.js";
 
 // ============================================================================
 // TREE DIGGER STATE MANAGEMENT
@@ -40,7 +40,7 @@ import * as Board from "./chess-board.js";
 /**
  * Tree digger state instance
  */
-let bestLinesState: TreeDiggerState = {
+let treeDiggerState: TreeDiggerState = {
   isAnalyzing: false,
   currentAnalysis: null,
   progress: {
@@ -55,8 +55,8 @@ let bestLinesState: TreeDiggerState = {
 /**
  * Update tree digger state
  */
-const updateBestLinesState = (updates: Partial<TreeDiggerState>): void => {
-  bestLinesState = { ...bestLinesState, ...updates };
+const updateTreeDiggerState = (updates: Partial<TreeDiggerState>): void => {
+  treeDiggerState = { ...treeDiggerState, ...updates };
 };
 
 // ============================================================================
@@ -85,12 +85,12 @@ const getAnalysisOptions = (analysis: TreeDiggerAnalysis): StockfishOptions => {
  */
 const initializeBestLinesAnalysis = (): TreeDiggerAnalysis => {
   // Use current board position instead of hardcoded starting position
-  const boardFEN = Board.getFEN();
+  const boardFEN = getFEN();
 
   // Get current move index from global state
   const currentMoveIndex = getGlobalCurrentMoveIndex();
 
-  const position = Board.getPosition();
+  const position = getPosition();
   const rootFen = getFENWithCorrectMoveCounter(
     boardFEN,
     currentMoveIndex,
@@ -197,19 +197,19 @@ const createNode = (
 /**
  * Analyze a position to find the best moves
  */
-const analyzePosition = async (
+const analyzePositionFromFen = async (
   fen: string,
   analysis: TreeDiggerAnalysis,
 ): Promise<AnalysisResult | null> => {
   // Check if analysis has been stopped
-  if (!bestLinesState.isAnalyzing) {
+  if (!treeDiggerState.isAnalyzing) {
     log(`Analysis stopped, aborting analyzePosition`);
     return null;
   }
 
   try {
     const options = getAnalysisOptions(analysis);
-    const result = await Stockfish.analyzePosition(fen, options);
+    const result = await analyzePosition(fen, options);
     return result;
   } catch (error) {
     logError(`Failed to analyze position ${fen}:`, error);
@@ -226,25 +226,25 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
 
   // Add debugging info
   console.log("=== Tree Digger Debug Info ===");
-  console.log("Current board FEN:", Board.getFEN());
+  console.log("Current board FEN:", getFEN());
   console.log("Current move index:", getGlobalCurrentMoveIndex());
-  console.log("Board position:", Board.getPosition());
+  console.log("Board position:", getPosition());
   console.log("=== End Debug Info ===");
 
   // Prevent multiple simultaneous analysis processes
-  if (bestLinesState.isAnalyzing) {
+  if (treeDiggerState.isAnalyzing) {
     console.log("Analysis already in progress, skipping...");
     return;
   }
 
   // Stop any existing analysis first to prevent conflicts
-  if (Stockfish.isAnalyzingPosition()) {
+  if (isAnalyzingPosition()) {
     log("Stopping existing analysis before starting tree digger...");
-    Stockfish.stopAnalysis();
+    stopAnalysis();
   }
 
   const analysis = initializeBestLinesAnalysis();
-  updateBestLinesState({
+  updateTreeDiggerState({
     isAnalyzing: true,
     currentAnalysis: analysis,
     progress: {
@@ -259,12 +259,12 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
   try {
     // Start with the root position and build the tree correctly
     log("Starting tree building from root position:", analysis.rootFen);
-    const boardFEN = Board.getFEN();
+    const boardFEN = getFEN();
 
     // Get current move index from global state
     const currentMoveIndex = getGlobalCurrentMoveIndex();
 
-    const position = Board.getPosition();
+    const position = getPosition();
     const currentBoardFen = getFENWithCorrectMoveCounter(
       boardFEN,
       currentMoveIndex,
@@ -297,7 +297,7 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
 
     // Mark analysis as complete
     analysis.isComplete = true;
-    updateBestLinesState({
+    updateTreeDiggerState({
       isAnalyzing: false,
       currentAnalysis: analysis,
     });
@@ -305,7 +305,7 @@ export const startBestLinesAnalysis = async (): Promise<void> => {
     log("Tree digger analysis complete!");
   } catch (error) {
     logError("Error during tree digger analysis:", error);
-    updateBestLinesState({
+    updateTreeDiggerState({
       isAnalyzing: false,
     });
   }
@@ -321,19 +321,19 @@ const buildAnalysisTree = async (
   depth: number,
 ): Promise<void> => {
   // Check if analysis has been stopped
-  if (!bestLinesState.isAnalyzing) {
+  if (!treeDiggerState.isAnalyzing) {
     log(`Analysis stopped, aborting buildAnalysisTree at depth ${depth}`);
     return;
   }
 
   // Update progress with more detailed information
-  const currentAnalyzed = bestLinesState.progress.analyzedPositions + 1;
+  const currentAnalyzed = treeDiggerState.progress.analyzedPositions + 1;
 
   window.dispatchEvent(
     new CustomEvent("tree-digger-progress", {
       detail: {
         analyzedPositions: currentAnalyzed,
-        totalPositions: bestLinesState.progress.totalPositions,
+        totalPositions: treeDiggerState.progress.totalPositions,
         currentPosition: fen,
       },
     }),
@@ -352,9 +352,9 @@ const buildAnalysisTree = async (
     );
   }
 
-  updateBestLinesState({
+  updateTreeDiggerState({
     progress: {
-      ...bestLinesState.progress,
+      ...treeDiggerState.progress,
       currentPosition: fen,
       analyzedPositions: currentAnalyzed,
     },
@@ -408,7 +408,7 @@ const processInitiatorMoveInTree = async (
   depth: number,
 ): Promise<void> => {
   // Check if analysis has been stopped
-  if (!bestLinesState.isAnalyzing) {
+  if (!treeDiggerState.isAnalyzing) {
     log(
       `Analysis stopped, aborting processInitiatorMoveInTree at depth ${depth}`,
     );
@@ -462,7 +462,7 @@ const processInitiatorMoveInTree = async (
       // For the first move, we need to establish the baseline from the initial position
       if (moveNumber === 1 && analysis.initialPositionScore === undefined) {
         try {
-          const initialAnalysis = await Stockfish.analyzePosition(
+          const initialAnalysis = await analyzePosition(
             fen,
             evaluationOptions,
           );
@@ -477,7 +477,7 @@ const processInitiatorMoveInTree = async (
 
       try {
         // Evaluate the position AFTER the move is made (newFen), not the initial position
-        analysisResult = await Stockfish.analyzePosition(
+        analysisResult = await analyzePosition(
           newFen,
           evaluationOptions,
         );
@@ -572,7 +572,7 @@ const processInitiatorMoveInTree = async (
   log(`Analyzing for initiator move at depth ${depth}`);
 
   // Analyze the position to find best initiator move
-  const analysisResult = await analyzePosition(fen, analysis);
+  const analysisResult = await analyzePositionFromFen(fen, analysis);
 
   if (!analysisResult || analysisResult.moves.length === 0) {
     logError(`No analysis results for initiator move: ${fen}`);
@@ -660,7 +660,7 @@ const processResponderMovesInTree = async (
   depth: number,
 ): Promise<void> => {
   // Check if analysis has been stopped
-  if (!bestLinesState.isAnalyzing) {
+  if (!treeDiggerState.isAnalyzing) {
     log(
       `Analysis stopped, aborting processResponderMovesInTree at depth ${depth}`,
     );
@@ -692,10 +692,7 @@ const processResponderMovesInTree = async (
     }),
   );
 
-  // Analyze the position to find best responses
-  const analysisOptions = getAnalysisOptions(analysis);
-
-  const analysisResult = await analyzePosition(fen, analysis);
+  const analysisResult = await analyzePositionFromFen(fen, analysis);
 
   if (!analysisResult || analysisResult.moves.length === 0) {
     logError(`No analysis results for position: ${fen}`);
@@ -836,7 +833,7 @@ const processResponderMovesInTree = async (
 export const stopBestLinesAnalysis = (): void => {
   log("TreeDigger: Stopping tree digger analysis...");
   log("Stopping tree digger analysis...");
-  updateBestLinesState({
+  updateTreeDiggerState({
     isAnalyzing: false,
   });
   log("BestLines: Analysis stopped, isAnalyzing set to false");
@@ -847,7 +844,7 @@ export const stopBestLinesAnalysis = (): void => {
  */
 export const clearBestLinesAnalysis = (): void => {
   log("Clearing tree digger analysis...");
-  updateBestLinesState({
+  updateTreeDiggerState({
     isAnalyzing: false,
     currentAnalysis: null,
     progress: {
@@ -864,32 +861,32 @@ export const clearBestLinesAnalysis = (): void => {
  * Get the current analysis results
  */
 export const getCurrentAnalysis = (): TreeDiggerAnalysis | null => {
-  return bestLinesState.currentAnalysis;
+  return treeDiggerState.currentAnalysis;
 };
 
 /**
  * Check if analysis is currently running
  */
 export const isAnalyzing = (): boolean => {
-  return bestLinesState.isAnalyzing;
+  return treeDiggerState.isAnalyzing;
 };
 
 /**
  * Get current progress
  */
 export const getProgress = (): TreeDiggerState["progress"] => {
-  return bestLinesState.progress;
+  return treeDiggerState.progress;
 };
 
 /**
  * Increment PV lines counter
  */
 const incrementPVLines = (): void => {
-  bestLinesState.progress.pvLinesReceived++;
+  treeDiggerState.progress.pvLinesReceived++;
   window.dispatchEvent(
     new CustomEvent("stockfish-pv-update", {
       detail: {
-        pvLines: bestLinesState.progress.pvLinesReceived,
+        pvLines: treeDiggerState.progress.pvLinesReceived,
       },
     }),
   );
