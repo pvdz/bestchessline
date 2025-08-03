@@ -1,7 +1,7 @@
 import { TreeDiggerNode, ChessMove } from "../types.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import * as Board from "../chess-board.js";
-import { getAppState, clearBranch, updateAppState } from "../main.js";
+import { clearBranch, updateAppState } from "../main.js";
 import { updateMoveList } from "./game-navigation.js";
 
 /**

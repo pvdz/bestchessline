@@ -1,5 +1,4 @@
 import type { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
-import { log } from "./logging.js";
 
 /**
  * Tree Digger Pagination Utility Functions
@@ -133,7 +132,7 @@ export const getPaginatedTreeNodes = (
  */
 export const renderPaginationControls = (
   paginationState: TreePaginationState,
-  onPageChange: (page: number) => void,
+  _onPageChange: (page: number) => void,
 ): string => {
   if (paginationState.isLargeTree) {
     return `

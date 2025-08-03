@@ -4,7 +4,6 @@ import {
   getProgress,
 } from "../tree-digger.js";
 import { log } from "./logging.js";
-import { parseFEN } from "./fen-utils.js";
 import { moveToNotation } from "./notation-utils.js";
 
 /**
@@ -189,10 +188,12 @@ const updateTreeInfo = (): void => {
 /**
  * Get the complete move sequence for a FEN position
  */
-const getMoveNotationFromFen = (fen: string, analysis: any): string => {
+import type { TreeDiggerAnalysis, TreeDiggerNode } from "../types.js";
+
+const getMoveNotationFromFen = (fen: string, analysis: TreeDiggerAnalysis): string => {
   try {
     // Find the node that corresponds to this FEN
-    const findNodeByFen = (nodes: any[], targetFen: string): any | null => {
+    const findNodeByFen = (nodes: TreeDiggerNode[], targetFen: string): TreeDiggerNode | null => {
       for (const node of nodes) {
         if (node.fen === targetFen) {
           return node;
@@ -221,14 +222,14 @@ const getMoveNotationFromFen = (fen: string, analysis: any): string => {
 /**
  * Get the complete move sequence for a node
  */
-const getCompleteMoveSequence = (node: any): string => {
+const getCompleteMoveSequence = (node: TreeDiggerNode): string => {
   const moves: string[] = [];
-  let currentNode = node;
+  let currentNode: TreeDiggerNode | null = node;
 
   // Walk up the tree to build the complete sequence
   while (currentNode && currentNode.move) {
     moves.unshift(moveToNotation(currentNode.move));
-    currentNode = currentNode.parent;
+    currentNode = currentNode.parent || null;
   }
 
   // Format as a move sequence
@@ -261,7 +262,7 @@ const getCompleteMoveSequence = (node: any): string => {
  * Calculate tree statistics
  */
 const calculateTreeStats = (
-  nodes: any[],
+  nodes: TreeDiggerNode[],
 ): {
   totalNodes: number;
   leafNodes: number;
@@ -277,7 +278,7 @@ const calculateTreeStats = (
   let nodesWithAnalysis = 0;
   let nodesWithoutAnalysis = 0;
 
-  const traverse = (nodeList: any[], depth: number): void => {
+  const traverse = (nodeList: TreeDiggerNode[], depth: number): void => {
     for (const node of nodeList) {
       totalNodes++;
       totalDepth += depth;

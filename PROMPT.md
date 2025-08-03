@@ -664,6 +664,172 @@ const buildAnalysisTree = async (
 };
 ```
 
+### 9. Line Fisher Analysis
+
+#### Deep Line Analysis with User-Defined Initiator Moves
+
+The Line Fisher performs comprehensive line analysis by building a recursive tree of moves and responses. It starts from the current board position and explores multiple lines to a specified depth, with user-defined initiator moves and configurable responder move counts.
+
+```typescript
+// Line Fisher analysis structure:
+interface LineFisherState {
+  isAnalyzing: boolean;
+  config: LineFisherConfig;
+  progress: LineFisherProgress;
+  results: LineFisherResult[];
+  analyzedPositions: Set<string>;
+  analysisQueue: string[];
+  isComplete: boolean;
+}
+
+interface LineFisherConfig {
+  initiatorMoves: string[]; // First n moves for initiator (e.g., ["Nf3", "g3"])
+  responderMoveCounts: number[]; // Number of responses for each initiator move (e.g., [2, 3])
+  maxDepth: number; // Maximum analysis depth
+  threads: number; // Number of CPU threads
+}
+
+interface LineFisherProgress {
+  totalNodes: number;
+  processedNodes: number;
+  totalLines: number;
+  completedLines: number;
+  currentPosition: string;
+  eventsPerSecond: number;
+  totalEvents: number;
+  startTime: number;
+  nodeProgress: number;
+  lineProgress: number;
+}
+
+interface LineFisherResult {
+  lineIndex: number;
+  moves: ChessMove[];
+  scores: number[];
+  deltas: number[];
+  notation: string;
+  isComplete: boolean;
+  responderMoveList?: string[]; // For initiator moves only - format: "moveNotation+score" (e.g., "Nf3+0.5")
+}
+```
+
+#### Configuration Options
+
+**Initiator Moves**: Space-separated chess moves that will be played first by White (e.g., "Nf3 g3"). Leave empty to use Stockfish's best moves.
+
+**Responder Counts**: Space-separated numbers specifying how many responses to analyze for each initiator move (e.g., "2 3").
+
+**Max Depth**: Maximum analysis depth (1-15). Higher depths explore more lines but take longer to analyze.
+
+**Threads**: Number of CPU threads to use (1-16). More threads can speed up analysis but use more resources.
+
+#### Analysis Process
+
+The Line Fisher follows a structured analysis process:
+
+1. **Configuration Validation**: Validates all input parameters and shows helpful error messages
+2. **Progress Calculation**: Calculates total nodes and lines based on configuration
+3. **Tree Building**: Recursively builds analysis tree with transposition detection
+4. **Real-time Updates**: Shows progress, activity monitor, and explored lines
+5. **State Persistence**: Allows saving/loading analysis state for sharing or resuming
+
+#### Usage Examples
+
+**Basic Analysis**:
+
+```typescript
+// Start analysis with default settings
+await startLineFisherAnalysisFromManager();
+
+// Stop analysis and preserve results
+stopLineFisherAnalysisFromManager();
+
+// Continue from where it left off
+await continueLineFisherAnalysisFromManager();
+```
+
+**Custom Configuration**:
+
+```typescript
+// Configure initiator moves and responder counts
+const config = {
+  initiatorMoves: ["Nf3", "g3"],
+  responderMoveCounts: [2, 3],
+  maxDepth: 3,
+  threads: 8,
+};
+
+// Start analysis with custom configuration
+updateLineFisherConfig(config);
+await startLineFisherAnalysisFromManager();
+```
+
+**State Management**:
+
+```typescript
+// Copy state to clipboard
+await copyLineFisherStateToClipboardFromManager();
+
+// Export state to file
+await exportLineFisherStateFromManager();
+
+// Import state from file
+await importLineFisherStateFromManager();
+
+// Import state from clipboard
+await importLineFisherStateFromClipboardFromManager();
+```
+
+#### Performance Optimizations
+
+**Efficient Transposition Detection**: Uses hash-based position lookup to avoid re-analyzing the same position.
+
+**Batched Operations**: Processes multiple operations in batches to improve performance.
+
+**Debounced UI Updates**: Reduces unnecessary re-renders by debouncing progress and activity updates.
+
+**Memory Management**: Uses WeakMap for position tracking and caches frequently accessed calculations.
+
+#### Error Handling
+
+**Categorized Errors**: Errors are categorized as Configuration, Analysis, State, or UI errors with appropriate user messages.
+
+**Graceful Recovery**: Provides automatic recovery from errors with state preservation.
+
+**Validation**: Comprehensive state validation before operations to prevent corruption.
+
+#### Keyboard Shortcuts
+
+- **Ctrl+Shift+L**: Start analysis
+- **Ctrl+Shift+S**: Stop analysis
+- **Ctrl+Shift+R**: Reset analysis
+- **Ctrl+Shift+C**: Copy state
+- **Ctrl+Shift+V**: Paste state
+- **Ctrl+Shift+E**: Export state
+- **Ctrl+Shift+I**: Import state
+
+#### UI Features
+
+**Real-time Progress**: Shows progress bar, node statistics, and current position being analyzed.
+
+**Activity Monitor**: Displays events per second, total events, and analysis status.
+
+**Results Display**: Shows explored lines with scores, deltas, and responder moves in a table format.
+
+**Configuration Display**: Shows current settings, search space statistics, and base position information.
+
+**Tooltips and Help**: Comprehensive tooltips and usage hints for all UI elements.
+
+#### Integration with Existing Systems
+
+**Stockfish Integration**: Uses existing Stockfish client for move generation and analysis.
+
+**Status Management**: Integrated with existing status system for consistent user experience.
+
+**Event System**: Follows existing event patterns for proper integration.
+
+**State Management**: Compatible with existing state management patterns.
+
 ## Critical Implementation Details
 
 ### 1. Arrow & Label Management
@@ -843,7 +1009,13 @@ const buildAnalysisTree = async (
 
 ### Build Process
 
+!IMPORTANT!
+
 Generally the human will do most of the build stuff. When you need to check build errors you'll be prompted to build. The AI should never install or serve.
+
+The AI can run `node_modules/.bin/tsc` to check validity, preferably with `--noUnusedLocals --noUnusedParameters --noEmit` for stricter validity.
+
+NEVER use or suggest npx.
 
 ```bash
 npm install          # Install dependencies
@@ -855,7 +1027,11 @@ npm run serve        # Start development server (human runs this)
 
 ### Development Guidelines
 
+!IMPORTANT!
+
 Do not use classes, keep flat simple concepts, prefer module exports, do not pass on exported functions as parameters, keep it simple and maintainable, use greppable obvious names. Import and export things explicitly, don't star export/import. Name imported/exported things in a sort-of-namespace way when possible. Import types with the `import type` keyword and don't mix them with value imports.
+Do NOT use dynamic import; all imports should be at the top.
+Do NOT use `log()`. This is human logging. Use `console.log` when debugging with the human.
 
 #### Adding Features
 
@@ -1040,3 +1216,179 @@ The application has been refactored into modular utility files for better organi
 8. **Modular Architecture**: The application has been refactored into focused utility modules for better maintainability
 
 The application provides a comprehensive chess analysis platform with advanced move validation, interactive navigation, enhanced notation display, color-coded analysis arrows, real-time status updates, and deep position analysis through the tree digger. The modular architecture allows for easy extension and enhancement of features.
+
+## Line Fisher Implementation
+
+### Overview
+
+The Line Fisher is a comprehensive deep position analysis tool that builds recursive trees of moves and responses. It allows users to define specific initiator moves and configurable responder move counts, providing controlled yet thorough position analysis.
+
+### Key Features
+
+#### Configuration System
+
+- **Initiator Moves**: User-defined first moves for controlled analysis (e.g., ["Nf3", "g3"])
+- **Responder Counts**: Configurable number of responses per level (e.g., [2, 3, 2])
+- **Move Depth**: Maximum analysis depth with proper termination
+- **Threading**: Multi-threaded Stockfish analysis for performance
+
+#### Analysis Engine
+
+- **Recursive Tree Building**: Deep position exploration with user-defined constraints
+- **Transposition Detection**: Efficient reuse of previously analyzed positions
+- **Real-time Progress**: Live updates of nodes processed, lines completed, and current position
+- **Incremental Results**: Results built incrementally as analysis progresses
+
+#### State Management
+
+- **Global State**: Centralized state management with proper TypeScript typing
+- **Progress Tracking**: Comprehensive progress metrics (nodes, lines, events per second)
+- **State Persistence**: Copy/paste, import/export functionality for sharing analysis
+- **Error Recovery**: Graceful handling of analysis interruptions and errors
+
+#### User Experience
+
+- **Real-time UI Updates**: Live progress bars, status displays, and result tables
+- **Interactive Results**: Clickable lines that load onto the main board
+- **Keyboard Shortcuts**: Comprehensive shortcut system for all operations
+- **Error Handling**: User-friendly error messages with recovery options
+- **Tooltips**: Comprehensive help system with rotating usage hints
+
+### Architecture
+
+#### Core Files
+
+- **`src/line_fisher.ts`** (846 lines): Core analysis engine with tree building logic
+- **`src/utils/line-fisher-calculations.ts`** (45 lines): Node and line calculation utilities
+- **`src/utils/line-fisher-manager.ts`** (811 lines): UI management and state control
+- **`src/utils/line-fisher-results.ts`** (537 lines): Results display and progress tracking
+- **`src/utils/line-fisher-ui-utils.ts`** (508 lines): UI utilities and configuration parsing
+- **`src/utils/notation-utils.ts`** (274 lines): Notation functions including rawMoveToSAN
+
+#### Key Components
+
+1. **Analysis Engine** (`line_fisher.ts`)
+   - Recursive tree building with depth limits
+   - Transposition detection for efficiency
+   - Stockfish integration for move generation
+   - Progress tracking and state management
+
+2. **Calculation Utilities** (`line-fisher-calculations.ts`)
+   - Node count calculation using geometric series
+   - Line count calculation using product of responder counts
+   - Special case handling for linear growth
+
+3. **UI Management** (`line-fisher-manager.ts`)
+   - Analysis control (start, stop, reset, continue)
+   - State persistence (copy, export, import)
+   - Error handling and recovery
+   - Button state management
+
+4. **Results Display** (`line-fisher-results.ts`)
+   - Real-time progress updates
+   - Configuration display with statistics
+   - Explored lines table with scores and deltas
+   - Interactive line loading
+
+5. **UI Utilities** (`line-fisher-ui-utils.ts`)
+   - Configuration parsing and validation
+   - Input error handling with visual feedback
+   - Tooltips and keyboard shortcuts
+   - Usage hints and error explanations
+
+### Key Learnings from Implementation
+
+#### 1. **Modular Architecture Benefits**
+
+- **Separation of Concerns**: Each utility file has a focused responsibility
+- **Maintainability**: Functions in logical locations make code easier to understand
+- **Reusability**: Utility functions can be shared across components
+- **Type Safety**: Proper TypeScript interfaces ensure consistency
+
+#### 2. **State Management Patterns**
+
+- **Global State**: Centralized state with proper typing prevents inconsistencies
+- **Immutable Updates**: Using spread operators for state updates prevents mutations
+- **Progress Tracking**: Real-time metrics provide user feedback and debugging info
+- **State Persistence**: JSON serialization enables sharing and resuming analysis
+
+#### 3. **Performance Optimization Techniques**
+
+- **Transposition Detection**: Hash-based lookup prevents redundant analysis
+- **Debounced Updates**: UI updates throttled to prevent blocking
+- **Batch Processing**: Operations grouped for efficiency
+- **Memory Management**: WeakMap usage for position caching
+
+#### 4. **User Experience Design**
+
+- **Real-time Feedback**: Progress bars, status updates, and live results
+- **Error Recovery**: Graceful handling with user-friendly messages
+- **Keyboard Shortcuts**: Comprehensive shortcut system for power users
+- **Visual Feedback**: Error styling, progress indicators, and status colors
+
+#### 5. **TypeScript Best Practices**
+
+- **Explicit Typing**: All functions properly typed with parameters and return values
+- **Interface Design**: Well-defined interfaces for complex data structures
+- **Import Organization**: Logical grouping of imports and exports
+- **Type Safety**: Compile-time error detection prevents runtime issues
+
+#### 6. **Code Organization Lessons**
+
+- **Function Placement**: Move functions to appropriate utility files
+- **Import Management**: Remove unused imports to reduce bundle size
+- **Code Deduplication**: Helper functions eliminate repetitive code
+- **Documentation**: Comprehensive comments explain complex algorithms
+
+#### 7. **Testing and Validation**
+
+- **Incremental Testing**: Test each component as it's implemented
+- **Error Handling**: Comprehensive error cases with recovery mechanisms
+- **Edge Cases**: Handle empty inputs, invalid configurations, and interruptions
+- **Type Checking**: Regular TypeScript compilation ensures code quality
+
+#### 8. **Integration Patterns**
+
+- **Event System**: Proper event delegation and cleanup
+- **Stockfish Integration**: Efficient engine communication and result parsing
+- **DOM Manipulation**: Direct DOM updates for performance
+- **State Synchronization**: Bidirectional updates prevent inconsistencies
+
+#### 9. **Development Workflow**
+
+- **Iterative Development**: Build incrementally with regular testing
+- **Documentation**: Keep logs and plans updated as implementation progresses
+- **Code Cleanup**: Regular refactoring improves maintainability
+- **Type Safety**: TypeScript compilation catches errors early
+
+#### 10. **Performance Considerations**
+
+- **UI Responsiveness**: Debounced updates prevent blocking
+- **Memory Efficiency**: Proper cleanup and WeakMap usage
+- **Analysis Speed**: Batching and caching improve performance
+- **Scalability**: Modular design allows for easy extension
+
+### Implementation Phases
+
+The Line Fisher was implemented in 7 phases:
+
+1. **Phase 1**: Core infrastructure and configuration parsing
+2. **Phase 2**: Analysis engine and tree building
+3. **Phase 3**: UI display and progress tracking
+4. **Phase 4**: Manager functions and state handling
+5. **Phase 5**: Event handling and testing
+6. **Phase 6**: Polish and optimization
+7. **Phase 7**: Final cleanup and code organization
+
+Each phase built upon the previous one, with comprehensive testing and documentation throughout the process.
+
+### Success Metrics
+
+- ✅ **Functionality**: All planned features implemented and working
+- ✅ **Performance**: Efficient analysis with real-time updates
+- ✅ **User Experience**: Intuitive interface with comprehensive feedback
+- ✅ **Code Quality**: Clean, well-organized, and properly typed
+- ✅ **Maintainability**: Modular architecture with clear separation of concerns
+- ✅ **Documentation**: Comprehensive logs, plans, and inline comments
+
+The Line Fisher implementation demonstrates the value of systematic development, proper architecture, and attention to both functionality and user experience. The resulting codebase is maintainable, performant, and provides a powerful tool for deep chess position analysis.

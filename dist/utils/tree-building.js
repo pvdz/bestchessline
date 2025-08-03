@@ -5,93 +5,89 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
  * Build the shadow tree from the data tree
  */
 export function buildShadowTree(nodes, analysis, parent = null, depth = 0) {
-  const uiNodes = [];
-  for (const node of nodes) {
-    const nodeId = generateNodeId(node);
-    const element = createTreeNodeElement(node, depth, analysis);
-    const uiNode = {
-      id: nodeId,
-      element,
-      children: [],
-      parent,
-    };
-    // Recursively build children
-    if (node.children.length > 0) {
-      uiNode.children = buildShadowTree(
-        node.children,
-        analysis,
-        uiNode,
-        depth + 1,
-      );
+    const uiNodes = [];
+    for (const node of nodes) {
+        const nodeId = generateNodeId(node);
+        const element = createTreeNodeElement(node, depth, analysis);
+        const uiNode = {
+            id: nodeId,
+            element,
+            children: [],
+            parent,
+        };
+        // Recursively build children
+        if (node.children.length > 0) {
+            uiNode.children = buildShadowTree(node.children, analysis, uiNode, depth + 1);
+        }
+        uiNodes.push(uiNode);
     }
-    uiNodes.push(uiNode);
-  }
-  return uiNodes;
+    return uiNodes;
 }
 /**
  * Find a node by ID in the data tree
  */
 export function findNodeById(nodeId, nodes) {
-  for (const node of nodes) {
-    if (generateNodeId(node) === nodeId) {
-      return node;
+    for (const node of nodes) {
+        if (generateNodeId(node) === nodeId) {
+            return node;
+        }
+        if (node.children.length > 0) {
+            const found = findNodeById(nodeId, node.children);
+            if (found)
+                return found;
+        }
     }
-    if (node.children.length > 0) {
-      const found = findNodeById(nodeId, node.children);
-      if (found) return found;
-    }
-  }
-  return null;
+    return null;
 }
 /**
  * Create a DOM element for a tree node
  */
 function createTreeNodeElement(node, depth, analysis) {
-  const moveText = moveToNotation(node.move);
-  const scoreText = formatNodeScore(node);
-  const moveClass = node.isWhiteMove ? "white-move" : "black-move";
-  const moveNumber = node.moveNumber;
-  let moveNumberText = "";
-  if (node.isWhiteMove) {
-    moveNumberText = `${moveNumber}.`;
-  } else {
-    moveNumberText = `${moveNumber}...`;
-  }
-  const depthClass = `tree-depth-${depth}`;
-  const nodeId = generateNodeId(node);
-  const positionAfterMove = applyMoveToFEN(node.fen, node.move);
-  const isTransposition =
-    node.children.length === 0 &&
-    analysis.analyzedPositions.has(positionAfterMove);
-  const transpositionClass = isTransposition ? "transposition" : "";
-  const element = document.createElement("div");
-  element.className = `tree-node ${moveClass} ${depthClass} ${transpositionClass}`;
-  element.setAttribute("data-node-id", nodeId);
-  const moveInfo = document.createElement("div");
-  moveInfo.className = "move-info clickable";
-  moveInfo.style.cursor = "pointer";
-  moveInfo.title = "Click to view this position on the board";
-  const moveNumberSpan = document.createElement("span");
-  moveNumberSpan.className = "move-number";
-  moveNumberSpan.textContent = moveNumberText;
-  const moveTextSpan = document.createElement("span");
-  moveTextSpan.className = "move-text";
-  moveTextSpan.textContent = moveText;
-  moveInfo.appendChild(moveNumberSpan);
-  moveInfo.appendChild(moveTextSpan);
-  if (scoreText) {
-    const scoreSpan = document.createElement("span");
-    scoreSpan.className = "move-score";
-    scoreSpan.innerHTML = scoreText;
-    moveInfo.appendChild(scoreSpan);
-  }
-  if (isTransposition) {
-    const transpositionSpan = document.createElement("span");
-    transpositionSpan.className = "transposition-indicator";
-    transpositionSpan.textContent = " (transposed)";
-    moveInfo.appendChild(transpositionSpan);
-  }
-  element.appendChild(moveInfo);
-  return element;
+    const moveText = moveToNotation(node.move);
+    const scoreText = formatNodeScore(node);
+    const moveClass = node.isWhiteMove ? "white-move" : "black-move";
+    const moveNumber = node.moveNumber;
+    let moveNumberText = "";
+    if (node.isWhiteMove) {
+        moveNumberText = `${moveNumber}.`;
+    }
+    else {
+        moveNumberText = `${moveNumber}...`;
+    }
+    const depthClass = `tree-depth-${depth}`;
+    const nodeId = generateNodeId(node);
+    const positionAfterMove = applyMoveToFEN(node.fen, node.move);
+    const isTransposition = node.children.length === 0 &&
+        analysis.analyzedPositions.has(positionAfterMove);
+    const transpositionClass = isTransposition ? "transposition" : "";
+    const element = document.createElement("div");
+    element.className = `tree-node ${moveClass} ${depthClass} ${transpositionClass}`;
+    element.setAttribute("data-node-id", nodeId);
+    const moveInfo = document.createElement("div");
+    moveInfo.className = "move-info clickable";
+    moveInfo.style.cursor = "pointer";
+    moveInfo.title = "Click to view this position on the board";
+    const moveNumberSpan = document.createElement("span");
+    moveNumberSpan.className = "move-number";
+    moveNumberSpan.textContent = moveNumberText;
+    const moveTextSpan = document.createElement("span");
+    moveTextSpan.className = "move-text";
+    moveTextSpan.textContent = moveText;
+    moveInfo.appendChild(moveNumberSpan);
+    moveInfo.appendChild(moveTextSpan);
+    if (scoreText) {
+        const scoreSpan = document.createElement("span");
+        scoreSpan.className = "move-score";
+        scoreSpan.innerHTML = scoreText;
+        moveInfo.appendChild(scoreSpan);
+    }
+    if (isTransposition) {
+        const transpositionSpan = document.createElement("span");
+        transpositionSpan.className = "transposition-indicator";
+        transpositionSpan.textContent = " (transposed)";
+        moveInfo.appendChild(transpositionSpan);
+    }
+    element.appendChild(moveInfo);
+    return element;
 }
 //# sourceMappingURL=tree-building.js.map

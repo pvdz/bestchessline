@@ -51,7 +51,7 @@
               <button id="copy-tree-digger-state">Copy to Clipboard</button>
               <button id="import-tree-digger-state">Import State</button>
               <button id="paste-tree-digger-state">Paste from Clipboard</button>
-              <button id="continue-tree-digger">Continue Analysis</button>
+              <button id="continue-tree-digger">Continue Dig</button>
               <input
                 type="file"
                 id="tree-digger-state-file"
@@ -165,11 +165,11 @@
               </div>
             </div>
           </div>
-          <div class="tree-digger-status">
+          <div class="tree-digger-status" style="display: none">
             <div class="status-title">Analysis Status</div>
             <p id="tree-digger-status">Ready</p>
           </div>
-          <div class="tree-digger-state-info">
+          <div class="tree-digger-state-info" style="display: none">
             <div class="state-info-title">State Information</div>
             <div id="tree-digger-state-info">
               <p>No state loaded</p>
@@ -196,6 +196,151 @@
             </div>
           </div>
           <div id="tree-digger-results" class="tree-digger-panel"></div>
+        </div>
+
+        <!-- Line Fisher -->
+        <div class="line-fisher-section">
+          <h2>Line Fisher</h2>
+          <div class="line-fisher-controls">
+            <div class="line-fisher-buttons">
+              <button id="start-line-fisher">Fish</button>
+              <button id="stop-line-fisher" disabled>Stop</button>
+              <button id="reset-line-fisher">Reset</button>
+              <button id="copy-line-fisher-state">Copy</button>
+              <button id="export-line-fisher-state">Export to Clipboard</button>
+              <button id="import-line-fisher-state">
+                Import from Clipboard
+              </button>
+              <button id="continue-line-fisher">Continue Fishing</button>
+              <input
+                type="file"
+                id="line-fisher-state-file"
+                accept=".json"
+                style="display: none"
+              />
+              <div class="thread-controls">
+                <label for="line-fisher-threads">Threads:</label>
+                <input
+                  type="range"
+                  id="line-fisher-threads"
+                  min="1"
+                  max="16"
+                  value="10"
+                />
+                <span id="line-fisher-threads-value">10</span>
+              </div>
+            </div>
+            <div class="line-fisher-initiator-moves">
+              <div class="initiator-moves-controls">
+                <label for="line-fisher-initiator-moves"
+                  >Initiator Moves:</label
+                >
+                <input
+                  type="text"
+                  id="line-fisher-initiator-moves"
+                  placeholder="e.g., Nf3 g3"
+                  value="Nf3 g3"
+                />
+              </div>
+              <div class="responder-counts-controls">
+                <label for="line-fisher-responder-counts"
+                  >Responder Counts:</label
+                >
+                <input
+                  type="text"
+                  id="line-fisher-responder-counts"
+                  placeholder="2 3 2"
+                  value="2 3"
+                  title="Space-separated responder move counts for each level"
+                />
+              </div>
+
+              <div class="responder-moves-controls">
+                <label for="line-fisher-default-responder-count"
+                  >Default Responder Count:</label
+                >
+                <input
+                  type="range"
+                  id="line-fisher-default-responder-count"
+                  min="1"
+                  max="15"
+                  value="3"
+                  class="line-fisher-slider"
+                  title="Default responder count for levels not specified"
+                />
+                <span id="line-fisher-default-responder-count-value">3</span>
+              </div>
+              <div class="depth-controls">
+                <label for="line-fisher-depth">Move Depth:</label>
+                <input
+                  type="range"
+                  id="line-fisher-depth"
+                  min="1"
+                  max="10"
+                  value="2"
+                  class="line-fisher-slider"
+                />
+                <span id="line-fisher-depth-value">2</span>
+              </div>
+            </div>
+          </div>
+          <div id="line-fisher-status">Ready</div>
+
+          <div id="line-fisher-config" class="line-fisher-panel">
+            <h3>Configuration</h3>
+            <div class="line-fisher-config-board">
+              <div
+                id="line-fisher-board-display"
+                class="line-fisher-board-display"
+              >
+                <!-- Chess board will be rendered here -->
+              </div>
+              <div class="line-fisher-config-details">
+                <div class="line-fisher-config-item">
+                  <label>Initiator Moves:</label>
+                  <span id="line-fisher-initiator-display">-</span>
+                </div>
+                <div class="line-fisher-config-item">
+                  <label>Responder Counts:</label>
+                  <span id="line-fisher-responder-display">-</span>
+                </div>
+                <div class="line-fisher-config-item">
+                  <label>Move Depth:</label>
+                  <span id="line-fisher-depth-display">-</span>
+                </div>
+                <div class="line-fisher-config-item">
+                  <label>Threads:</label>
+                  <span id="line-fisher-threads-display">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="line-fisher-state-info" class="line-fisher-panel">
+            <h3>Analysis Status</h3>
+            <div class="line-fisher-progress-section">
+              <div class="line-fisher-progress-bar">
+                <div
+                  id="line-fisher-progress-fill"
+                  class="line-fisher-progress-fill"
+                ></div>
+              </div>
+              <div class="line-fisher-progress-stats">
+                <span class="line-fisher-stat"
+                  >Action:
+                  <span id="line-fisher-action-display">Ready</span></span
+                >
+                <span class="line-fisher-stat"
+                  >Lines: <span id="line-fisher-lines-display">0</span></span
+                >
+                <span class="line-fisher-stat"
+                  >Position:
+                  <span id="line-fisher-position-display">-</span></span
+                >
+              </div>
+            </div>
+          </div>
+          <div id="line-fisher-results" class="line-fisher-panel"></div>
         </div>
 
         <!-- Chess Board -->

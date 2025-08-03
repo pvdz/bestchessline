@@ -76,7 +76,6 @@ export function validateMove(
   }
 
   const [fromRank, fromFile] = squareToCoords(move.from);
-  const [toRank, toFile] = squareToCoords(move.to);
 
   // Check if source square has a piece
   const sourcePiece = position.board[fromRank][fromFile];
@@ -269,7 +268,7 @@ function isLegalRookMove(position: ChessPosition, move: ChessMove): boolean {
 /**
  * Checks if a knight move is legal
  */
-function isLegalKnightMove(position: ChessPosition, move: ChessMove): boolean {
+function isLegalKnightMove(_position: ChessPosition, move: ChessMove): boolean {
   const [fromRank, fromFile] = squareToCoords(move.from);
   const [toRank, toFile] = squareToCoords(move.to);
 
@@ -279,14 +278,6 @@ function isLegalKnightMove(position: ChessPosition, move: ChessMove): boolean {
   // Knight moves in L-shape: 2 squares in one direction, 1 square perpendicular
   const isValidKnightMove =
     (rankDiff === 2 && fileDiff === 1) || (rankDiff === 1 && fileDiff === 2);
-
-  if (move.from === "g8" && move.to === "e7") {
-    // console.log(
-    //   `Knight move g8-e7: rankDiff=${rankDiff}, fileDiff=${fileDiff}, isValid=${isValidKnightMove}`,
-    // );
-    const targetPiece = position.board[toRank][toFile];
-    // console.log(`Target piece at e7: ${targetPiece}`);
-  }
 
   return isValidKnightMove;
 }
@@ -334,7 +325,7 @@ function isLegalQueenMove(position: ChessPosition, move: ChessMove): boolean {
 /**
  * Checks if a king move is legal
  */
-function isLegalKingMove(position: ChessPosition, move: ChessMove): boolean {
+function isLegalKingMove(_position: ChessPosition, move: ChessMove): boolean {
   const [fromRank, fromFile] = squareToCoords(move.from);
   const [toRank, toFile] = squareToCoords(move.to);
 
@@ -375,9 +366,7 @@ function isLegalCastlingMove(
   if (!move.rookFrom || !move.rookTo) return false;
 
   const [kingFromRank, kingFromFile] = squareToCoords(move.from);
-  const [kingToRank, kingToFile] = squareToCoords(move.to);
   const [rookFromRank, rookFromFile] = squareToCoords(move.rookFrom);
-  const [rookToRank, rookToFile] = squareToCoords(move.rookTo);
 
   // Check that king and rook are in correct positions
   const kingPiece = position.board[kingFromRank][kingFromFile];
@@ -510,14 +499,6 @@ function isKingInCheck(position: ChessPosition, color: Color): boolean {
 
         const pieceType = getPieceType(createPieceNotation(piece));
         if (pieceType) {
-          const move: ChessMove = {
-            from: coordsToSquare(rank, file),
-            to: kingSquare,
-            piece: piece, // Use the actual piece from the board, not just the type
-          };
-
-          // Add debugging for check detection
-
           // For check detection, we need to allow moves to the king's square
           // Create a temporary move validation that bypasses king capture prevention
           const pieceNotation = createPieceNotation(piece);
@@ -549,7 +530,7 @@ function canPieceAttackSquare(
   fromSquare: string,
   toSquare: string,
 ): boolean {
-  const [fromRank, fromFile] = squareToCoords(fromSquare);
+  const [_fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
   const pieceType = getPieceTypeFromNotation(piece);
   const color = getColorFromNotation(piece);
@@ -874,10 +855,6 @@ function isCheckMate(position: ChessPosition, color: Color): boolean {
       }
     }
   }
-
-  // Check if any piece can block the check or capture the attacking piece
-  const opponentColor =
-    color === PLAYER_COLORS.WHITE ? PLAYER_COLORS.BLACK : PLAYER_COLORS.WHITE;
 
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {

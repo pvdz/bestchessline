@@ -11,9 +11,7 @@ export declare function getInputElement(id: string): HTMLInputElement | null;
 /**
  * Safely get an HTML textarea element by ID
  */
-export declare function getTextAreaElement(
-  id: string,
-): HTMLTextAreaElement | null;
+export declare function getTextAreaElement(id: string): HTMLTextAreaElement | null;
 /**
  * Safely get an HTML button element by ID
  */
@@ -21,33 +19,25 @@ export declare function getButtonElement(id: string): HTMLButtonElement | null;
 /**
  * Safely get a checked radio button by name and value
  */
-export declare function getCheckedRadio(
-  name: string,
-  value: string,
-): HTMLInputElement | null;
+export declare function getCheckedRadio(name: string, value: string): HTMLInputElement | null;
 /**
  * Safely get a checked radio button by name
  */
-export declare function getCheckedRadioByName(
-  name: string,
-): HTMLInputElement | null;
+export declare function getCheckedRadioByName(name: string): HTMLInputElement | null;
 /**
  * Safely get an HTMLElement by querySelector
  */
-export declare function querySelectorHTMLElement(
-  parent: Element,
-  selector: string,
-): HTMLElement | null;
+export declare function querySelectorHTMLElement(parent: Element, selector: string): HTMLElement | null;
 /**
  * Safely get an HTMLButtonElement by querySelector
  */
-export declare function querySelectorButton(
-  parent: Element,
-  selector: string,
-): HTMLButtonElement | null;
+export declare function querySelectorButton(parent: Element, selector: string): HTMLButtonElement | null;
 /**
  * Safely get an HTMLElement by querySelector
  */
-export declare function querySelectorHTMLElementBySelector(
-  selector: string,
-): HTMLElement | null;
+export declare function querySelectorHTMLElementBySelector(selector: string): HTMLElement | null;
+/**
+ * Get an element by ID or throw an error if not found
+ * Use this when an element is required for the application to function
+ */
+export declare const getElementByIdOrThrow: (id: string) => HTMLElement;

@@ -36,8 +36,10 @@ import { getAnalysisOptions } from "./utils/analysis-config.js";
 import {
   updateTreeDiggerStatus,
   updateAnalysisStatus,
+  updateLineFisherStatus,
 } from "./utils/status-management.js";
 import { updateTreeDiggerResults } from "./utils/tree-digger-results.js";
+
 import {
   addMove,
   importGame,
@@ -60,16 +62,26 @@ import {
   updateTreeDiggerButtonStates,
   exportTreeDiggerStateFromManager,
   copyTreeDiggerStateToClipboardFromManager,
-  importTreeDiggerStateFromManager,
   importTreeDiggerStateFromClipboardFromManager,
   handleStateFileInput,
   updateTreeDiggerStateInfo,
 } from "./utils/tree-digger-manager.js";
+import {
+  startLineFisherAnalysisFromManager,
+  stopLineFisherAnalysisFromManager,
+  resetLineFisherAnalysisFromManager,
+  continueLineFisherAnalysisFromManager,
+  copyLineFisherStateToClipboardFromManager,
+  exportLineFisherStateFromManager,
+  importLineFisherStateFromClipboardFromManager,
+  handleLineFisherStateFileInput,
+} from "./utils/line-fisher-manager.js";
 import { toggleDebugPanel, closeDebugPanel } from "./utils/debug-utils.js";
 import * as Board from "./chess-board.js";
 import * as Stockfish from "./stockfish-client.js";
 import { validateMove } from "./move-validator.js";
 import * as TreeDigger from "./tree-digger.js";
+import * as LineFisher from "./line_fisher.js";
 import { hideMoveArrow } from "./utils/arrow-utils.js";
 
 // ============================================================================
@@ -167,7 +179,7 @@ export const getAppState = (): AppState => ({ ...appState });
 /**
  * Initialize the application
  */
-export const initializeApp = (): void => {
+export const initializeApp = async (): Promise<void> => {
   log("Initializing Best Chess Line Discovery App...");
 
   // Initialize board
@@ -209,6 +221,9 @@ export const initializeApp = (): void => {
 
   // Initialize position evaluation button
   initializePositionEvaluationButton();
+
+  // Initialize Line Fisher
+  await LineFisher.initializeLineFisher();
 
   log("Application initialized successfully");
 };
@@ -439,6 +454,147 @@ const initializeEventListeners = (): void => {
     });
   }
 
+  // Line Fisher analysis controls
+  const startLineFisherBtn = document.getElementById("start-line-fisher");
+  const stopLineFisherBtn = document.getElementById("stop-line-fisher");
+  const resetLineFisherBtn = document.getElementById("reset-line-fisher");
+  const continueLineFisherBtn = document.getElementById("continue-line-fisher");
+
+  if (startLineFisherBtn) {
+    startLineFisherBtn.addEventListener("click", async () => {
+      console.log("Start Line Fisher button clicked!");
+      await startLineFisherAnalysisFromManager();
+      console.log("Finished Line Fisher analysis");
+    });
+  }
+
+  if (stopLineFisherBtn) {
+    stopLineFisherBtn.addEventListener("click", () => {
+      console.log(
+        "USER PRESSED STOP BUTTON - Line Fisher analysis manually stopped",
+      );
+      stopLineFisherAnalysisFromManager();
+    });
+  }
+
+  if (resetLineFisherBtn) {
+    resetLineFisherBtn.addEventListener("click", () =>
+      resetLineFisherAnalysisFromManager(),
+    );
+  }
+
+  if (continueLineFisherBtn) {
+    continueLineFisherBtn.addEventListener("click", async () => {
+      await continueLineFisherAnalysisFromManager();
+    });
+  }
+
+  // Line Fisher state management controls
+  const exportLineFisherStateBtn = document.getElementById(
+    "export-line-fisher-state",
+  );
+  const copyLineFisherStateBtn = document.getElementById(
+    "copy-line-fisher-state",
+  );
+  const importLineFisherStateBtn = document.getElementById(
+    "import-line-fisher-state",
+  );
+  const pasteLineFisherStateBtn = document.getElementById(
+    "paste-line-fisher-state",
+  );
+  const lineFisherStateFileInput = document.getElementById(
+    "line-fisher-state-file",
+  ) as HTMLInputElement;
+
+  if (exportLineFisherStateBtn) {
+    exportLineFisherStateBtn.addEventListener("click", () => {
+      exportLineFisherStateFromManager();
+    });
+  }
+
+  if (copyLineFisherStateBtn) {
+    copyLineFisherStateBtn.addEventListener("click", async () => {
+      await copyLineFisherStateToClipboardFromManager();
+    });
+  }
+
+  if (importLineFisherStateBtn) {
+    importLineFisherStateBtn.addEventListener("click", () => {
+      // Trigger the hidden file input
+      if (lineFisherStateFileInput) {
+        lineFisherStateFileInput.click();
+      }
+    });
+  }
+
+  if (pasteLineFisherStateBtn) {
+    pasteLineFisherStateBtn.addEventListener("click", async () => {
+      await importLineFisherStateFromClipboardFromManager();
+    });
+  }
+
+  if (lineFisherStateFileInput) {
+    lineFisherStateFileInput.addEventListener(
+      "change",
+      handleLineFisherStateFileInput,
+    );
+  }
+
+  // Line Fisher thread control
+  const lineFisherThreadsInput = document.getElementById(
+    "line-fisher-threads",
+  ) as HTMLInputElement;
+  const lineFisherThreadsValue = document.getElementById(
+    "line-fisher-threads-value",
+  );
+
+  if (lineFisherThreadsInput && lineFisherThreadsValue) {
+    // Initialize with default value
+    lineFisherThreadsValue.textContent = lineFisherThreadsInput.value;
+
+    lineFisherThreadsInput.addEventListener("input", () => {
+      const threads = lineFisherThreadsInput.value;
+      lineFisherThreadsValue.textContent = threads;
+    });
+  }
+
+  // Line Fisher depth control
+  const lineFisherDepthInput = document.getElementById(
+    "line-fisher-depth",
+  ) as HTMLInputElement;
+  const lineFisherDepthValue = document.getElementById(
+    "line-fisher-depth-value",
+  );
+
+  if (lineFisherDepthInput && lineFisherDepthValue) {
+    // Initialize with default value
+    lineFisherDepthValue.textContent = lineFisherDepthInput.value;
+
+    lineFisherDepthInput.addEventListener("input", () => {
+      const depth = lineFisherDepthInput.value;
+      lineFisherDepthValue.textContent = depth;
+    });
+  }
+
+  // Line Fisher default responder count control
+  const lineFisherDefaultResponderInput = document.getElementById(
+    "line-fisher-default-responder-count",
+  ) as HTMLInputElement;
+  const lineFisherDefaultResponderValue = document.getElementById(
+    "line-fisher-default-responder-count-value",
+  );
+
+  if (lineFisherDefaultResponderInput && lineFisherDefaultResponderValue) {
+    // Initialize with default value
+    lineFisherDefaultResponderValue.textContent =
+      lineFisherDefaultResponderInput.value;
+
+    lineFisherDefaultResponderInput.addEventListener("input", () => {
+      const count = lineFisherDefaultResponderInput.value;
+      lineFisherDefaultResponderValue.textContent = count;
+    });
+  }
+
   // Update tree digger threads input for fallback mode
   updateTreeDiggerThreadsForFallbackMode();
 
@@ -463,11 +619,13 @@ const initializeEventListeners = (): void => {
     const message = customEvent.detail?.message || "Loading Stockfish...";
     updateTreeDiggerStatus(message);
     updateAnalysisStatus(message);
+    updateLineFisherStatus(message);
   }) as EventListener);
 
   window.addEventListener("stockfish-ready", (() => {
     updateTreeDiggerStatus("Stockfish ready");
     updateAnalysisStatus("Stockfish ready");
+    updateLineFisherStatus("Stockfish ready");
   }) as EventListener);
 
   window.addEventListener("stockfish-analyzing", ((event: Event) => {
@@ -476,6 +634,7 @@ const initializeEventListeners = (): void => {
     const position = customEvent.detail?.position || "";
     updateTreeDiggerStatus(`${message} ${position}`);
     updateAnalysisStatus(`${message} ${position}`);
+    updateLineFisherStatus(`${message} ${position}`);
   }) as EventListener);
 
   window.addEventListener("stockfish-analysis-complete", ((event: Event) => {
@@ -484,12 +643,10 @@ const initializeEventListeners = (): void => {
     const movesFound = customEvent.detail?.movesFound || 0;
     updateTreeDiggerStatus(`${message} (${movesFound} moves)`);
     updateAnalysisStatus(`${message} (${movesFound} moves)`);
+    updateLineFisherStatus(`${message} (${movesFound} moves)`);
   }) as EventListener);
 
-  window.addEventListener("stockfish-pv-update", ((event: Event) => {
-    const customEvent = event as CustomEvent;
-    const pvLines = customEvent.detail?.pvLines || 0;
-
+  window.addEventListener("stockfish-pv-update", ((_event: Event) => {
     // Update the status immediately with PV count
     const statusElement = document.getElementById("tree-digger-status");
     if (statusElement && TreeDigger.isAnalyzing()) {
@@ -505,7 +662,7 @@ const initializeEventListeners = (): void => {
     }
   }) as EventListener);
 
-  window.addEventListener("stockfish-pv-line", ((event: Event) => {
+  window.addEventListener("stockfish-pv-line", ((_event: Event) => {
     // const customEvent = event as CustomEvent;
     // const depth = customEvent.detail?.depth || 0;
     // const multipv = customEvent.detail?.multipv || 0;
@@ -544,6 +701,9 @@ const initializeEventListeners = (): void => {
       "Stockfish crashed - click 'Recover from Crash' to restart",
     );
     updateAnalysisStatus(
+      "Stockfish crashed - click 'Recover from Crash' to restart",
+    );
+    updateLineFisherStatus(
       "Stockfish crashed - click 'Recover from Crash' to restart",
     );
 

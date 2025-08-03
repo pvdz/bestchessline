@@ -1168,7 +1168,7 @@ export const calculateTotalLeafs = (nodes: TreeDiggerNode[]): number => {
  * Calculate number of unique positions analyzed
  */
 export const calculateUniquePositions = (
-  nodes: TreeDiggerNode[],
+  _nodes: TreeDiggerNode[],
   analysis: TreeDiggerAnalysis,
 ): number => {
   return analysis.analyzedPositions.size;

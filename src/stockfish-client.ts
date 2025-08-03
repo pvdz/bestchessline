@@ -686,7 +686,7 @@ export const analyzePosition = async (
   options: StockfishOptions = {},
   onUpdate?: (result: AnalysisResult) => void,
 ): Promise<AnalysisResult> => {
-  return new Promise((resolve, reject) => {
+  const promise = new Promise<AnalysisResult>((resolve, reject) => {
     // Validate input parameters
     if (!fen || typeof fen !== "string") {
       console.warn("Stockfish analyzePosition: Invalid FEN parameter:", fen);
@@ -779,6 +779,8 @@ export const analyzePosition = async (
 
     uciCmd(goCommand);
   });
+
+  return promise;
 };
 
 export const stopAnalysis = (): void => {

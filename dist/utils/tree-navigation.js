@@ -14,50 +14,50 @@ import { updateMoveList } from "./game-navigation.js";
  * @returns Array of nodes representing the path from root to target
  */
 export function getPathToNode(targetNode, rootNodes) {
-  const findPath = (nodes, path = []) => {
-    for (const node of nodes) {
-      const currentPath = [...path, node];
-      if (node === targetNode) {
-        return currentPath;
-      }
-      if (node.children.length > 0) {
-        const result = findPath(node.children, currentPath);
-        if (result) {
-          return result;
+    const findPath = (nodes, path = []) => {
+        for (const node of nodes) {
+            const currentPath = [...path, node];
+            if (node === targetNode) {
+                return currentPath;
+            }
+            if (node.children.length > 0) {
+                const result = findPath(node.children, currentPath);
+                if (result) {
+                    return result;
+                }
+            }
         }
-      }
-    }
-    return null;
-  };
-  return findPath(rootNodes) || [];
+        return null;
+    };
+    return findPath(rootNodes) || [];
 }
 /**
  * Apply a sequence of moves to the board, replacing the current game
  * @param moves Array of TreeDiggerNode moves to apply
  */
 export function applyMovesToBoard(moves) {
-  // Clear any existing branch
-  clearBranch();
-  // Convert TreeDiggerNode moves to ChessMove array
-  const chessMoves = moves.map((node) => node.move);
-  // Get the initial FEN from the first node, or use current board FEN
-  const initialFEN = moves.length > 0 ? moves[0].fen : Board.getFEN();
-  // Replace the entire game with these moves
-  updateAppState({
-    moves: chessMoves,
-    initialFEN: initialFEN,
-    currentMoveIndex: chessMoves.length - 1, // Set to last move
-    isInBranch: false,
-    branchMoves: [],
-    branchStartIndex: -1,
-  });
-  // Update the board to show the final position
-  if (moves.length > 0) {
-    const lastNode = moves[moves.length - 1];
-    const finalFen = applyMoveToFEN(lastNode.fen, lastNode.move);
-    Board.setPosition(finalFen);
-  }
-  // Update the UI
-  updateMoveList();
+    // Clear any existing branch
+    clearBranch();
+    // Convert TreeDiggerNode moves to ChessMove array
+    const chessMoves = moves.map((node) => node.move);
+    // Get the initial FEN from the first node, or use current board FEN
+    const initialFEN = moves.length > 0 ? moves[0].fen : Board.getFEN();
+    // Replace the entire game with these moves
+    updateAppState({
+        moves: chessMoves,
+        initialFEN: initialFEN,
+        currentMoveIndex: chessMoves.length - 1, // Set to last move
+        isInBranch: false,
+        branchMoves: [],
+        branchStartIndex: -1,
+    });
+    // Update the board to show the final position
+    if (moves.length > 0) {
+        const lastNode = moves[moves.length - 1];
+        const finalFen = applyMoveToFEN(lastNode.fen, lastNode.move);
+        Board.setPosition(finalFen);
+    }
+    // Update the UI
+    updateMoveList();
 }
 //# sourceMappingURL=tree-navigation.js.map

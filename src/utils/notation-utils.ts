@@ -163,7 +163,7 @@ export function pvToNotation(
   if (pv.length === 0) return "";
 
   // Process moves in the context of the actual position
-  const moves = pv.map((move: ChessMove, index: number) => {
+  const moves = pv.map((move: ChessMove, _index: number) => {
     // For now, use the original position for all moves
     // In a more sophisticated implementation, we'd update the position after each move
     return moveToNotation(move, format, pieceFormat, fen);
@@ -211,3 +211,67 @@ function getPieceColor(piece: PieceNotation): ColorNotation {
     ? createColorNotation("w")
     : createColorNotation("b");
 }
+
+/**
+ * Convert raw move (e.g., "b8c6") to short algebraic notation (e.g., "Nc6")
+ * This is needed because Stockfish returns raw moves but parseMove expects SAN
+ */
+export const rawMoveToSAN = (rawMove: string, fen: string): string => {
+  if (rawMove.length !== 4) return rawMove; // Not a raw move, return as-is
+  const from: string = rawMove.substring(0, 2);
+  const to: string = rawMove.substring(2, 4);
+
+  // Handle castling FIRST
+  if ((from === "e1" && to === "g1") || (from === "e8" && to === "g8"))
+    return "O-O";
+  if ((from === "e1" && to === "c1") || (from === "e8" && to === "c8"))
+    return "O-O-O";
+
+  // If from and to are the same, return raw move
+  if (from === to) return rawMove;
+
+  // Parse the position to get piece information
+  const position = parseFEN(fen);
+  const board = position.board;
+
+  // Convert square to coordinates
+  const fileToIndex = (file: string): number =>
+    file.charCodeAt(0) - "a".charCodeAt(0);
+  const rankToIndex = (rank: string): number => 8 - parseInt(rank);
+
+  const fromFile: number = fileToIndex(from[0]);
+  const fromRank: number = rankToIndex(from[1]);
+
+  if (fromRank < 0 || fromRank >= 8 || fromFile < 0 || fromFile >= 8) {
+    return rawMove; // Invalid square, return as-is
+  }
+
+  const piece: string | null = board[fromRank][fromFile];
+  if (!piece) return rawMove; // No piece at square, return as-is
+
+  // If it's a pawn move, only return the destination square if the piece is a pawn
+  if ((piece === "P" || piece === "p") && from[0] === to[0]) {
+    return to;
+  }
+
+  // Convert piece to SAN notation
+  const pieceMap: { [key: string]: string } = {
+    P: "", // Pawns don't get a letter
+    p: "", // Black pawns don't get a letter
+    R: "R",
+    r: "R", // Black rooks still get R
+    N: "N",
+    n: "N", // Black knights still get N
+    B: "B",
+    b: "B", // Black bishops still get B
+    Q: "Q",
+    q: "Q", // Black queens still get Q
+    K: "K",
+    k: "K", // Black kings still get K
+  };
+
+  const pieceLetter: string = pieceMap[piece] || "";
+  const toSquare: string = to;
+
+  return pieceLetter + toSquare;
+};

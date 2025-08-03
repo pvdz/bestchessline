@@ -63,7 +63,7 @@ export function applyMoveToFEN(fen: string, move: ChessMove): string {
   let newEnPassant = null;
   if (move.piece.toUpperCase() === PIECE_TYPES.PAWN) {
     const [fromRank, fromFile] = squareToCoords(move.from);
-    const [toRank, toFile] = squareToCoords(move.to);
+    const [toRank, _toFile] = squareToCoords(move.to);
 
     // Check if it's a double pawn move
     if (Math.abs(fromRank - toRank) === 2) {

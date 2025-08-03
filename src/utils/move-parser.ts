@@ -117,26 +117,22 @@ export function parseSimpleMove(
   }
 
   // Handle pawn promotions (e8=Q, e8Q, etc.)
-  const promotionMatch = cleanMove.match(/^([a-h]x?[a-h][18])=?([QRBN])$/);
+  const promotionMatch = cleanMove.match(/^([a-h][18])=?([QRBN])$/);
   if (promotionMatch) {
-    const movePart = promotionMatch[1];
+    const toSquare = promotionMatch[1];
     const promotionPiece = promotionMatch[2];
     const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
 
-    // Extract to square from the move part
-    const toSquare = movePart.match(/[a-h][18]/)?.[0];
-    if (toSquare) {
-      const fromSquare = findFromSquare(piece, toSquare, fen);
-      if (fromSquare) {
-        return {
-          from: fromSquare,
-          to: toSquare,
-          piece,
-          promotion: (isWhiteTurn
-            ? promotionPiece
-            : promotionPiece.toLowerCase()) as PieceNotation,
-        };
-      }
+    const fromSquare = inferPawnFromSquare(toSquare, isWhiteTurn);
+    if (fromSquare) {
+      return {
+        from: fromSquare,
+        to: toSquare,
+        piece,
+        promotion: (isWhiteTurn
+          ? promotionPiece
+          : promotionPiece.toLowerCase()) as PieceNotation,
+      };
     }
   }
 
@@ -195,7 +191,7 @@ export function parseSimpleMove(
     /^([a-h])x([a-h][18])=?([QRBN])$/,
   );
   if (promotionCaptureMatch) {
-    const fromFile = promotionCaptureMatch[1];
+    // const _fromFile = promotionCaptureMatch[1];
     const toSquare = promotionCaptureMatch[2];
     const promotionPiece = promotionCaptureMatch[3];
     const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
@@ -215,7 +211,7 @@ export function parseSimpleMove(
   // Handle en passant captures (exd6) - must be after regular pawn captures
   const enPassantMatch = cleanMove.match(/^([a-h])x([a-h][1-8])$/);
   if (enPassantMatch) {
-    const fromFile = enPassantMatch[1];
+    // const fromFile = enPassantMatch[1];
     const toSquare = enPassantMatch[2];
     const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
     const fromSquare = findFromSquare(piece, toSquare, fen);
@@ -246,6 +242,210 @@ export function parseSimpleMove(
 }
 
 /**
+ * Parse a move string purely from notation without position validation
+ * This is useful for the Line Fisher where we want to parse user input moves
+ * without checking if they're actually legal in the current position
+ */
+export function parseMoveFromNotation(
+  moveText: string,
+  isWhiteTurn: boolean = true,
+): ChessMove | null {
+  // Clean the move text - remove check/checkmate/evaluation symbols
+  const cleanMove = moveText.replace(/[+#?!]/, "");
+
+  // Handle castling
+  if (cleanMove === "O-O" || cleanMove === "0-0") {
+    if (isWhiteTurn) {
+      return {
+        from: "e1",
+        to: "g1",
+        piece: "K",
+        special: "castling",
+        rookFrom: "h1",
+        rookTo: "f1",
+      };
+    } else {
+      return {
+        from: "e8",
+        to: "g8",
+        piece: "k",
+        special: "castling",
+        rookFrom: "h8",
+        rookTo: "f8",
+      };
+    }
+  }
+
+  if (cleanMove === "O-O-O" || cleanMove === "0-0-0") {
+    if (isWhiteTurn) {
+      return {
+        from: "e1",
+        to: "c1",
+        piece: "K",
+        special: "castling",
+        rookFrom: "a1",
+        rookTo: "d1",
+      };
+    } else {
+      return {
+        from: "e8",
+        to: "c8",
+        piece: "k",
+        special: "castling",
+        rookFrom: "a8",
+        rookTo: "d8",
+      };
+    }
+  }
+
+  // Handle pawn moves (e4, e5, etc.)
+  if (cleanMove.match(/^[a-h][1-8]$/)) {
+    const toSquare = cleanMove;
+    const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
+    // For pure parsing, we need to infer the from square based on the destination
+    const fromSquare = inferPawnFromSquare(toSquare, isWhiteTurn);
+    if (fromSquare) {
+      return { from: fromSquare, to: toSquare, piece };
+    }
+  }
+
+  // Handle pawn captures (exd5, etc.)
+  if (cleanMove.match(/^[a-h]x[a-h][1-8]$/)) {
+    const fromFile = cleanMove[0];
+    const toSquare = cleanMove.substring(2);
+    const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
+    const fromSquare = inferPawnFromSquareForCapture(
+      fromFile,
+      toSquare,
+      isWhiteTurn,
+    );
+    if (fromSquare) {
+      return { from: fromSquare, to: toSquare, piece };
+    }
+  }
+
+  // Handle pawn promotions (e8=Q, e8Q, etc.)
+  const promotionMatch = cleanMove.match(/^([a-h][18])=?([QRBN])$/);
+  if (promotionMatch) {
+    const toSquare = promotionMatch[1];
+    const promotionPiece = promotionMatch[2];
+    const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
+
+    // Extract to square from the move part
+    const fromSquare = inferPawnFromSquare(toSquare, isWhiteTurn);
+    if (fromSquare) {
+      return {
+        from: fromSquare,
+        to: toSquare,
+        piece,
+        promotion: (isWhiteTurn
+          ? promotionPiece
+          : promotionPiece.toLowerCase()) as PieceNotation,
+      };
+    }
+  }
+
+  // Handle piece moves (Nf3, Rg1, etc.) - including disambiguation
+  const pieceMatch = cleanMove.match(
+    /^([KQRBN])([a-h]?[1-8]?)?x?([a-h][1-8])$/,
+  );
+  if (pieceMatch) {
+    const pieceType = pieceMatch[1];
+    const disambiguation = pieceMatch[2] || "";
+    const toSquare = pieceMatch[3];
+    const pieceNotation = (
+      isWhiteTurn ? pieceType : pieceType.toLowerCase()
+    ) as PieceNotation;
+    const fromSquare = inferPieceFromSquareWithDisambiguation(
+      pieceNotation,
+      toSquare,
+      disambiguation,
+      isWhiteTurn,
+    );
+    if (fromSquare) {
+      const piece = (
+        isWhiteTurn ? pieceType : pieceType.toLowerCase()
+      ) as PieceNotation;
+      return { from: fromSquare, to: toSquare, piece };
+    }
+  }
+
+  // Handle piece captures (Nxe4, etc.) - including disambiguation
+  const captureMatch = cleanMove.match(
+    /^([KQRBN])([a-h]?[1-8]?)?x([a-h][1-8])$/,
+  );
+  if (captureMatch) {
+    const pieceType = captureMatch[1];
+    const disambiguation = captureMatch[2] || "";
+    const toSquare = captureMatch[3];
+    const pieceNotation = (
+      isWhiteTurn ? pieceType : pieceType.toLowerCase()
+    ) as PieceNotation;
+    const fromSquare = inferPieceFromSquareWithDisambiguation(
+      pieceNotation,
+      toSquare,
+      disambiguation,
+      isWhiteTurn,
+    );
+    if (fromSquare) {
+      const piece = (
+        isWhiteTurn ? pieceType : pieceType.toLowerCase()
+      ) as PieceNotation;
+      return { from: fromSquare, to: toSquare, piece };
+    }
+  }
+
+  // Handle promotion captures (exd8=Q, exd8Q, etc.)
+  const promotionCaptureMatch = cleanMove.match(
+    /^([a-h])x([a-h][18])=?([QRBN])$/,
+  );
+  if (promotionCaptureMatch) {
+    const fromFile = promotionCaptureMatch[1];
+    const toSquare = promotionCaptureMatch[2];
+    const promotionPiece = promotionCaptureMatch[3];
+    const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
+    const fromSquare = inferPawnFromSquareForCapture(
+      fromFile,
+      toSquare,
+      isWhiteTurn,
+    );
+    if (fromSquare) {
+      return {
+        from: fromSquare,
+        to: toSquare,
+        piece,
+        promotion: (isWhiteTurn
+          ? promotionPiece
+          : promotionPiece.toLowerCase()) as PieceNotation,
+      };
+    }
+  }
+
+  // Handle en passant captures (exd6) - must be after regular pawn captures
+  const enPassantMatch = cleanMove.match(/^([a-h])x([a-h][1-8])$/);
+  if (enPassantMatch) {
+    const fromFile = enPassantMatch[1];
+    const toSquare = enPassantMatch[2];
+    const piece = (isWhiteTurn ? "P" : "p") as PieceNotation;
+    const fromSquare = inferPawnFromSquareForCapture(
+      fromFile,
+      toSquare,
+      isWhiteTurn,
+    );
+    if (fromSquare) {
+      return {
+        from: fromSquare,
+        to: toSquare,
+        piece,
+        special: "en-passant",
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Find the from square for a piece moving to a destination
  */
 export function findFromSquare(
@@ -255,8 +455,6 @@ export function findFromSquare(
 ): string | null {
   const position = parseFEN(currentFEN);
   const candidates: string[] = [];
-  const pieceType = getPieceTypeFromNotation(piece);
-  const color = getColorFromNotation(piece);
 
   // Find all squares with the specified piece
   for (let rank = 0; rank < 8; rank++) {
@@ -296,8 +494,6 @@ export function findFromSquareWithDisambiguation(
 ): string | null {
   const position = parseFEN(currentFEN);
   const candidates: string[] = [];
-  const pieceType = getPieceTypeFromNotation(piece);
-  const color = getColorFromNotation(piece);
 
   // Find all squares with the specified piece
   for (let rank = 0; rank < 8; rank++) {
@@ -320,7 +516,13 @@ export function findFromSquareWithDisambiguation(
 
   if (validCandidates.length > 1) {
     // Use disambiguation to select the correct move
-    return selectCorrectMove(validCandidates, toSquare, piece, position.board);
+    return selectCorrectMove(
+      validCandidates,
+      toSquare,
+      piece,
+      position.board,
+      disambiguation,
+    );
   }
 
   return null;
@@ -337,7 +539,6 @@ export function canPieceMoveTo(
 ): boolean {
   const pieceType = getPieceTypeFromNotation(piece);
   const color = getColorFromNotation(piece);
-  const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
 
   // Check if destination is occupied by same color piece
@@ -376,7 +577,6 @@ export function canPawnMoveTo(
   const [toRank, toFile] = squareToCoords(toSquare);
   const piece = board[fromRank][fromFile];
   const isWhite = piece === "P";
-  const direction = isWhite ? -1 : 1;
 
   // Check if it's a capture
   const isCapture = fromFile !== toFile;
@@ -457,7 +657,7 @@ export function canRookMoveTo(
 export function canKnightMoveTo(
   fromSquare: string,
   toSquare: string,
-  board: string[][],
+  _board: string[][],
 ): boolean {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
@@ -524,7 +724,7 @@ export function canQueenMoveTo(
 export function canKingMoveTo(
   fromSquare: string,
   toSquare: string,
-  board: string[][],
+  _board: string[][],
 ): boolean {
   const [fromRank, fromFile] = squareToCoords(fromSquare);
   const [toRank, toFile] = squareToCoords(toSquare);
@@ -537,19 +737,52 @@ export function canKingMoveTo(
 }
 
 /**
- * Select the correct move from multiple candidates
+ * Select the correct move from multiple candidates using disambiguation
  */
 export function selectCorrectMove(
   candidates: string[],
-  toSquare: string,
-  piece: PieceNotation,
-  board: string[][],
+  _toSquare: string,
+  _piece: PieceNotation,
+  _board: string[][],
+  disambiguation: string,
 ): string {
-  const pieceType = getPieceTypeFromNotation(piece);
-  const color = getColorFromNotation(piece);
+  // If no disambiguation provided, return first candidate
+  if (!disambiguation) {
+    return candidates[0];
+  }
 
-  // For now, just return the first candidate
-  // In a more sophisticated implementation, this would use additional context
+  // Handle different types of disambiguation
+  if (disambiguation.length === 1) {
+    // Single character disambiguation (file or rank)
+    const char = disambiguation.toLowerCase();
+
+    if (char >= "a" && char <= "h") {
+      // File disambiguation (e.g., "Nbd2" - 'b' means knight on b-file)
+      const file = char.charCodeAt(0) - "a".charCodeAt(0);
+      const fileCandidates = candidates.filter((square) => {
+        const [, squareFile] = squareToCoords(square);
+        return squareFile === file;
+      });
+      return fileCandidates.length > 0 ? fileCandidates[0] : candidates[0];
+    } else if (char >= "1" && char <= "8") {
+      // Rank disambiguation (e.g., "N1d2" - '1' means knight on rank 1)
+      const rank = parseInt(char) - 1;
+      const rankCandidates = candidates.filter((square) => {
+        const [squareRank] = squareToCoords(square);
+        return squareRank === rank;
+      });
+      return rankCandidates.length > 0 ? rankCandidates[0] : candidates[0];
+    }
+  } else if (disambiguation.length === 2) {
+    // Full square disambiguation (e.g., "Nc3d2" - 'c3' means knight on c3)
+    const disambiguationSquare = disambiguation.toLowerCase();
+    const exactCandidates = candidates.filter(
+      (square) => square.toLowerCase() === disambiguationSquare,
+    );
+    return exactCandidates.length > 0 ? exactCandidates[0] : candidates[0];
+  }
+
+  // Fallback to first candidate if disambiguation doesn't match
   return candidates[0];
 }
 
@@ -558,4 +791,321 @@ export function selectCorrectMove(
  */
 function getPieceColor(piece: PieceNotation): "w" | "b" {
   return piece === piece.toUpperCase() ? "w" : "b";
+}
+
+/**
+ * Infer the from square for a pawn move based on destination
+ */
+function inferPawnFromSquare(toSquare: string, isWhiteTurn: boolean): string {
+  const file = toSquare[0];
+  const rank = parseInt(toSquare[1]);
+
+  if (isWhiteTurn) {
+    // White pawns start on rank 2
+    if (rank === 8) {
+      // Promotion - pawn must be on rank 7
+      return `${file}7`;
+    } else if (rank === 7) {
+      // Could be from rank 6
+      return `${file}6`;
+    } else if (rank === 6) {
+      // Could be from rank 5
+      return `${file}5`;
+    } else if (rank === 5) {
+      // Could be from rank 4
+      return `${file}4`;
+    } else if (rank === 4) {
+      // Could be from rank 3
+      return `${file}3`;
+    } else if (rank === 3) {
+      // Could be from rank 2
+      return `${file}2`;
+    } else if (rank === 2) {
+      // Could be from rank 1
+      return `${file}1`;
+    } else {
+      // rank 1 - must be from rank 2
+      return `${file}2`;
+    }
+  } else {
+    // Black pawns start on rank 7
+    if (rank === 1) {
+      // Promotion - pawn must be on rank 2
+      return `${file}2`;
+    } else if (rank === 2) {
+      // Could be from rank 3
+      return `${file}3`;
+    } else if (rank === 3) {
+      // Could be from rank 4
+      return `${file}4`;
+    } else if (rank === 4) {
+      // Could be from rank 5
+      return `${file}5`;
+    } else if (rank === 5) {
+      // Could be from rank 6
+      return `${file}6`;
+    } else if (rank === 6) {
+      // Could be from rank 7
+      return `${file}7`;
+    } else if (rank === 7) {
+      // Could be from rank 8
+      return `${file}8`;
+    } else {
+      // rank 8 - must be from rank 7
+      return `${file}7`;
+    }
+  }
+}
+
+/**
+ * Infer the from square for a pawn capture based on file and destination
+ */
+function inferPawnFromSquareForCapture(
+  fromFile: string,
+  toSquare: string,
+  isWhiteTurn: boolean,
+): string {
+  const toRank = parseInt(toSquare[1]);
+
+  if (isWhiteTurn) {
+    // White pawns capture diagonally up
+    if (toRank === 8) {
+      // Promotion capture - pawn must be on rank 7
+      return `${fromFile}7`;
+    } else if (toRank === 7) {
+      // Could be from rank 6
+      return `${fromFile}6`;
+    } else if (toRank === 6) {
+      // Could be from rank 5
+      return `${fromFile}5`;
+    } else if (toRank === 5) {
+      // Could be from rank 4
+      return `${fromFile}4`;
+    } else if (toRank === 4) {
+      // Could be from rank 3
+      return `${fromFile}3`;
+    } else if (toRank === 3) {
+      // Could be from rank 2
+      return `${fromFile}2`;
+    } else {
+      // rank 2 - must be from rank 1
+      return `${fromFile}1`;
+    }
+  } else {
+    // Black pawns capture diagonally down
+    if (toRank === 1) {
+      // Promotion capture - pawn must be on rank 2
+      return `${fromFile}2`;
+    } else if (toRank === 2) {
+      // Could be from rank 3
+      return `${fromFile}3`;
+    } else if (toRank === 3) {
+      // Could be from rank 4
+      return `${fromFile}4`;
+    } else if (toRank === 4) {
+      // Could be from rank 5
+      return `${fromFile}5`;
+    } else if (toRank === 5) {
+      // Could be from rank 6
+      return `${fromFile}6`;
+    } else if (toRank === 6) {
+      // Could be from rank 7
+      return `${fromFile}7`;
+    } else {
+      // rank 7 - must be from rank 8
+      return `${fromFile}8`;
+    }
+  }
+}
+
+/**
+ * Infer the from square for a piece move with disambiguation
+ */
+function inferPieceFromSquareWithDisambiguation(
+  piece: PieceNotation,
+  toSquare: string,
+  disambiguation: string,
+  isWhiteTurn: boolean,
+): string {
+  const pieceType = getPieceTypeFromNotation(piece);
+
+  // Handle different types of disambiguation
+  if (disambiguation.length === 1) {
+    // Single character disambiguation (file or rank)
+    const char = disambiguation.toLowerCase();
+
+    if (char >= "a" && char <= "h") {
+      // File disambiguation (e.g., "Nbd2" - 'b' means knight on b-file)
+      const file = char.charCodeAt(0) - "a".charCodeAt(0);
+      const rank = inferRankForPiece(pieceType, toSquare, isWhiteTurn);
+      return coordsToSquare(rank, file);
+    } else if (char >= "1" && char <= "8") {
+      // Rank disambiguation (e.g., "N1d2" - '1' means knight on rank 1)
+      const rank = parseInt(char) - 1;
+      const file = inferFileForPiece(pieceType, toSquare, isWhiteTurn);
+      return coordsToSquare(rank, file);
+    }
+  } else if (disambiguation.length === 2) {
+    // Full square disambiguation (e.g., "Nc3d2" - 'c3' means knight on c3)
+    return disambiguation.toLowerCase();
+  }
+
+  // No disambiguation or fallback - infer based on piece type and destination
+  return inferPieceFromSquare(piece, toSquare, isWhiteTurn);
+}
+
+/**
+ * Infer the from square for a piece move
+ */
+function inferPieceFromSquare(
+  piece: PieceNotation,
+  toSquare: string,
+  isWhiteTurn: boolean,
+): string {
+  const pieceType = getPieceTypeFromNotation(piece);
+
+  switch (pieceType) {
+    case "N":
+      return inferKnightFromSquare(toSquare, isWhiteTurn);
+    case "R":
+      return inferRookFromSquare(toSquare, isWhiteTurn);
+    case "B":
+      return inferBishopFromSquare(toSquare, isWhiteTurn);
+    case "Q":
+      return inferQueenFromSquare(toSquare, isWhiteTurn);
+    case "K":
+      return inferKingFromSquare(toSquare, isWhiteTurn);
+    default:
+      return "a1"; // Fallback
+  }
+}
+
+/**
+ * Infer rank for piece based on destination
+ */
+function inferRankForPiece(
+  pieceType: string,
+  toSquare: string,
+  isWhiteTurn: boolean,
+): number {
+  const toRank = parseInt(toSquare[1]) - 1;
+
+  if (isWhiteTurn) {
+    // White pieces typically start on ranks 0-1
+    return pieceType === "P" ? Math.min(toRank + 1, 6) : 0;
+  } else {
+    // Black pieces typically start on ranks 6-7
+    return pieceType === "P" ? Math.max(toRank - 1, 1) : 7;
+  }
+}
+
+/**
+ * Infer file for piece based on destination
+ */
+function inferFileForPiece(
+  pieceType: string,
+  toSquare: string,
+  isWhiteTurn: boolean,
+): number {
+  const toFile = toSquare.charCodeAt(0) - "a".charCodeAt(0);
+
+  // For most pieces, infer based on typical starting positions
+  switch (pieceType) {
+    case "N":
+      return isWhiteTurn ? 1 : 6; // b1 or g8
+    case "R":
+      return isWhiteTurn ? 0 : 7; // a1 or h8
+    case "B":
+      return isWhiteTurn ? 2 : 5; // c1 or f8
+    case "Q":
+      return 3; // d1 or d8
+    case "K":
+      return 4; // e1 or e8
+    default:
+      return toFile; // For pawns, use destination file
+  }
+}
+
+/**
+ * Infer knight from square
+ */
+function inferKnightFromSquare(toSquare: string, isWhiteTurn: boolean): string {
+  const toFile = toSquare.charCodeAt(0) - "a".charCodeAt(0);
+
+  // For white pieces, use typical game positions
+  if (isWhiteTurn) {
+    // If moving to e4, likely from f3 (common development)
+    if (toSquare === "e4") return "f3";
+    if (toSquare === "d4") return "c3";
+    if (toSquare === "c4") return "b3";
+    if (toSquare === "f4") return "g3";
+    if (toSquare === "g4") return "h3";
+    if (toSquare === "b4") return "a3";
+    if (toSquare === "h4") return "g3";
+    if (toSquare === "a4") return "b3";
+    // Default fallback
+    return toFile <= 3 ? "b1" : "g1";
+  } else {
+    // For black pieces, use typical game positions
+    if (toSquare === "e5") return "f6";
+    if (toSquare === "d5") return "c6";
+    if (toSquare === "c5") return "b6";
+    if (toSquare === "f5") return "g6";
+    if (toSquare === "g5") return "h6";
+    if (toSquare === "b5") return "a6";
+    if (toSquare === "h5") return "g6";
+    if (toSquare === "a5") return "b6";
+    // Default fallback
+    return toFile <= 3 ? "b8" : "g8";
+  }
+}
+
+/**
+ * Infer rook from square
+ */
+function inferRookFromSquare(_toSquare: string, isWhiteTurn: boolean): string {
+  return isWhiteTurn ? "a1" : "h8";
+}
+
+/**
+ * Infer bishop from square
+ */
+function inferBishopFromSquare(toSquare: string, isWhiteTurn: boolean): string {
+  // For white pieces, use typical game positions
+  if (isWhiteTurn) {
+    if (toSquare === "e4") return "f1";
+    if (toSquare === "d4") return "e1";
+    if (toSquare === "c4") return "d1";
+    if (toSquare === "f4") return "g1";
+    if (toSquare === "g4") return "h1";
+    if (toSquare === "b4") return "c1";
+    if (toSquare === "h4") return "g1";
+    if (toSquare === "a4") return "b1";
+    return "c1";
+  } else {
+    // For black pieces, use typical game positions
+    if (toSquare === "e5") return "f8";
+    if (toSquare === "d5") return "e8";
+    if (toSquare === "c5") return "d8";
+    if (toSquare === "f5") return "g8";
+    if (toSquare === "g5") return "h8";
+    if (toSquare === "b5") return "c8";
+    if (toSquare === "h5") return "g8";
+    if (toSquare === "a5") return "b8";
+    return "f8";
+  }
+}
+
+/**
+ * Infer queen from square
+ */
+function inferQueenFromSquare(_toSquare: string, isWhiteTurn: boolean): string {
+  return isWhiteTurn ? "d1" : "d8";
+}
+
+/**
+ * Infer king from square
+ */
+function inferKingFromSquare(_toSquare: string, isWhiteTurn: boolean): string {
+  return isWhiteTurn ? "e1" : "e8";
 }

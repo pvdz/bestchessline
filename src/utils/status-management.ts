@@ -1,5 +1,7 @@
 import { getAppState } from "../main.js";
 import * as TreeDigger from "../tree-digger.js";
+import * as LineFisher from "../line_fisher.js";
+import { getElementByIdOrThrow } from "./dom-helpers.js";
 
 /**
  * Status Management Utility Functions
@@ -58,3 +60,23 @@ export function updateAnalysisStatus(message?: string): void {
     statusElement.textContent = "Ready";
   }
 }
+
+/**
+ * Update Line Fisher status display
+ * Show Line Fisher-specific status messages with Stockfish event tracking
+ */
+export const updateLineFisherStatus = (message: string): void => {
+  const statusElement = getElementByIdOrThrow("line-fisher-status");
+
+  // Get current progress for Stockfish event info
+  const state = LineFisher.getLineFisherState();
+  const progress = state.progress;
+
+  // Add Stockfish event information to the message
+  const eventInfo =
+    progress.totalEvents > 0
+      ? ` | Stockfish: ${progress.totalEvents} total, ${progress.eventsPerSecond}/s`
+      : "";
+
+  statusElement.textContent = message + eventInfo;
+};

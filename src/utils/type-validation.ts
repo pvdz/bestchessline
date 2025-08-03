@@ -5,6 +5,11 @@ import type {
   WhitePieceNotation,
   BlackPieceNotation,
 } from "../types.js";
+import {
+  createPieceNotation,
+  createPieceTypeNotation,
+  createColorNotation,
+} from "../types.js";
 
 /**
  * Type Validation Utilities
@@ -115,16 +120,14 @@ export const validateBlackPieceNotation = (
 /**
  * Safe piece notation creation with validation
  */
-export const safeCreatePieceNotation = async (
+export const safeCreatePieceNotation = (
   value: unknown,
-): Promise<PieceNotation | null> => {
+): PieceNotation | null => {
   if (!validatePieceNotation(value)) {
     return null;
   }
 
   try {
-    // Import the create function dynamically to avoid circular dependencies
-    const { createPieceNotation } = await import("../types.js");
     return createPieceNotation(value as string);
   } catch (error) {
     console.error("Error creating piece notation:", error);
@@ -135,15 +138,14 @@ export const safeCreatePieceNotation = async (
 /**
  * Safe piece type notation creation with validation
  */
-export const safeCreatePieceTypeNotation = async (
+export const safeCreatePieceTypeNotation = (
   value: unknown,
-): Promise<PieceTypeNotation | null> => {
+): PieceTypeNotation | null => {
   if (!validatePieceTypeNotation(value)) {
     return null;
   }
 
   try {
-    const { createPieceTypeNotation } = await import("../types.js");
     return createPieceTypeNotation(value as string);
   } catch (error) {
     console.error("Error creating piece type notation:", error);
@@ -154,15 +156,14 @@ export const safeCreatePieceTypeNotation = async (
 /**
  * Safe color notation creation with validation
  */
-export const safeCreateColorNotation = async (
+export const safeCreateColorNotation = (
   value: unknown,
-): Promise<ColorNotation | null> => {
+): ColorNotation | null => {
   if (!validateColorNotation(value)) {
     return null;
   }
 
   try {
-    const { createColorNotation } = await import("../types.js");
     return createColorNotation(value as string);
   } catch (error) {
     console.error("Error creating color notation:", error);

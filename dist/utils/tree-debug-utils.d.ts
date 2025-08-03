@@ -10,17 +10,10 @@ import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
  * @param nodes Array of nodes to verify against
  * @param depth Current depth in the tree (default: 0)
  */
-export declare function verifyDOMStructure(
-  container: HTMLElement,
-  nodes: TreeDiggerNode[],
-  depth?: number,
-): void;
+export declare function verifyDOMStructure(container: HTMLElement, nodes: TreeDiggerNode[], depth?: number): void;
 /**
  * Handle click on tree node
  * @param node The node that was clicked
  * @param analysis The current analysis
  */
-export declare function handleTreeNodeClick(
-  node: TreeDiggerNode,
-  analysis: TreeDiggerAnalysis,
-): void;
+export declare function handleTreeNodeClick(node: TreeDiggerNode, analysis: TreeDiggerAnalysis): void;

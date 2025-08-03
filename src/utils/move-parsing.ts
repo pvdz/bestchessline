@@ -84,7 +84,6 @@ export function parseMove(
 
   // Handle pawn captures (both white and black)
   if (moveText.match(/^[a-h]x[a-h][1-8]$/)) {
-    const fromFile = moveText[0];
     const toSquare = moveText.substring(2);
     const piece = isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN;
     const fromSquare = findFromSquare(piece, toSquare, currentFEN);
@@ -116,7 +115,12 @@ export function parseMove(
     }
   }
 
-  console.log("Failed to parse move:", moveText);
+  console.log(
+    "[parseMove] Failed to parse move:",
+    moveText,
+    "from FEN:",
+    currentFEN,
+  );
   return null;
 }
 

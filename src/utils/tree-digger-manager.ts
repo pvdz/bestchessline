@@ -37,8 +37,22 @@ import {
   formatStateFileSize,
   estimateStateFileSize,
 } from "./tree-digger-persistence.js";
-import { DEFAULT_PAGINATION_CONFIG } from "./tree-digger-pagination.js";
 import { getFEN } from "../chess-board.js";
+
+/**
+ * Show tree digger status and state info boxes
+ */
+const showTreeDiggerInfoBoxes = (): void => {
+  const statusElement = document.querySelector(
+    ".tree-digger-status",
+  ) as HTMLElement;
+  const stateInfoElement = document.querySelector(
+    ".tree-digger-state-info",
+  ) as HTMLElement;
+  if (statusElement) statusElement.style.display = "block";
+  if (stateInfoElement) stateInfoElement.style.display = "block";
+};
+
 /**
  * Tree Digger Analysis Management Utility Functions
  *
@@ -55,6 +69,9 @@ export const startTreeDiggerAnalysisFromManager = async (): Promise<void> => {
 
     // Reset pagination state for new analysis
     resetTreeDiggerPagination();
+
+    // Show status and state info boxes
+    showTreeDiggerInfoBoxes();
 
     await startTreeDiggerAnalysis();
     updateTreeDiggerButtonStates();
@@ -106,6 +123,9 @@ export const clearTreeDiggerAnalysisFromManager = (): void => {
 export const continueTreeDiggerAnalysisFromManager =
   async (): Promise<void> => {
     try {
+      // Show status and state info boxes
+      showTreeDiggerInfoBoxes();
+
       // Update button states immediately when continue is pressed
       updateTreeDiggerButtonStates();
       updateTreeDiggerStatus("Continuing analysis...");
@@ -237,8 +257,6 @@ export const updateTreeNodeElement = (
   node: TreeDiggerNode,
   analysis: TreeDiggerAnalysis,
 ): void => {
-  const moveInfo = element.querySelector(".move-info") as HTMLElement;
-
   const moveText = moveToNotation(node.move);
   const scoreText = formatNodeScore(node);
 
@@ -699,9 +717,14 @@ export const importTreeDiggerStateFromClipboardFromManager =
 /**
  * Update tree digger state information display
  */
+interface ValidationResult {
+  warnings: string[];
+  errors: string[];
+}
+
 export const updateTreeDiggerStateInfo = (
-  stateExport?: any,
-  validation?: any,
+  _stateExport?: unknown,
+  validation?: ValidationResult,
 ): void => {
   const stateInfoElement = document.getElementById("tree-digger-state-info");
   if (!stateInfoElement) {

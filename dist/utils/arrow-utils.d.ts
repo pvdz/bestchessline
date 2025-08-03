@@ -14,11 +14,7 @@ export declare function hideMoveArrow(arrowId?: string): void;
  * @param from The starting square
  * @param to The ending square
  */
-export declare function positionArrow(
-  arrow: HTMLElement,
-  from: string,
-  to: string,
-): void;
+export declare function positionArrow(arrow: HTMLElement, from: string, to: string): void;
 /**
  * Get the arrow elements map (for internal use)
  */
@@ -26,6 +22,4 @@ export declare function getArrowElements(): Map<string, HTMLElement>;
 /**
  * Set the arrow elements map (for internal use)
  */
-export declare function setArrowElements(
-  elements: Map<string, HTMLElement>,
-): void;
+export declare function setArrowElements(elements: Map<string, HTMLElement>): void;

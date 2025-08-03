@@ -10,7 +10,4 @@ export declare function updateTreeDiggerResults(): void;
 /**
  * Update tree digger progress section
  */
-export declare function updateTreeDiggerProgress(
-  resultsElement: HTMLElement,
-  analysis: TreeDiggerAnalysis,
-): void;
+export declare function updateTreeDiggerProgress(resultsElement: HTMLElement, analysis: TreeDiggerAnalysis): void;

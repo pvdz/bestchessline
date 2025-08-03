@@ -43,81 +43,11 @@ export function getCheckedRadio(
 }
 
 /**
- * Safely get all radio buttons by name
- */
-function getAllRadios(name: string): NodeListOf<HTMLInputElement> | null {
-  const elements = document.querySelectorAll(`input[name="${name}"]`);
-  return elements.length > 0
-    ? (elements as NodeListOf<HTMLInputElement>)
-    : null;
-}
-
-/**
  * Safely get a checked radio button by name
  */
 export function getCheckedRadioByName(name: string): HTMLInputElement | null {
   const element = document.querySelector(`input[name="${name}"]:checked`);
   return element instanceof HTMLInputElement ? element : null;
-}
-
-/**
- * Safely get an element that matches a selector
- */
-function querySelector<T extends Element>(selector: string): T | null {
-  const element = document.querySelector(selector);
-  return element as T | null;
-}
-
-/**
- * Safely get all elements that match a selector
- */
-function querySelectorAll<T extends Element>(
-  selector: string,
-): NodeListOf<T> | null {
-  const elements = document.querySelectorAll(selector);
-  return elements.length > 0 ? (elements as NodeListOf<T>) : null;
-}
-
-/**
- * Safely get an element by ID with type checking
- */
-function getElementById<T extends Element>(id: string): T | null {
-  const element = document.getElementById(id);
-  return element as T | null;
-}
-
-/**
- * Check if an element is an HTMLElement
- */
-function isHTMLElement(element: EventTarget | null): element is HTMLElement {
-  return element instanceof HTMLElement;
-}
-
-/**
- * Check if an element is an HTMLInputElement
- */
-function isHTMLInputElement(
-  element: Element | null,
-): element is HTMLInputElement {
-  return element instanceof HTMLInputElement;
-}
-
-/**
- * Check if an element is an HTMLButtonElement
- */
-function isHTMLButtonElement(
-  element: Element | null,
-): element is HTMLButtonElement {
-  return element instanceof HTMLButtonElement;
-}
-
-/**
- * Check if an element is an HTMLTextAreaElement
- */
-function isHTMLTextAreaElement(
-  element: Element | null,
-): element is HTMLTextAreaElement {
-  return element instanceof HTMLTextAreaElement;
 }
 
 /**
@@ -160,3 +90,24 @@ export function querySelectorHTMLElementBySelector(
   const element = document.querySelector(selector);
   return element instanceof HTMLElement ? element : null;
 }
+
+/**
+ * Get an element by ID or throw an error if not found
+ * Use this when an element is required for the application to function
+ */
+export const getElementByIdOrThrow = (id: string): HTMLElement => {
+  const element = document.getElementById(id);
+  if (!element) {
+    const errorMessage = `Required element '${id}' not found. This is a bug.`;
+    console.error(errorMessage);
+
+    // Show error in UI
+    const statusElement = document.getElementById("line-fisher-status");
+    if (statusElement) {
+      statusElement.textContent = errorMessage;
+    }
+
+    throw new Error(errorMessage);
+  }
+  return element;
+};

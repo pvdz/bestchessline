@@ -32,34 +32,19 @@ export declare const updateTreeDiggerButtonStates: () => void;
 /**
  * Update an existing DOM element for a tree node
  */
-export declare const updateTreeNodeElement: (
-  element: HTMLElement,
-  node: TreeDiggerNode,
-  analysis: TreeDiggerAnalysis,
-) => void;
+export declare const updateTreeNodeElement: (element: HTMLElement, node: TreeDiggerNode, analysis: TreeDiggerAnalysis) => void;
 /**
  * Sync the DOM with the shadow tree
  */
-export declare const syncDOMWithShadowTree: (
-  container: HTMLElement,
-  shadowNodes: UITreeNode[],
-  analysis: TreeDiggerAnalysis,
-) => void;
+export declare const syncDOMWithShadowTree: (container: HTMLElement, shadowNodes: UITreeNode[], analysis: TreeDiggerAnalysis) => void;
 /**
  * Update the tree UI incrementally
  */
-export declare const updateTreeDiggerTreeIncrementally: (
-  resultsElement: HTMLElement,
-  analysis: TreeDiggerAnalysis,
-) => void;
+export declare const updateTreeDiggerTreeIncrementally: (resultsElement: HTMLElement, analysis: TreeDiggerAnalysis) => void;
 /**
  * Render a tree node recursively
  */
-export declare const renderTreeNode: (
-  node: TreeDiggerNode,
-  depth: number,
-  analysis: TreeDiggerAnalysis,
-) => string;
+export declare const renderTreeNode: (node: TreeDiggerNode, depth: number, analysis: TreeDiggerAnalysis) => string;
 /**
  * Render a tree digger node
  */
@@ -75,9 +60,7 @@ export declare const copyTreeDiggerStateToClipboardFromManager: () => Promise<vo
 /**
  * Import tree digger state from file
  */
-export declare const importTreeDiggerStateFromManager: (
-  file: File,
-) => Promise<void>;
+export declare const importTreeDiggerStateFromManager: (file: File) => Promise<void>;
 /**
  * Import tree digger state from clipboard
  */
@@ -85,10 +68,11 @@ export declare const importTreeDiggerStateFromClipboardFromManager: () => Promis
 /**
  * Update tree digger state information display
  */
-export declare const updateTreeDiggerStateInfo: (
-  stateExport?: any,
-  validation?: any,
-) => void;
+interface ValidationResult {
+    warnings: string[];
+    errors: string[];
+}
+export declare const updateTreeDiggerStateInfo: (_stateExport?: unknown, validation?: ValidationResult) => void;
 /**
  * Reset tree digger pagination state
  */
@@ -97,3 +81,4 @@ export declare const resetTreeDiggerPagination: () => void;
  * Handle file input change for state import
  */
 export declare const handleStateFileInput: (event: Event) => void;
+export {};

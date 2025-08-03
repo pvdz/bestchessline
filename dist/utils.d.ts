@@ -1,9 +1,4 @@
-import {
-  PieceTypeNotation,
-  ColorNotation,
-  PieceNotation,
-  PlayerColor,
-} from "./types.js";
+import { PieceTypeNotation, ColorNotation, PieceNotation, PlayerColor } from "./types.js";
 export declare function getPieceColor(piece: PieceNotation): ColorNotation;
 export declare function getPieceType(piece: PieceNotation): PieceTypeNotation;
 /**
@@ -17,12 +12,7 @@ export declare function getGlobalCurrentMoveIndex(): number;
 /**
  * Get FEN with correct move counter based on current move index
  */
-export declare function getFENWithCorrectMoveCounter(
-  boardFEN: string,
-  currentMoveIndex: number,
-  castling?: string,
-  enPassant?: string | null,
-): string;
+export declare function getFENWithCorrectMoveCounter(boardFEN: string, currentMoveIndex: number, castling?: string, enPassant?: string | null): string;
 /**
  * Get the starting player from a FEN string
  */

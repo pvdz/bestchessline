@@ -1,8 +1,4 @@
-import {
-  TreeDiggerNode,
-  TreeDiggerAnalysis,
-  TreeDiggerState,
-} from "./types.js";
+import { TreeDiggerNode, TreeDiggerAnalysis, TreeDiggerState } from "./types.js";
 /**
  * Start the tree digger analysis
  */
@@ -18,9 +14,7 @@ export declare const clearTreeDiggerAnalysis: () => void;
 /**
  * Restore tree digger state from imported data
  */
-export declare const restoreTreeDiggerState: (
-  importedState: TreeDiggerState,
-) => void;
+export declare const restoreTreeDiggerState: (importedState: TreeDiggerState) => void;
 /**
  * Continue tree digger analysis from current state
  */
@@ -44,7 +38,4 @@ export declare const calculateTotalLeafs: (nodes: TreeDiggerNode[]) => number;
 /**
  * Calculate number of unique positions analyzed
  */
-export declare const calculateUniquePositions: (
-  nodes: TreeDiggerNode[],
-  analysis: TreeDiggerAnalysis,
-) => number;
+export declare const calculateUniquePositions: (_nodes: TreeDiggerNode[], analysis: TreeDiggerAnalysis) => number;

@@ -9,9 +9,7 @@ import { TreeDiggerNode } from "../types.js";
  * @param moves Array of moves to format
  * @returns Formatted line string
  */
-export declare function formatLineWithMoveNumbers(
-  moves: TreeDiggerNode[],
-): string;
+export declare function formatLineWithMoveNumbers(moves: TreeDiggerNode[]): string;
 /**
  * Initialize copy button functionality
  */

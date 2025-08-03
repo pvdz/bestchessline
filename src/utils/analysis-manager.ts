@@ -103,14 +103,12 @@ export function updateResults(result: AnalysisResult): void {
   updateStatus(`Analysis complete: ${result.moves.length} moves found`);
 }
 
-// Debounce mechanism for analysis updates
-let analysisUpdateTimeout: number | null = null;
+
 
 /**
  * Update results panel
  */
 export function actuallyUpdateResultsPanel(moves: AnalysisMove[]): void {
-  analysisUpdateTimeout = null;
 
   const resultsPanel = document.getElementById("analysis-results");
   if (!resultsPanel) return;
