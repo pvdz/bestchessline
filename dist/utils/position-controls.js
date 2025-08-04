@@ -1,4 +1,8 @@
-import { getInputElement, getCheckedRadio } from "./dom-helpers.js";
+import {
+  getInputElement,
+  getCheckedRadio,
+  getElementByIdOrThrow,
+} from "./dom-helpers.js";
 import { getFENWithCorrectMoveCounter } from "../utils.js";
 import { clearInitiatorMoveInputs } from "./ui-utils.js";
 import * as Board from "../chess-board.js";
@@ -116,7 +120,7 @@ export const resetPositionEvaluation = () => {
  * Initialize position evaluation button
  */
 export const initializePositionEvaluationButton = () => {
-  const evaluationButton = document.getElementById("position-evaluation-btn");
+  const evaluationButton = getElementByIdOrThrow("position-evaluation-btn");
   if (evaluationButton) {
     evaluationButton.addEventListener("click", () => {
       evaluateCurrentPosition();
@@ -205,7 +209,7 @@ export const evaluateCurrentPosition = async () => {
  * Update the position evaluation display
  */
 export const updatePositionEvaluationDisplay = () => {
-  const evaluationButton = document.getElementById("position-evaluation-btn");
+  const evaluationButton = getElementByIdOrThrow("position-evaluation-btn");
   if (!evaluationButton) {
     return;
   }

@@ -149,8 +149,8 @@
       ];
 
       function testAnalysisMoves() {
-        const fen = document.getElementById("analysisFEN").value;
-        const resultDiv = document.getElementById("analysisResult");
+        const fen = getElementByIdOrThrow("analysisFEN").value;
+        const resultDiv = getElementByIdOrThrow("analysisResult");
 
         let html = "<h3>Analysis Moves with Effects:</h3>";
 
@@ -187,9 +187,9 @@
       }
 
       function testMove() {
-        const fen = document.getElementById("testFEN").value;
-        const moveText = document.getElementById("testMove").value;
-        const resultDiv = document.getElementById("moveResult");
+        const fen = getElementByIdOrThrow("testFEN").value;
+        const moveText = getElementByIdOrThrow("testMove").value;
+        const resultDiv = getElementByIdOrThrow("moveResult");
 
         if (!moveText.includes("-")) {
           alert("Please enter move in format: from-to (e.g., e2-e4)");
@@ -232,8 +232,8 @@
       }
 
       function importGame() {
-        const notation = document.getElementById("gameInput").value;
-        const resultDiv = document.getElementById("gameResult");
+        const notation = getElementByIdOrThrow("gameInput").value;
+        const resultDiv = getElementByIdOrThrow("gameResult");
 
         // Simulate the game import process
         const moves = parseGameNotation(notation);

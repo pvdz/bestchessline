@@ -32,14 +32,14 @@
 
     <script>
       function log(message) {
-        const logDiv = document.getElementById("log");
+        const logDiv = getElementByIdOrThrow("log");
         const timestamp = new Date().toLocaleTimeString();
         logDiv.textContent += `[${timestamp}] ${message}\n`;
         logDiv.scrollTop = logDiv.scrollHeight;
       }
 
       function clearLog() {
-        document.getElementById("log").textContent = "";
+        getElementByIdOrThrow("log").textContent = "";
       }
 
       // Set up exports for UMD module

@@ -92,7 +92,7 @@
 
     <script>
       async function testModernClipboard() {
-        const resultDiv = document.getElementById("modern-result");
+        const resultDiv = getElementByIdOrThrow("modern-result");
 
         try {
           if (navigator.clipboard && window.isSecureContext) {
@@ -118,7 +118,7 @@
       }
 
       function testFallbackClipboard() {
-        const resultDiv = document.getElementById("fallback-result");
+        const resultDiv = getElementByIdOrThrow("fallback-result");
 
         try {
           const testText =
@@ -151,7 +151,7 @@
       }
 
       async function testTreeDiggerState() {
-        const resultDiv = document.getElementById("tree-digger-result");
+        const resultDiv = getElementByIdOrThrow("tree-digger-result");
 
         try {
           // Create a sample tree digger state
@@ -277,7 +277,7 @@
       }
 
       async function testClipboardPaste() {
-        const resultDiv = document.getElementById("paste-result");
+        const resultDiv = getElementByIdOrThrow("paste-result");
 
         try {
           if (!navigator.clipboard || !window.isSecureContext) {
@@ -343,7 +343,7 @@
       }
 
       async function testCompleteWorkflow() {
-        const resultDiv = document.getElementById("workflow-result");
+        const resultDiv = getElementByIdOrThrow("workflow-result");
 
         try {
           if (!navigator.clipboard || !window.isSecureContext) {
@@ -493,7 +493,7 @@
       }
 
       function testContinueAnalysis() {
-        const resultDiv = document.getElementById("continue-result");
+        const resultDiv = getElementByIdOrThrow("continue-result");
 
         try {
           // Simulate a state with an analysis queue

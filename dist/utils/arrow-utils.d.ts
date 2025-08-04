@@ -1,9 +1,4 @@
 /**
- * Arrow Utility Functions
- *
- * Provides functions for managing move arrows on the chess board.
- */
-/**
  * Hide move arrow
  * @param arrowId Optional specific arrow ID to hide, or hide all if not provided
  */

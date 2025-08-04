@@ -29,7 +29,7 @@
       const result = validateMove(position, move);
       console.log("Validation result:", result);
 
-      document.getElementById("result").innerHTML = `
+      getElementByIdOrThrow("result").innerHTML = `
             <h2>Test Results</h2>
             <p><strong>FEN:</strong> ${fen}</p>
             <p><strong>Move:</strong> ${move.from}-${move.to}</p>

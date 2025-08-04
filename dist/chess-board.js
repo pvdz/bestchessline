@@ -18,6 +18,7 @@ import {
   positionArrow,
   getArrowElements,
 } from "./utils/arrow-utils.js";
+import { querySelectorOrThrow } from "./utils/dom-helpers.js";
 /**
  * Board state instance
  */
@@ -293,7 +294,8 @@ const updateDropTarget = (clientX, clientY) => {
   const square = findSquareAtPosition(clientX, clientY);
   // Remove previous drop target highlight
   if (dragState.currentDropTarget) {
-    const prevSquare = document.querySelector(
+    const prevSquare = querySelectorOrThrow(
+      document,
       `[data-square="${dragState.currentDropTarget}"]`,
     );
     if (prevSquare) {
@@ -302,7 +304,10 @@ const updateDropTarget = (clientX, clientY) => {
   }
   // Add new drop target highlight
   if (square && square !== dragState.currentDropTarget) {
-    const squareElement = document.querySelector(`[data-square="${square}"]`);
+    const squareElement = querySelectorOrThrow(
+      document,
+      `[data-square="${square}"]`,
+    );
     if (squareElement) {
       squareElement.classList.add("dragover");
     }
@@ -313,7 +318,7 @@ const updateDropTarget = (clientX, clientY) => {
  * Find square at mouse position
  */
 const findSquareAtPosition = (clientX, clientY) => {
-  const boardElement = document.querySelector(".board");
+  const boardElement = querySelectorOrThrow(document, ".board");
   if (!boardElement) return null;
   const rect = boardElement.getBoundingClientRect();
   const x = clientX - rect.left;
@@ -336,7 +341,7 @@ export const makeMove = (from, to, piece) => {
   const newPosition = applyMoveToPosition(boardState.position, from, to, piece);
   updateBoardState({ position: newPosition });
   // Re-render board
-  const boardElement = document.querySelector("#chess-board");
+  const boardElement = querySelectorOrThrow(document, "#chess-board");
   if (boardElement) {
     renderBoard(boardElement);
     // Re-setup event listeners after re-rendering
@@ -438,7 +443,7 @@ export const setPosition = (fen) => {
     // Clear any existing arrows and labels before re-rendering
     hideMoveArrow();
     updateBoardState({ position: newPosition });
-    const boardElement = document.querySelector("#chess-board");
+    const boardElement = querySelectorOrThrow(document, "#chess-board");
     if (boardElement) {
       renderBoard(boardElement);
       // Re-setup event listeners after re-rendering
@@ -594,7 +599,7 @@ export const showMoveArrow = (
     arrow.setAttribute("data-score", scoreText);
   }
   positionArrow(arrow, from, to);
-  const boardContainer = document.querySelector(".board-section");
+  const boardContainer = querySelectorOrThrow(document, ".board-section");
   if (boardContainer) {
     boardContainer.appendChild(arrow);
   }
@@ -608,8 +613,11 @@ export const showMoveArrow = (
     scoreLabel.style.setProperty("--arrow-color", arrowColor);
     scoreLabel.setAttribute("data-arrow-id", arrowId);
     // Position the score label at the end of the arrow
-    const fromElement = document.querySelector(`[data-square="${from}"]`);
-    const toElement = document.querySelector(`[data-square="${to}"]`);
+    const fromElement = querySelectorOrThrow(
+      document,
+      `[data-square="${from}"]`,
+    );
+    const toElement = querySelectorOrThrow(document, `[data-square="${to}"]`);
     if (fromElement && toElement) {
       const fromRect = fromElement.getBoundingClientRect();
       const toRect = toElement.getBoundingClientRect();

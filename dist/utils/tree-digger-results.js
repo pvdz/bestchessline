@@ -6,6 +6,7 @@ import {
   calculateUniquePositions,
 } from "../tree-digger.js";
 import { getStartingPlayer } from "../utils.js";
+import { getElementByIdOrThrow } from "./dom-helpers.js";
 import {
   getThreadCount,
   getDepthScaler,
@@ -42,7 +43,8 @@ export const resetTreeDiggerPaginationState = () => {
  * Update tree digger results display
  */
 export function updateTreeDiggerResults() {
-  const resultsElement = document.getElementById("tree-digger-results");
+  console.warn("right?");
+  const resultsElement = getElementByIdOrThrow("tree-digger-results");
   if (!resultsElement) return;
   const analysis = getCurrentAnalysis();
   if (!analysis) {
@@ -192,7 +194,7 @@ export function updateTreeDiggerProgress(resultsElement, analysis) {
               const startingPlayer = getStartingPlayer(rootFen);
               return startingPlayer === "w" ? "White" : "Black";
             })()} Move</div>
-            <div class="setting-value">${document.getElementById("tree-digger-initiator-move-1")?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
+            <div class="setting-value">${getElementByIdOrThrow("tree-digger-initiator-move-1")?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
           </div>
           <div class="setting">
             <div class="setting-label">2nd ${(() => {
@@ -203,7 +205,7 @@ export function updateTreeDiggerProgress(resultsElement, analysis) {
               const startingPlayer = getStartingPlayer(rootFen);
               return startingPlayer === "w" ? "White" : "Black";
             })()} Move</div>
-            <div class="setting-value">${document.getElementById("tree-digger-initiator-move-2")?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
+            <div class="setting-value">${getElementByIdOrThrow("tree-digger-initiator-move-2")?.value || '<span style=\"color:#aaa\">[default]</span>'}</div>
           </div>
           <div class="setting">
             <div class="setting-label">Responder Moves</div>

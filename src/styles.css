@@ -1360,16 +1360,6 @@ h2 {
   margin-bottom: 15px;
 }
 
-.tree-digger-tree {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 5px;
-  padding: 15px;
-  font-family: "Courier New", monospace;
-  font-size: 0.9em;
-  line-height: 1.4;
-}
-
 /* Unified slider control styles */
 .tree-controls,
 .depth-controls,

@@ -11,10 +11,6 @@ export declare const continueFishAnalysis: () => Promise<void>;
  */
 export declare const importFishStateFromClipboard: () => Promise<void>;
 /**
- * Debug function to check current fish state
- */
-export declare const debugFishState: () => void;
-/**
  * Configuration for the fish function
  */
 export interface FishConfig {
@@ -39,6 +35,10 @@ interface FishLine {
   isDone: boolean;
   isFull: boolean;
 }
+/**
+ * Stop Fish analysis
+ */
+export declare const stopFishAnalysis: () => void;
 /**
  * Fish function - performs line analysis according to the algorithm in the comment
  *

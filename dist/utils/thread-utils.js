@@ -1,6 +1,7 @@
 import {
   getInputElement,
   querySelectorHTMLElementBySelector,
+  getElementByIdOrThrow,
 } from "./dom-helpers.js";
 import * as Stockfish from "../stockfish-client.js";
 /**
@@ -44,8 +45,8 @@ export function updateThreadsInputForFallbackMode() {
  * Update tree digger threads input for fallback mode
  */
 export function updateTreeDiggerThreadsForFallbackMode() {
-  const treeDiggerThreadsInput = document.getElementById("tree-digger-threads");
-  const treeDiggerThreadsValue = document.getElementById(
+  const treeDiggerThreadsInput = getElementByIdOrThrow("tree-digger-threads");
+  const treeDiggerThreadsValue = getElementByIdOrThrow(
     "tree-digger-threads-value",
   );
   const treeDiggerThreadsLabel = querySelectorHTMLElementBySelector(

@@ -5,7 +5,7 @@ import { validateMove } from "../move-validator.js";
 import { parseGameNotation } from "./move-parsing.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { moveToNotation } from "./notation-utils.js";
-import { getCheckedRadioByName } from "./dom-helpers.js";
+import { getCheckedRadioByName, getElementByIdOrThrow } from "./dom-helpers.js";
 import { log } from "./logging.js";
 import { navigateToMove, applyMovesUpToIndex } from "./navigation-utils.js";
 import { updateNavigationButtons } from "./button-utils.js";
@@ -126,7 +126,7 @@ export function nextMove(): void {
  * Update move list display
  */
 export function updateMoveList(): void {
-  const movesPanel = document.getElementById("game-moves");
+  const movesPanel = getElementByIdOrThrow("game-moves");
   if (!movesPanel) return;
 
   const appState = getAppState();

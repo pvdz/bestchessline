@@ -91,11 +91,53 @@
 - **Formatting**: `formatMovesWithNumbers()` for display
 - **Notifications**: Toast with WIP/done counts
 
-#### **Current Issue Being Debugged:**
+#### **Recent Fixes and Cleanup:**
 
-- **Export functionality**: WIP and done lines not appearing in clipboard
-- **Debugging added**: Comprehensive logging to track state throughout analysis
-- **Next step**: Test analysis and export to identify root cause
+1. **Export/Import System Overhaul**
+   - ✅ **Fixed export functionality**: Now exports full `FishState` object instead of just formatted lines
+   - ✅ **Repurposed existing buttons**: Export/Import/Continue/Stop buttons now prioritize Fish functions with Line Fisher fallback
+   - ✅ **Streamlined `FishLine`**: Removed `position`, `isDone`, `isFull` properties (reconstructed on import)
+   - ✅ **Simplified scoring**: Changed from `scores: number[]` to `score: number` and `deltas: number[]` to `delta: number`
+   - ✅ **Import reconstruction**: Added `reconstructFishLine()` helper to rebuild missing properties
+   - ✅ **Continue functionality**: Fixed "Continue Fishing" to resume from `currentFishState.wip`
+   - ✅ **UI display fixes**: Imported "done" lines now correctly show as completed (not yellow WIP markers)
+
+2. **Button State Management**
+   - ✅ **Fish analysis state**: Added `isFishing` flag to `FishState` interface
+   - ✅ **Stop functionality**: Added `shouldStopFishAnalysis` flag and proper loop interruption
+   - ✅ **Button integration**: Fish start/stop/continue buttons now use existing config panel buttons
+   - ✅ **State synchronization**: `updateFishButtonStates()` integrates with `updateLineFisherButtonStates()`
+
+3. **UI Improvements**
+   - ✅ **Fish2 button colors**: Swapped normal and hover state colors (was backwards)
+   - ✅ **Stop button styling**: Added disabled state styling for proper dimming
+   - ✅ **Error handling**: Added try/catch blocks with proper button state reset
+
+4. **File Structure Changes**
+   - ✅ **Moved `index.html`**: Relocated from root to `src/` directory
+   - ✅ **Updated server.js**: Added path correction logic for `../` references
+   - ✅ **Updated package.json**: Changed main entry point to `src/index.html`
+
+5. **TypeScript Cleanup**
+   - ✅ **Fixed missing imports**: Added `getElementByIdOrThrow` imports to 13 files
+   - ✅ **Fixed missing imports**: Added `querySelectorOrThrow` imports to 8 files
+   - ✅ **Updated function signature**: Made `querySelectorOrThrow` accept both `HTMLElement` and `Document`
+   - ✅ **Fixed type errors**: Added explicit `Event` type for event listeners
+   - ✅ **Removed dead code**: Deleted unused `updateLineFisherActivityMonitor` function
+   - ✅ **Code cleanup**: Removed unused Line Fisher functions and interfaces
+
+6. **Idempotent Export/Import**
+   - ✅ **Verified idempotency**: Export/import/export process produces identical results
+   - ✅ **Fixed FEN reconstruction**: Import now correctly rebuilds position FEN from move sequences
+   - ✅ **Fixed "Invalid FEN parameter" error**: Proper position reconstruction prevents analysis errors
+
+#### **Current Status:**
+
+- ✅ **All TypeScript errors fixed**: 0 errors, 0 warnings
+- ✅ **Fish export/import working**: Full state preservation and reconstruction
+- ✅ **Button states working**: Proper enable/disable during analysis
+- ✅ **Continue functionality working**: Resumes analysis from imported state
+- ✅ **UI display correct**: Imported states show proper completion status
 
 #### **Files Modified:**
 

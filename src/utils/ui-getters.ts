@@ -1,3 +1,5 @@
+import { getElementByIdOrThrow } from "./dom-helpers.js";
+
 /**
  * UI Getter Functions
  *
@@ -9,10 +11,10 @@
  * Get depth scaler from UI (1-15)
  */
 export function getDepthScaler(): number {
-  const depthScalerInput = document.getElementById(
+  const depthScalerInput = getElementByIdOrThrow(
     "tree-digger-depth-scaler",
   ) as HTMLInputElement;
-  const depthScalerValue = document.getElementById(
+  const depthScalerValue = getElementByIdOrThrow(
     "tree-digger-depth-scaler-value",
   );
 
@@ -32,10 +34,10 @@ export function getDepthScaler(): number {
  * Get black moves count from UI
  */
 export function getResponderMovesCount(): number {
-  const responderMovesInput = document.getElementById(
+  const responderMovesInput = getElementByIdOrThrow(
     "tree-digger-responder-moves",
   ) as HTMLInputElement;
-  const responderMovesValue = document.getElementById(
+  const responderMovesValue = getElementByIdOrThrow(
     "tree-digger-responder-moves-value",
   );
 
@@ -55,10 +57,10 @@ export function getResponderMovesCount(): number {
  * Get thread count from UI
  */
 export function getThreadCount(): number {
-  const threadsInput = document.getElementById(
+  const threadsInput = getElementByIdOrThrow(
     "tree-digger-threads",
   ) as HTMLInputElement;
-  const threadsValue = document.getElementById("tree-digger-threads-value");
+  const threadsValue = getElementByIdOrThrow("tree-digger-threads-value");
 
   // Try to get the value from the display span first, then fall back to input value
   if (threadsValue && threadsValue.textContent) {
@@ -76,10 +78,10 @@ export function getThreadCount(): number {
  * Get initiator moves from UI inputs
  */
 export function getInitiatorMoves(): string[] {
-  const initiatorMove1Input = document.getElementById(
+  const initiatorMove1Input = getElementByIdOrThrow(
     "tree-digger-initiator-move-1",
   ) as HTMLInputElement;
-  const initiatorMove2Input = document.getElementById(
+  const initiatorMove2Input = getElementByIdOrThrow(
     "tree-digger-initiator-move-2",
   ) as HTMLInputElement;
 
@@ -97,10 +99,10 @@ export function getInitiatorMoves(): string[] {
  * Get first reply override from UI (0 = use default)
  */
 export function getFirstReplyOverride(): number {
-  const overrideInput = document.getElementById(
+  const overrideInput = getElementByIdOrThrow(
     "tree-digger-override-1",
   ) as HTMLInputElement;
-  const overrideValue = document.getElementById("tree-digger-override-1-value");
+  const overrideValue = getElementByIdOrThrow("tree-digger-override-1-value");
 
   // Try to get the value from the display span first, then fall back to input value
   if (overrideValue && overrideValue.textContent) {
@@ -118,10 +120,10 @@ export function getFirstReplyOverride(): number {
  * Get second reply override from UI (0 = use default)
  */
 export function getSecondReplyOverride(): number {
-  const overrideInput = document.getElementById(
+  const overrideInput = getElementByIdOrThrow(
     "tree-digger-override-2",
   ) as HTMLInputElement;
-  const overrideValue = document.getElementById("tree-digger-override-2-value");
+  const overrideValue = getElementByIdOrThrow("tree-digger-override-2-value");
 
   // Try to get the value from the display span first, then fall back to input value
   if (overrideValue && overrideValue.textContent) {

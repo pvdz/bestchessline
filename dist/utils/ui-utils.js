@@ -1,3 +1,4 @@
+import { getElementByIdOrThrow } from "./dom-helpers.js";
 /**
  * UI Utility Functions
  *
@@ -45,28 +46,13 @@ export function debounce(func, wait) {
  * Clear the initiator move input fields
  */
 export function clearInitiatorMoveInputs() {
-  const initiatorMove1Input = document.getElementById(
+  const initiatorMove1Input = getElementByIdOrThrow(
     "tree-digger-initiator-move-1",
   );
-  const initiatorMove2Input = document.getElementById(
+  const initiatorMove2Input = getElementByIdOrThrow(
     "tree-digger-initiator-move-2",
   );
   if (initiatorMove1Input) initiatorMove1Input.value = "";
   if (initiatorMove2Input) initiatorMove2Input.value = "";
-}
-/**
- * Update tree font size
- * @param fontSize The font size in pixels
- */
-export function updateTreeFontSize(fontSize) {
-  const treeSection = document.querySelector(".tree-digger-tree");
-  if (treeSection) {
-    treeSection.style.fontSize = `${fontSize}px`;
-  }
-  // Also update the initial font size when the control is first loaded
-  const treeFontSizeInput = document.getElementById("tree-font-size");
-  if (treeFontSizeInput) {
-    treeFontSizeInput.value = fontSize.toString();
-  }
 }
 //# sourceMappingURL=ui-utils.js.map

@@ -1,4 +1,3 @@
-import { getAppState } from "../main.js";
 import * as TreeDigger from "../tree-digger.js";
 import * as LineFisher from "../line_fisher.js";
 import { getElementByIdOrThrow } from "./dom-helpers.js";
@@ -13,7 +12,7 @@ import { getElementByIdOrThrow } from "./dom-helpers.js";
  * Update tree digger status
  */
 export function updateTreeDiggerStatus(message?: string): void {
-  const statusElement = document.getElementById("tree-digger-status");
+  const statusElement = getElementByIdOrThrow("tree-digger-status");
   if (!statusElement) return;
 
   if (message) {
@@ -36,26 +35,6 @@ export function updateTreeDiggerStatus(message?: string): void {
     statusElement.textContent = `Analyzing... ${progress.analyzedPositions}/${progress.totalPositions} (${progressPercent}%) - ${currentPos}`;
   } else if (analysis?.isComplete) {
     statusElement.textContent = "Analysis complete";
-  } else {
-    statusElement.textContent = "Ready";
-  }
-}
-
-/**
- * Update analysis status
- */
-export function updateAnalysisStatus(message?: string): void {
-  const statusElement = document.getElementById("analysis-status");
-  if (!statusElement) return;
-
-  if (message) {
-    statusElement.textContent = message;
-    return;
-  }
-
-  const appState = getAppState();
-  if (appState.isAnalyzing) {
-    statusElement.textContent = "Analyzing...";
   } else {
     statusElement.textContent = "Ready";
   }

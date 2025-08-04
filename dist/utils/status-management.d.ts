@@ -8,10 +8,6 @@
  */
 export declare function updateTreeDiggerStatus(message?: string): void;
 /**
- * Update analysis status
- */
-export declare function updateAnalysisStatus(message?: string): void;
-/**
  * Update Line Fisher status display
  * Show Line Fisher-specific status messages with Stockfish event tracking
  */

@@ -1,6 +1,7 @@
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { moveToNotation } from "./notation-utils.js";
 import * as TreeDigger from "../tree-digger.js";
+import { getElementByIdOrThrow } from "./dom-helpers.js";
 /**
  * Copy and Export Utility Functions
  *
@@ -37,7 +38,7 @@ export function formatLineWithMoveNumbers(moves) {
  * Initialize copy button functionality
  */
 export function initializeCopyButton() {
-  const copyBtn = document.getElementById("copy-tree-digger-tree");
+  const copyBtn = getElementByIdOrThrow("copy-tree-digger-tree");
   if (copyBtn) {
     copyBtn.addEventListener("click", () => {
       const analysis = TreeDigger.getCurrentAnalysis();

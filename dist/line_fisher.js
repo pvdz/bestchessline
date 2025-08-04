@@ -14,8 +14,8 @@ import {
 } from "./utils/line-fisher-results.js";
 import { updateLineFisherButtonStates } from "./utils/line-fisher-manager.js";
 import { updateLineFisherStatus } from "./utils/status-management.js";
-import { addLineFisherTooltips } from "./utils/line-fisher-ui-utils.js";
 import { getFEN } from "./chess-board.js";
+import { getElementByIdOrThrow } from "./utils/dom-helpers.js";
 // Track app start time for relative timestamps
 const appStartTime = performance.now();
 const getRelativeTime = () => {
@@ -25,191 +25,6 @@ const getRelativeTime = () => {
 // ============================================================================
 // ONE FISH LINE VERIFICATION AND UTILITIES
 // ============================================================================
-/**
- * Create initial FishLineNewState
- */
-export const createInitialFishLineNewState = () => ({
-  isFishing: false,
-  config: {
-    initiatorMoves: [],
-    responderMoveCounts: [2, 2, 2, 2, 2], // Default: 2 responses per level
-    maxDepth: 3,
-    threads: 4,
-    defaultResponderCount: 3, // Default responder count
-    rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Default starting position
-  },
-  analyzedPartianFens: new Set(),
-  linesWip: [],
-  linesDone: [],
-});
-/**
- * Verify that FishLineNewState represents a valid LineFisherState
- * This function checks if the new state structure can represent the same analysis
- * as the original LineFisherState
- */
-export const verifyFishLineNewState = (fishState, originalState) => {
-  const errors = [];
-  const warnings = [];
-  // Check basic structure
-  if (!fishState.config) {
-    errors.push("FishLineNewState missing config");
-  }
-  if (!fishState.analyzedPartianFens) {
-    errors.push("FishLineNewState missing analyzedPartianFens");
-  }
-  if (!Array.isArray(fishState.linesWip)) {
-    errors.push("FishLineNewState linesWip must be an array");
-  }
-  if (!Array.isArray(fishState.linesDone)) {
-    errors.push("FishLineNewState linesDone must be an array");
-  }
-  // Check config compatibility
-  if (fishState.config && originalState.config) {
-    if (fishState.config.rootFEN !== originalState.config.rootFEN) {
-      errors.push("Config rootFEN mismatch");
-    }
-    if (fishState.config.maxDepth !== originalState.config.maxDepth) {
-      errors.push("Config maxDepth mismatch");
-    }
-    if (fishState.config.threads !== originalState.config.threads) {
-      errors.push("Config threads mismatch");
-    }
-  }
-  // Check analyzed positions compatibility
-  if (fishState.analyzedPartianFens && originalState.analyzedPositions) {
-    // Convert original analyzed positions to partial FENs for comparison
-    const originalPartialFens = new Set();
-    for (const fen of originalState.analyzedPositions) {
-      const partialFen = fen.split(" ").slice(0, 5).join(" ");
-      originalPartialFens.add(partialFen);
-    }
-    // Check if all original positions are covered
-    for (const partialFen of originalPartialFens) {
-      if (!fishState.analyzedPartianFens.has(partialFen)) {
-        warnings.push(`Original position not in new state: ${partialFen}`);
-      }
-    }
-  }
-  // Check lines compatibility
-  const totalNewLines = fishState.linesWip.length + fishState.linesDone.length;
-  const totalOriginalResults = originalState.results.length;
-  if (totalNewLines !== totalOriginalResults) {
-    warnings.push(
-      `Line count mismatch: new=${totalNewLines}, original=${totalOriginalResults}`,
-    );
-  }
-  // Check baseline score compatibility
-  if (fishState.config.baselineScore !== originalState.config.baselineScore) {
-    warnings.push("Baseline score mismatch");
-  }
-  // Check analysis state compatibility
-  if (fishState.isFishing !== originalState.isAnalyzing) {
-    warnings.push("Analysis state mismatch: isFishing vs isAnalyzing");
-  }
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings,
-  };
-};
-/**
- * Convert LineFisherState to FishLineNewState
- * This function creates a new state representation from the original
- */
-export const convertLineFisherStateToFishLineNewState = (originalState) => {
-  // Convert analyzed positions to partial FENs
-  const analyzedPartianFens = new Set();
-  for (const fen of originalState.analyzedPositions) {
-    const partialFen = fen.split(" ").slice(0, 5).join(" ");
-    analyzedPartianFens.add(partialFen);
-  }
-  // Convert results to OneFishLine format
-  const linesDone = originalState.results.map((result) => ({
-    sans: result.sans,
-    score:
-      result.scores.length > 0 ? result.scores[result.scores.length - 1] : 0,
-    isFull: result.isComplete,
-    isDone: result.isDone,
-    isTransposition: result.isTransposition || false,
-  }));
-  return {
-    isFishing: originalState.isAnalyzing,
-    config: originalState.config,
-    analyzedPartianFens,
-    linesWip: [], // Original state doesn't have WIP lines concept
-    linesDone,
-  };
-};
-/**
- * Convert FishLineNewState to LineFisherState
- * This function creates the original state representation from the new state
- */
-export const convertFishLineNewStateToLineFisherState = (fishState) => {
-  // Convert partial FENs back to full FENs with move counters
-  const analyzedPositions = new Set();
-  for (const partialFen of fishState.analyzedPartianFens) {
-    // Add default move counters (this is approximate)
-    const fullFen = `${partialFen} 0 1`;
-    analyzedPositions.add(fullFen);
-  }
-  // Convert OneFishLine back to LineFisherResult format
-  const results = fishState.linesDone.map((line, index) => ({
-    lineIndex: index,
-    sans: line.sans,
-    scores: line.sans.length > 0 ? [line.score] : [], // Simplified - original has scores for each move
-    deltas: [], // Would need to calculate from baseline
-    notation: line.sans.join(" "),
-    isComplete: line.isFull,
-    isDone: line.isDone,
-    isTransposition: line.isTransposition,
-    updateCount: 1, // Default value
-  }));
-  return {
-    isAnalyzing: fishState.isFishing,
-    config: fishState.config,
-    progress: {
-      totalNodes: 0, // Would need to calculate from lines
-      processedNodes: 0,
-      totalLines: fishState.linesDone.length + fishState.linesWip.length,
-      completedLines: fishState.linesDone.length,
-      currentPosition: "",
-      currentAction: "",
-      eventsPerSecond: 0,
-      totalEvents: 0,
-      startTime: 0,
-    },
-    results,
-    analyzedPositions,
-    analysisQueue: [], // New state doesn't have queue concept
-    isComplete: fishState.linesWip.length === 0,
-    rootNodes: [], // New state doesn't have tree nodes
-  };
-};
-/**
- * Get current FishLineNewState (for testing and comparison)
- */
-export const getFishLineNewState = () => {
-  return convertLineFisherStateToFishLineNewState(lineFisherState);
-};
-/**
- * Update FishLineNewState (for testing and comparison)
- */
-export const updateFishLineNewState = (newState) => {
-  // Convert back to LineFisherState for now
-  const currentFishState = getFishLineNewState();
-  const updatedFishState = { ...currentFishState, ...newState };
-  const convertedState =
-    convertFishLineNewStateToLineFisherState(updatedFishState);
-  lineFisherState = convertedState;
-};
-/**
- * Test verification function with current state
- */
-export const testFishLineNewStateVerification = () => {
-  const currentState = getLineFisherState();
-  const fishState = getFishLineNewState();
-  return verifyFishLineNewState(fishState, currentState);
-};
 // ============================================================================
 // LINE FISHER CORE ANALYSIS ENGINE
 // ============================================================================
@@ -292,8 +107,6 @@ export const initializeLineFisher = async () => {
   lineFisherState = createInitialLineFisherState();
   // Initialize progress calculations
   initializeLineFisherProgress(lineFisherState);
-  // Initialize UI enhancements
-  addLineFisherTooltips();
 };
 /**
  * Get current Line Fisher state
@@ -1421,10 +1234,10 @@ export const startLineFisherAnalysis = async () => {
       lineFisherState.config.responderMoveCounts = [2, 2, 2, 2, 2]; // Reset to defaults
       // Clear the UI inputs as well
       try {
-        const initiatorMovesInput = document.getElementById(
+        const initiatorMovesInput = getElementByIdOrThrow(
           "line-fisher-initiator-moves",
         );
-        const responderCountsInput = document.getElementById(
+        const responderCountsInput = getElementByIdOrThrow(
           "line-fisher-responder-counts",
         );
         if (initiatorMovesInput) {

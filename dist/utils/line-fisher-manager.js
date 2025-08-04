@@ -89,14 +89,14 @@ export const stopLineFisherAnalysisFromManager = async () => {
     state.isComplete = false;
     updateLineFisherState(state);
     // Update UI to remove analyzing state
-    const configElement = document.getElementById("line-fisher-config");
+    const configElement = getElementByIdOrThrow("line-fisher-config");
     if (configElement) {
       configElement.classList.remove("line-fisher-analyzing");
     }
     // Update button states
     updateLineFisherButtonStates();
     // Update status
-    const statusElement = document.getElementById("line-fisher-status");
+    const statusElement = getElementByIdOrThrow("line-fisher-status");
     if (statusElement) {
       statusElement.textContent = "Analysis stopped";
       statusElement.className = "line-fisher-status stopped";
@@ -116,68 +116,63 @@ export const stopLineFisherAnalysisFromManager = async () => {
  */
 export const resetLineFisherAnalysisFromManager = async () => {
   log("Resetting Line Fisher analysis from manager");
-  try {
-    // Reset analysis process
-    resetLineFisherAnalysis();
-    // Clear UI
-    const resultsElement = document.getElementById("line-fisher-results");
-    if (resultsElement) {
-      resultsElement.innerHTML = `
-        <div class="line-fisher-no-results">
-          <p>No analysis results. Start a new analysis to see results here.</p>
-        </div>
-      `;
-    }
-    // Clear progress display
-    const progressElement = document.getElementById("line-fisher-progress");
-    if (progressElement) {
-      const progressBar = progressElement.querySelector(
-        ".line-fisher-progress-bar-fill",
-      );
-      if (progressBar) {
-        progressBar.style.width = "0%";
-      }
-      const progressText = progressElement.querySelector(
-        ".line-fisher-progress-text",
-      );
-      if (progressText) {
-        progressText.textContent = "0%";
-      }
-    }
-    // Clear activity monitor
-    const activityElement = document.getElementById("line-fisher-activity");
-    if (activityElement) {
-      const eventsPerSecond = activityElement.querySelector(
-        ".line-fisher-events-per-second",
-      );
-      const totalEvents = activityElement.querySelector(
-        ".line-fisher-total-events",
-      );
-      const activityStatus = activityElement.querySelector(
-        ".line-fisher-activity-status",
-      );
-      if (eventsPerSecond) eventsPerSecond.textContent = "0.00";
-      if (totalEvents) totalEvents.textContent = "0";
-      if (activityStatus) {
-        activityStatus.textContent = "Idle";
-        activityStatus.className = "line-fisher-activity-status idle";
-      }
-    }
-    // Update button states
-    updateLineFisherButtonStates();
-    // Update status
-    const statusElement = document.getElementById("line-fisher-status");
-    if (statusElement) {
-      statusElement.textContent = "Ready";
-      statusElement.className = "line-fisher-status ready";
-    }
-    // Show success notification
-    showToast("Analysis reset", "#4CAF50", 3000);
-    log("Line Fisher analysis reset successfully");
-  } catch (error) {
-    log(`Error resetting Line Fisher analysis: ${error}`);
-    showToast("Failed to reset analysis", "#f44336", 4000);
+  // Reset analysis process
+  resetLineFisherAnalysis();
+  // Clear UI
+  const resultsElement = getElementByIdOrThrow("line-fisher-results");
+  if (resultsElement) {
+    resultsElement.innerHTML = `
+      <div class="line-fisher-no-results">
+        <p>No analysis results. Start a new analysis to see results here.</p>
+      </div>
+    `;
   }
+  // Clear progress display
+  const progressElement = getElementByIdOrThrow("line-fisher-progress");
+  if (progressElement) {
+    const progressBar = progressElement.querySelector(
+      ".line-fisher-progress-bar-fill",
+    );
+    if (progressBar) {
+      progressBar.style.width = "0%";
+    }
+    const progressText = progressElement.querySelector(
+      ".line-fisher-progress-text",
+    );
+    if (progressText) {
+      progressText.textContent = "0%";
+    }
+  }
+  // Clear activity monitor
+  const activityElement = getElementByIdOrThrow("line-fisher-activity");
+  if (activityElement) {
+    const eventsPerSecond = activityElement.querySelector(
+      ".line-fisher-events-per-second",
+    );
+    const totalEvents = activityElement.querySelector(
+      ".line-fisher-total-events",
+    );
+    const activityStatus = activityElement.querySelector(
+      ".line-fisher-activity-status",
+    );
+    if (eventsPerSecond) eventsPerSecond.textContent = "0.00";
+    if (totalEvents) totalEvents.textContent = "0";
+    if (activityStatus) {
+      activityStatus.textContent = "Idle";
+      activityStatus.className = "line-fisher-activity-status idle";
+    }
+  }
+  // Update button states
+  updateLineFisherButtonStates();
+  // Update status
+  const statusElement = getElementByIdOrThrow("line-fisher-status");
+  if (statusElement) {
+    statusElement.textContent = "Ready";
+    statusElement.className = "line-fisher-status ready";
+  }
+  // Show success notification
+  showToast("Analysis reset", "#4CAF50", 3000);
+  log("Line Fisher analysis reset successfully");
 };
 /**
  * Continue Line Fisher analysis from manager
@@ -199,14 +194,14 @@ export const continueLineFisherAnalysisFromManager = async () => {
     state.isComplete = false;
     updateLineFisherState(state);
     // Update UI to show analyzing state
-    const configElement = document.getElementById("line-fisher-config");
+    const configElement = getElementByIdOrThrow("line-fisher-config");
     if (configElement) {
       configElement.classList.add("line-fisher-analyzing");
     }
     // Update button states
     updateLineFisherButtonStates();
     // Update status
-    const statusElement = document.getElementById("line-fisher-status");
+    const statusElement = getElementByIdOrThrow("line-fisher-status");
     if (statusElement) {
       statusElement.textContent = "Continuing analysis...";
       statusElement.className = "line-fisher-status analyzing";
@@ -369,17 +364,21 @@ export const updateLineFisherButtonStates = () => {
   const copyBtn = getElementByIdOrThrow("copy-line-fisher-state");
   const exportBtn = getElementByIdOrThrow("export-line-fisher-state");
   const importBtn = getElementByIdOrThrow("import-line-fisher-state");
+  const startFish2Btn = getElementByIdOrThrow("start-fish2");
   // Get current analysis state from Line Fisher state
   const lineFisherState = getLineFisherState();
   const isAnalyzing = lineFisherState.isAnalyzing;
   const hasResults = lineFisherState.results.length > 0;
+  // Check if Fish analysis is running (imported from fish.ts)
+  const isFishAnalyzing = window.isFishAnalysisRunning || false;
   // Update button states
-  stopBtn.disabled = !isAnalyzing;
-  resetBtn.disabled = isAnalyzing;
-  continueBtn.disabled = isAnalyzing || !hasResults;
+  stopBtn.disabled = !isAnalyzing && !isFishAnalyzing;
+  resetBtn.disabled = isAnalyzing || isFishAnalyzing;
+  continueBtn.disabled = isAnalyzing || isFishAnalyzing || !hasResults;
   copyBtn.disabled = false; // Copy should always work
   exportBtn.disabled = false; // Export should always work
-  importBtn.disabled = isAnalyzing;
+  importBtn.disabled = isAnalyzing || isFishAnalyzing;
+  startFish2Btn.disabled = isAnalyzing || isFishAnalyzing;
 };
 /**
  * Update Line Fisher state information display
@@ -502,14 +501,14 @@ export const recoverLineFisherFromCrash = async () => {
     state.isComplete = false;
     updateLineFisherState(state);
     // Clear UI analyzing state
-    const configElement = document.getElementById("line-fisher-config");
+    const configElement = getElementByIdOrThrow("line-fisher-config");
     if (configElement) {
       configElement.classList.remove("line-fisher-analyzing");
     }
     // Update button states
     updateLineFisherButtonStates();
     // Update status
-    const statusElement = document.getElementById("line-fisher-status");
+    const statusElement = getElementByIdOrThrow("line-fisher-status");
     if (statusElement) {
       statusElement.textContent = "Recovered from crash";
       statusElement.className = "line-fisher-status recovered";
@@ -517,7 +516,7 @@ export const recoverLineFisherFromCrash = async () => {
     // Show recovery message
     showToast("Recovered from analysis crash", "#FF9800", 5000);
     // Clear progress display
-    const progressElement = document.getElementById("line-fisher-progress");
+    const progressElement = getElementByIdOrThrow("line-fisher-progress");
     if (progressElement) {
       const progressBar = progressElement.querySelector(
         ".line-fisher-progress-bar-fill",
@@ -533,7 +532,7 @@ export const recoverLineFisherFromCrash = async () => {
       }
     }
     // Clear activity monitor
-    const activityElement = document.getElementById("line-fisher-activity");
+    const activityElement = getElementByIdOrThrow("line-fisher-activity");
     if (activityElement) {
       const eventsPerSecond = activityElement.querySelector(
         ".line-fisher-events-per-second",
@@ -603,7 +602,7 @@ export const handleLineFisherError = (error, context) => {
   // Show user-friendly notification
   showToast(`${category} Error: ${userMessage}`, "#f44336", 5000);
   // Update status to show error
-  const statusElement = document.getElementById("line-fisher-status");
+  const statusElement = getElementByIdOrThrow("line-fisher-status");
   if (statusElement) {
     statusElement.textContent = `Error: ${category.toLowerCase()}`;
     statusElement.className = "line-fisher-status error";
@@ -624,7 +623,7 @@ export const recoverFromLineFisherError = async () => {
     state.isComplete = false;
     updateLineFisherState(state);
     // Clear UI error state
-    const configElement = document.getElementById("line-fisher-config");
+    const configElement = getElementByIdOrThrow("line-fisher-config");
     if (configElement) {
       configElement.classList.remove(
         "line-fisher-analyzing",
@@ -634,7 +633,7 @@ export const recoverFromLineFisherError = async () => {
     // Update button states
     updateLineFisherButtonStates();
     // Update status
-    const statusElement = document.getElementById("line-fisher-status");
+    const statusElement = getElementByIdOrThrow("line-fisher-status");
     if (statusElement) {
       statusElement.textContent = "Recovered from error";
       statusElement.className = "line-fisher-status recovered";

@@ -30,7 +30,7 @@ class ChessAnalysisApp {
   private currentMoveIndex: number = -1;
 
   constructor() {
-    const boardElement = document.getElementById("chess-board");
+    const boardElement = getElementByIdOrThrow("chess-board");
     if (!boardElement) {
       throw new Error("Chess board element not found");
     }
@@ -56,12 +56,12 @@ class ChessAnalysisApp {
 
   private initializeEventListeners(): void {
     // Board controls
-    const resetBtn = document.getElementById("reset-board");
-    const clearBtn = document.getElementById("clear-board");
+    const resetBtn = getElementByIdOrThrow("reset-board");
+    const clearBtn = getElementByIdOrThrow("clear-board");
     const fenInput = getInputElement("fen-input");
-    const loadFenBtn = document.getElementById("load-fen");
+    const loadFenBtn = getElementByIdOrThrow("load-fen");
     const gameNotation = getTextAreaElement("game-notation");
-    const importGameBtn = document.getElementById("import-game");
+    const importGameBtn = getElementByIdOrThrow("import-game");
 
     if (resetBtn)
       resetBtn.addEventListener("click", () => {
@@ -107,8 +107,8 @@ class ChessAnalysisApp {
     }
 
     // Game moves navigation
-    const prevMoveBtn = document.getElementById("prev-move");
-    const nextMoveBtn = document.getElementById("next-move");
+    const prevMoveBtn = getElementByIdOrThrow("prev-move");
+    const nextMoveBtn = getElementByIdOrThrow("next-move");
 
     if (prevMoveBtn)
       prevMoveBtn.addEventListener("click", () => this.previousMove());
@@ -119,9 +119,9 @@ class ChessAnalysisApp {
     this.initializePositionControls();
 
     // Analysis controls
-    const startBtn = document.getElementById("start-analysis");
-    const pauseBtn = document.getElementById("pause-analysis");
-    const stopBtn = document.getElementById("stop-analysis");
+    const startBtn = getElementByIdOrThrow("start-analysis");
+    const pauseBtn = getElementByIdOrThrow("pause-analysis");
+    const stopBtn = getElementByIdOrThrow("stop-analysis");
 
     if (startBtn)
       startBtn.addEventListener("click", () => this.startAnalysis());
@@ -218,15 +218,13 @@ class ChessAnalysisApp {
   }
 
   private updateButtonStates(): void {
-    const startBtn = document.getElementById(
+    const startBtn = getElementByIdOrThrow(
       "start-analysis",
     ) as HTMLButtonElement;
-    const pauseBtn = document.getElementById(
+    const pauseBtn = getElementByIdOrThrow(
       "pause-analysis",
     ) as HTMLButtonElement;
-    const stopBtn = document.getElementById(
-      "stop-analysis",
-    ) as HTMLButtonElement;
+    const stopBtn = getElementByIdOrThrow("stop-analysis") as HTMLButtonElement;
 
     if (startBtn) startBtn.disabled = this.isAnalyzing;
     if (pauseBtn) pauseBtn.disabled = !this.isAnalyzing;
@@ -234,7 +232,7 @@ class ChessAnalysisApp {
   }
 
   private updateStatus(message: string): void {
-    const statusElement = document.getElementById("status");
+    const statusElement = getElementByIdOrThrow("status");
     if (statusElement) {
       statusElement.textContent = message;
     }
@@ -337,7 +335,7 @@ class ChessAnalysisApp {
   }
 
   private updateResultsPanel(moves: ProcessedMoveItem[]): void {
-    const panel = document.getElementById("analysis-results");
+    const panel = getElementByIdOrThrow("analysis-results");
     if (!panel) return;
 
     if (moves.length === 0) {
@@ -347,7 +345,8 @@ class ChessAnalysisApp {
 
     const notationFormat =
       (
-        document.querySelector(
+        querySelectorOrThrow(
+          document,
           'input[name="notation-format"]:checked',
         ) as HTMLInputElement
       )?.value || "short";
@@ -572,7 +571,7 @@ class ChessAnalysisApp {
   }
 
   private updateFENInput(): void {
-    const fenInput = document.getElementById("fen-input") as HTMLInputElement;
+    const fenInput = getElementByIdOrThrow("fen-input") as HTMLInputElement;
     if (fenInput) {
       fenInput.value = this.board.getFEN();
     }
@@ -916,7 +915,7 @@ class ChessAnalysisApp {
   }
 
   private updateMoveList(): void {
-    const movesPanel = document.getElementById("game-moves");
+    const movesPanel = getElementByIdOrThrow("game-moves");
     if (!movesPanel) return;
 
     if (this.moves.length === 0) {
@@ -956,13 +955,15 @@ class ChessAnalysisApp {
     // Use the current notation and piece format settings
     const notationFormat =
       (
-        document.querySelector(
+        querySelectorOrThrow(
+          document,
           'input[name="notation-format"]:checked',
         ) as HTMLInputElement
       )?.value || "short";
     const pieceFormat =
       (
-        document.querySelector(
+        querySelectorOrThrow(
+          document,
           'input[name="piece-format"]:checked',
         ) as HTMLInputElement
       )?.value || "unicode";
@@ -1836,8 +1837,14 @@ class ChessAnalysisApp {
     this.clearLastMoveHighlight();
 
     // Add highlight class to from and to squares
-    const fromSquare = document.querySelector(`[data-square="${move.from}"]`);
-    const toSquare = document.querySelector(`[data-square="${move.to}"]`);
+    const fromSquare = querySelectorOrThrow(
+      document,
+      `[data-square="${move.from}"]`,
+    );
+    const toSquare = querySelectorOrThrow(
+      document,
+      `[data-square="${move.to}"]`,
+    );
 
     if (fromSquare) {
       fromSquare.classList.add("last-move-from");
@@ -1853,8 +1860,8 @@ class ChessAnalysisApp {
   }
 
   private updateNavigationButtons(): void {
-    const prevBtn = document.getElementById("prev-move") as HTMLButtonElement;
-    const nextBtn = document.getElementById("next-move") as HTMLButtonElement;
+    const prevBtn = getElementByIdOrThrow("prev-move") as HTMLButtonElement;
+    const nextBtn = getElementByIdOrThrow("next-move") as HTMLButtonElement;
 
     console.log(
       "Updating navigation buttons. Current index:",
@@ -1893,7 +1900,7 @@ class ChessAnalysisApp {
       "black-queenside",
     ];
     castlingCheckboxes.forEach((id) => {
-      const checkbox = document.getElementById(id) as HTMLInputElement;
+      const checkbox = getElementByIdOrThrow(id) as HTMLInputElement;
       if (checkbox) {
         checkbox.addEventListener("change", () => {
           this.updatePositionFromControls();
@@ -1902,7 +1909,7 @@ class ChessAnalysisApp {
     });
 
     // En passant input
-    const enPassantInput = document.getElementById(
+    const enPassantInput = getElementByIdOrThrow(
       "en-passant",
     ) as HTMLInputElement;
     if (enPassantInput) {
@@ -1915,24 +1922,25 @@ class ChessAnalysisApp {
   private updatePositionFromControls(): void {
     const currentPlayer =
       (
-        document.querySelector(
+        querySelectorOrThrow(
+          document,
           'input[name="current-player"]:checked',
         ) as HTMLInputElement
       )?.value || "w";
     const whiteKingside =
-      (document.getElementById("white-kingside") as HTMLInputElement)
-        ?.checked || false;
+      (getElementByIdOrThrow("white-kingside") as HTMLInputElement)?.checked ||
+      false;
     const whiteQueenside =
-      (document.getElementById("white-queenside") as HTMLInputElement)
-        ?.checked || false;
+      (getElementByIdOrThrow("white-queenside") as HTMLInputElement)?.checked ||
+      false;
     const blackKingside =
-      (document.getElementById("black-kingside") as HTMLInputElement)
-        ?.checked || false;
+      (getElementByIdOrThrow("black-kingside") as HTMLInputElement)?.checked ||
+      false;
     const blackQueenside =
-      (document.getElementById("black-queenside") as HTMLInputElement)
-        ?.checked || false;
+      (getElementByIdOrThrow("black-queenside") as HTMLInputElement)?.checked ||
+      false;
     const enPassant =
-      (document.getElementById("en-passant") as HTMLInputElement)?.value || "-";
+      (getElementByIdOrThrow("en-passant") as HTMLInputElement)?.value || "-";
 
     // Build castling rights string
     let castling = "";
@@ -1970,7 +1978,8 @@ class ChessAnalysisApp {
     if (fenParts.length >= 4) {
       // Update current player
       const currentPlayer = fenParts[1];
-      const playerRadio = document.querySelector(
+      const playerRadio = querySelectorOrThrow(
+        document,
         `input[name="current-player"][value="${currentPlayer}"]`,
       ) as HTMLInputElement;
       if (playerRadio) {
@@ -1979,16 +1988,16 @@ class ChessAnalysisApp {
 
       // Update castling rights
       const castling = fenParts[2];
-      const whiteKingside = document.getElementById(
+      const whiteKingside = getElementByIdOrThrow(
         "white-kingside",
       ) as HTMLInputElement;
-      const whiteQueenside = document.getElementById(
+      const whiteQueenside = getElementByIdOrThrow(
         "white-queenside",
       ) as HTMLInputElement;
-      const blackKingside = document.getElementById(
+      const blackKingside = getElementByIdOrThrow(
         "black-kingside",
       ) as HTMLInputElement;
-      const blackQueenside = document.getElementById(
+      const blackQueenside = getElementByIdOrThrow(
         "black-queenside",
       ) as HTMLInputElement;
 
@@ -1999,7 +2008,7 @@ class ChessAnalysisApp {
 
       // Update en passant
       const enPassant = fenParts[3];
-      const enPassantInput = document.getElementById(
+      const enPassantInput = getElementByIdOrThrow(
         "en-passant",
       ) as HTMLInputElement;
       if (enPassantInput) {

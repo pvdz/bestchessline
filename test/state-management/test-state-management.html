@@ -178,7 +178,7 @@
 
       // Test state serialization
       window.testStateSerialization = function () {
-        const resultDiv = document.getElementById("serialization-result");
+        const resultDiv = getElementByIdOrThrow("serialization-result");
         try {
           const serialized = serializeTreeDiggerState(mockAnalysis, mockState);
           const estimatedSize = estimateStateFileSize(mockAnalysis);
@@ -205,7 +205,7 @@
 
       // Test state validation
       window.testStateValidation = function () {
-        const resultDiv = document.getElementById("validation-result");
+        const resultDiv = getElementByIdOrThrow("validation-result");
         try {
           const serialized = serializeTreeDiggerState(mockAnalysis, mockState);
           const currentBoardPosition =
@@ -241,7 +241,7 @@
 
       // Test file export
       window.testFileExport = function () {
-        const resultDiv = document.getElementById("file-result");
+        const resultDiv = getElementByIdOrThrow("file-result");
         try {
           const serialized = serializeTreeDiggerState(mockAnalysis, mockState);
           const jsonString = JSON.stringify(serialized, null, 2);
@@ -275,8 +275,8 @@
 
       // Test file import
       window.testFileImport = function () {
-        const resultDiv = document.getElementById("file-result");
-        const fileInput = document.getElementById("test-file-input");
+        const resultDiv = getElementByIdOrThrow("file-result");
+        const fileInput = getElementByIdOrThrow("test-file-input");
 
         fileInput.onchange = function (event) {
           const file = event.target.files[0];
@@ -314,7 +314,7 @@
 
       // Test pagination
       window.testPagination = function () {
-        const resultDiv = document.getElementById("pagination-result");
+        const resultDiv = getElementByIdOrThrow("pagination-result");
         try {
           const stats = calculateTreeStatistics(mockAnalysis);
           const paginationState = getPaginatedTreeNodes(mockAnalysis);
@@ -342,7 +342,7 @@
 
       // Test integration
       window.testIntegration = function () {
-        const resultDiv = document.getElementById("integration-result");
+        const resultDiv = getElementByIdOrThrow("integration-result");
         try {
           // Test that all required functions are available
           const requiredFunctions = [

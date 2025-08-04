@@ -1,3 +1,4 @@
+import { querySelectorOrThrow } from "./dom-helpers.js";
 /**
  * Arrow Utility Functions
  *
@@ -43,9 +44,9 @@ export function hideMoveArrow(arrowId) {
  * @param to The ending square
  */
 export function positionArrow(arrow, from, to) {
-  const fromElement = document.querySelector(`[data-square="${from}"]`);
-  const toElement = document.querySelector(`[data-square="${to}"]`);
-  const boardContainer = document.querySelector(".board-section");
+  const fromElement = querySelectorOrThrow(document, `[data-square="${from}"]`);
+  const toElement = querySelectorOrThrow(document, `[data-square="${to}"]`);
+  const boardContainer = querySelectorOrThrow(document, ".board-section");
   if (!fromElement || !toElement || !boardContainer) {
     return;
   }

@@ -30,8 +30,3 @@ export declare function debounce<T extends (...args: unknown[]) => unknown>(
  * Clear the initiator move input fields
  */
 export declare function clearInitiatorMoveInputs(): void;
-/**
- * Update tree font size
- * @param fontSize The font size in pixels
- */
-export declare function updateTreeFontSize(fontSize: number): void;

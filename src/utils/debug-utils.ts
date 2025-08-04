@@ -5,6 +5,7 @@ import {
 } from "../tree-digger.js";
 import { log } from "./logging.js";
 import { moveToNotation } from "./notation-utils.js";
+import { getElementByIdOrThrow } from "./dom-helpers.js";
 
 /**
  * Debug panel state
@@ -16,8 +17,8 @@ let debugUpdateInterval: number | null = null;
  * Toggle debug panel visibility
  */
 export const toggleDebugPanel = (): void => {
-  const debugPanel = document.getElementById("debug-panel");
-  const toggleBtn = document.getElementById("toggle-debug-panel");
+  const debugPanel = getElementByIdOrThrow("debug-panel");
+  const toggleBtn = getElementByIdOrThrow("toggle-debug-panel");
 
   if (!debugPanel || !toggleBtn) {
     log("Debug panel elements not found");
@@ -41,8 +42,8 @@ export const toggleDebugPanel = (): void => {
  * Close debug panel
  */
 export const closeDebugPanel = (): void => {
-  const debugPanel = document.getElementById("debug-panel");
-  const toggleBtn = document.getElementById("toggle-debug-panel");
+  const debugPanel = getElementByIdOrThrow("debug-panel");
+  const toggleBtn = getElementByIdOrThrow("toggle-debug-panel");
 
   if (!debugPanel || !toggleBtn) {
     return;
@@ -94,7 +95,7 @@ const updateDebugInfo = (): void => {
  * Update queue information
  */
 const updateQueueInfo = (): void => {
-  const element = document.getElementById("debug-queue-info");
+  const element = getElementByIdOrThrow("debug-queue-info");
   if (!element) return;
 
   const analysis = getCurrentAnalysis();
@@ -134,7 +135,7 @@ const updateQueueInfo = (): void => {
  * Update state information
  */
 const updateStateInfo = (): void => {
-  const element = document.getElementById("debug-state-info");
+  const element = getElementByIdOrThrow("debug-state-info");
   if (!element) return;
 
   const analysis = getCurrentAnalysis();
@@ -164,7 +165,7 @@ const updateStateInfo = (): void => {
  * Update tree statistics
  */
 const updateTreeInfo = (): void => {
-  const element = document.getElementById("debug-tree-info");
+  const element = getElementByIdOrThrow("debug-tree-info");
   if (!element) return;
 
   const analysis = getCurrentAnalysis();

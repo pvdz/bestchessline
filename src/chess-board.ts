@@ -21,6 +21,7 @@ import {
   positionArrow,
   getArrowElements,
 } from "./utils/arrow-utils.js";
+import { querySelectorOrThrow } from "./utils/dom-helpers.js";
 
 // ============================================================================
 // BOARD STATE MANAGEMENT
@@ -378,7 +379,8 @@ const updateDropTarget = (clientX: number, clientY: number): void => {
 
   // Remove previous drop target highlight
   if (dragState.currentDropTarget) {
-    const prevSquare = document.querySelector(
+    const prevSquare = querySelectorOrThrow(
+      document,
       `[data-square="${dragState.currentDropTarget}"]`,
     );
     if (prevSquare) {
@@ -388,7 +390,10 @@ const updateDropTarget = (clientX: number, clientY: number): void => {
 
   // Add new drop target highlight
   if (square && square !== dragState.currentDropTarget) {
-    const squareElement = document.querySelector(`[data-square="${square}"]`);
+    const squareElement = querySelectorOrThrow(
+      document,
+      `[data-square="${square}"]`,
+    );
     if (squareElement) {
       squareElement.classList.add("dragover");
     }
@@ -403,7 +408,7 @@ const findSquareAtPosition = (
   clientX: number,
   clientY: number,
 ): string | null => {
-  const boardElement = document.querySelector(".board");
+  const boardElement = querySelectorOrThrow(document, ".board");
   if (!boardElement) return null;
 
   const rect = boardElement.getBoundingClientRect();
@@ -433,7 +438,10 @@ export const makeMove = (from: string, to: string, piece: string): void => {
   updateBoardState({ position: newPosition });
 
   // Re-render board
-  const boardElement = document.querySelector("#chess-board") as HTMLElement;
+  const boardElement = querySelectorOrThrow(
+    document,
+    "#chess-board",
+  ) as HTMLElement;
   if (boardElement) {
     renderBoard(boardElement);
     // Re-setup event listeners after re-rendering
@@ -555,7 +563,10 @@ export const setPosition = (fen: string): void => {
     hideMoveArrow();
 
     updateBoardState({ position: newPosition });
-    const boardElement = document.querySelector("#chess-board") as HTMLElement;
+    const boardElement = querySelectorOrThrow(
+      document,
+      "#chess-board",
+    ) as HTMLElement;
     if (boardElement) {
       renderBoard(boardElement);
       // Re-setup event listeners after re-rendering
@@ -737,7 +748,8 @@ export const showMoveArrow = (
 
   positionArrow(arrow, from, to);
 
-  const boardContainer = document.querySelector(
+  const boardContainer = querySelectorOrThrow(
+    document,
     ".board-section",
   ) as HTMLElement;
   if (boardContainer) {
@@ -756,8 +768,11 @@ export const showMoveArrow = (
     scoreLabel.setAttribute("data-arrow-id", arrowId);
 
     // Position the score label at the end of the arrow
-    const fromElement = document.querySelector(`[data-square="${from}"]`);
-    const toElement = document.querySelector(`[data-square="${to}"]`);
+    const fromElement = querySelectorOrThrow(
+      document,
+      `[data-square="${from}"]`,
+    );
+    const toElement = querySelectorOrThrow(document, `[data-square="${to}"]`);
 
     if (fromElement && toElement) {
       const fromRect = fromElement.getBoundingClientRect();

@@ -10,14 +10,20 @@ import {
   updateLineFisherExploredLines,
   generateLineFisherFormula,
 } from "./utils/line-fisher-results.js";
-import { getElementByIdOrThrow } from "./utils/dom-helpers.js";
+import {
+  getElementByIdOrThrow,
+  querySelectorOrThrow,
+} from "./utils/dom-helpers.js";
 import {
   calculateTotalNodes,
   calculateTotalLines,
 } from "./utils/line-fisher-calculations.js";
 import { showToast } from "./utils/ui-utils.js";
+import { updateLineFisherButtonStates } from "./utils/line-fisher-manager.js";
 // Global state for fish function
 let currentFishState = null;
+let isFishAnalysisRunning = false;
+let shouldStopFishAnalysis = false;
 /**
  * Continue fish analysis from current state
  * Resume fish analysis from the current state if there are WIP lines
@@ -38,13 +44,25 @@ export const continueFishAnalysis = async () => {
       currentFishState.wip.length,
     );
     showToast("Continuing fish analysis...", "#007bff", 2000);
+    // Update button states - disable start, enable stop
+    updateFishButtonStates(true);
     // Continue the analysis from where it left off by running the main loop
     let limit = 0;
     console.log(
       "Continuing main analysis loop with WIP count:",
       currentFishState.wip.length,
     );
-    while (currentFishState.wip.length > 0) {
+    // Set fishing flag to true when continuing
+    currentFishState.isFishing = true;
+    while (currentFishState.wip.length > 0 && currentFishState.isFishing) {
+      // Check if analysis should be stopped
+      if (shouldStopFishAnalysis) {
+        console.log("Fish analysis continue stopped by user");
+        currentFishState.isFishing = false;
+        updateFishStatus("Analysis continue stopped by user");
+        updateFishButtonStates(false);
+        return;
+      }
       if (++limit > 100) throw new Error("Limit reached");
       const currentLine = currentFishState.wip.shift();
       console.log("Continue loop, next line:", currentLine.sans.join(" "));
@@ -84,6 +102,8 @@ export const continueFishAnalysis = async () => {
       currentFishState.done.length,
     );
     console.log("Final done lines:", currentFishState.done);
+    // Set fishing to false when analysis completes
+    currentFishState.isFishing = false;
     // Update final results in UI
     updateFishStatus("Analysis continue complete");
     updateFishProgress(currentFishState);
@@ -100,6 +120,8 @@ export const continueFishAnalysis = async () => {
       "#28a745",
       5000,
     );
+    // Update button states - enable start, disable stop
+    updateFishButtonStates(false);
   } catch (error) {
     console.error("Error continuing fish analysis:", error);
     showToast(
@@ -107,6 +129,8 @@ export const continueFishAnalysis = async () => {
       "#dc3545",
       5000,
     );
+    // Update button states - enable start, disable stop (even on error)
+    updateFishButtonStates(false);
   }
 };
 /**
@@ -173,6 +197,7 @@ export const importFishStateFromClipboard = async () => {
     );
     // Load state into global state
     currentFishState = {
+      isFishing: false, // Imported state should not be fishing by default
       config: importedState.config,
       wip: reconstructedWip,
       done: reconstructedDone,
@@ -216,22 +241,6 @@ export const importFishStateFromClipboard = async () => {
   }
 };
 /**
- * Debug function to check current fish state
- */
-export const debugFishState = () => {
-  console.log("=== Fish State Debug ===");
-  console.log("currentFishState:", currentFishState);
-  if (currentFishState) {
-    console.log("WIP count:", currentFishState.wip.length);
-    console.log("Done count:", currentFishState.done.length);
-    console.log("WIP lines:", currentFishState.wip);
-    console.log("Done lines:", currentFishState.done);
-  } else {
-    console.log("No fish state found");
-  }
-  console.log("========================");
-};
-/**
  * Convert FishConfig to LineFisherConfig format for calculations
  */
 function convertFishConfigToLineFisherConfig(config) {
@@ -244,6 +253,37 @@ function convertFishConfigToLineFisherConfig(config) {
     rootFEN: config.rootFEN,
   };
 }
+/**
+ * Update Fish button states using existing Line Fisher button management
+ */
+function updateFishButtonStates(isAnalyzing) {
+  isFishAnalysisRunning = isAnalyzing;
+  shouldStopFishAnalysis = false;
+  // Make Fish analysis state available to button management
+  window.isFishAnalysisRunning = isAnalyzing;
+  updateLineFisherButtonStates();
+}
+/**
+ * Stop Fish analysis
+ */
+export const stopFishAnalysis = () => {
+  console.log("Stopping Fish analysis");
+  if (!isFishAnalysisRunning) {
+    console.log("Fish analysis not running, nothing to stop");
+    return;
+  }
+  // Set the stop flag to interrupt the analysis loop
+  shouldStopFishAnalysis = true;
+  // Set isFishing to false in current state if it exists
+  if (currentFishState) {
+    currentFishState.isFishing = false;
+  }
+  // Update button states
+  updateFishButtonStates(false);
+  // Update UI status
+  updateFishStatus("Analysis stopped");
+  showToast("Fish analysis stopped", "#FF9800", 3000);
+};
 /**
  * Fish function - performs line analysis according to the algorithm in the comment
  *
@@ -287,100 +327,132 @@ export async function fish(config) {
   //    - otherwise the line can stay in queue and will be picked up again for responder moves
   // repeat until wip queue is drained.
   console.log("Starting fish analysis with config:", config);
-  // Create state object with empty wip/done lists
-  const state = {
-    wip: [],
-    done: [],
-    config,
-  };
-  // Store state globally for export functionality
-  currentFishState = state;
-  console.log("Initial fish state set globally:", currentFishState);
-  // Show config in UI
-  updateFishConfigDisplay(config);
-  updateFishStatus("Starting root analysis...");
-  updateFishProgress(state);
-  // Get root score and update config
-  const rootAnalysis = await analyzePosition(config.rootFEN, {
-    ...config.stockfishOptions,
-    multiPV: 1,
-  });
-  console.log("rootAnalysis:", rootAnalysis);
-  const direction =
-    config.initiatorColor === PLAYER_COLORS.BLACK ? "asc" : "desc";
-  const bestMove = rootAnalysis.moves.sort((a, b) =>
-    compareAnalysisMoves(a, b, direction),
-  )[0];
-  console.log("root score:", bestMove.score);
-  config.rootScore = bestMove.score;
-  config.baselineScore = bestMove.score; // Set baseline for delta calculations
-  // Update root score in UI
-  updateFishRootScore(bestMove.score);
-  updateFishStatus(`Creating initial move`);
-  // Create initial move
-  const initialLine = await createInitialMove(state);
-  if (initialLine) {
-    state.wip.push(initialLine);
-    console.log("Added initial line to wip:", initialLine);
-    console.log("WIP count after adding initial line:", state.wip.length);
-  }
-  updateFishResultsRealTime(state);
-  // Main analysis loop
-  let limit = 0;
-  console.log("Starting main analysis loop with WIP count:", state.wip.length);
-  while (state.wip.length > 0) {
-    if (++limit > 100) throw new Error("Limit reached");
-    const currentLine = state.wip.shift();
-    console.log("Main loop, next line:", currentLine.sans.join(" "));
-    console.log("WIP count at start of iteration:", state.wip.length);
-    const halfMoves = currentLine.sans.length;
-    const isEvenHalfMoves = halfMoves % 2 === 0;
-    updateFishStatus(`Analyzing line: ${currentLine.sans.join(" ")}`);
-    if (isEvenHalfMoves) {
-      console.group("processInitiatorMove()");
-      // Initiator move - get best move from Stockfish
-      await findBestInitiatorMove(state, currentLine);
-    } else {
-      // Responder move - get N best moves from Stockfish
-      console.group("processResponderMove()");
-      await findNextResponseMoves(state, currentLine);
-    }
-    // Update progress in UI
+  // Update button states - disable start, enable stop
+  updateFishButtonStates(true);
+  try {
+    // Create state object with empty wip/done lists
+    const state = {
+      isFishing: true, // Start with fishing enabled
+      wip: [],
+      done: [],
+      config,
+    };
+    // Store state globally for export functionality
+    currentFishState = state;
+    console.log("Initial fish state set globally:", currentFishState);
+    // Show config in UI
+    updateFishConfigDisplay(config);
+    updateFishStatus("Starting root analysis...");
     updateFishProgress(state);
-    // Update the current line node specifically
-    updateFishLineNode(currentLine, state);
-    // Update global state for export functionality
+    // Get root score and update config
+    const rootAnalysis = await analyzePosition(config.rootFEN, {
+      ...config.stockfishOptions,
+      multiPV: 1,
+    });
+    console.log("rootAnalysis:", rootAnalysis);
+    const direction =
+      config.initiatorColor === PLAYER_COLORS.BLACK ? "asc" : "desc";
+    const bestMove = rootAnalysis.moves.sort((a, b) =>
+      compareAnalysisMoves(a, b, direction),
+    )[0];
+    console.log("root score:", bestMove.score);
+    config.rootScore = bestMove.score;
+    config.baselineScore = bestMove.score; // Set baseline for delta calculations
+    // Update root score in UI
+    updateFishRootScore(bestMove.score);
+    updateFishStatus(`Creating initial move`);
+    // Create initial move
+    const initialLine = await createInitialMove(state);
+    if (initialLine) {
+      state.wip.push(initialLine);
+      console.log("Added initial line to wip:", initialLine);
+      console.log("WIP count after adding initial line:", state.wip.length);
+    }
+    updateFishResultsRealTime(state);
+    // Main analysis loop
+    let limit = 0;
+    console.log(
+      "Starting main analysis loop with WIP count:",
+      state.wip.length,
+    );
+    while (state.wip.length > 0 && state.isFishing) {
+      // Check if analysis should be stopped
+      if (shouldStopFishAnalysis) {
+        console.log("Fish analysis stopped by user");
+        state.isFishing = false;
+        updateFishStatus("Analysis stopped by user");
+        updateFishButtonStates(false);
+        return state.done;
+      }
+      if (++limit > 100) throw new Error("Limit reached");
+      const currentLine = state.wip.shift();
+      console.log("Main loop, next line:", currentLine.sans.join(" "));
+      console.log("WIP count at start of iteration:", state.wip.length);
+      const halfMoves = currentLine.sans.length;
+      const isEvenHalfMoves = halfMoves % 2 === 0;
+      updateFishStatus(`Analyzing line: ${currentLine.sans.join(" ")}`);
+      if (isEvenHalfMoves) {
+        console.group("processInitiatorMove()");
+        // Initiator move - get best move from Stockfish
+        await findBestInitiatorMove(state, currentLine);
+      } else {
+        // Responder move - get N best moves from Stockfish
+        console.group("processResponderMove()");
+        await findNextResponseMoves(state, currentLine);
+      }
+      // Update progress in UI
+      updateFishProgress(state);
+      // Update the current line node specifically
+      updateFishLineNode(currentLine, state);
+      // Update global state for export functionality
+      currentFishState = state;
+      console.log(
+        "Updated global state. WIP count:",
+        state.wip.length,
+        "Done count:",
+        state.done.length,
+      );
+      console.log("Global state updated during main loop iteration");
+      console.groupEnd();
+    }
+    console.log(
+      "Fish analysis END. Wip len:",
+      state.wip.length,
+      ", done len:",
+      state.done.length,
+    );
+    console.log("Final done lines:", state.done);
+    // Set fishing to false when analysis completes
+    state.isFishing = false;
+    // Update final results in UI
+    updateFishStatus("Analysis complete");
+    updateFishProgress(state);
+    updateFishResults(state.done);
+    // Update global state one final time
     currentFishState = state;
     console.log(
-      "Updated global state. WIP count:",
+      "Final global state updated. WIP count:",
       state.wip.length,
       "Done count:",
       state.done.length,
     );
-    console.log("Global state updated during main loop iteration");
-    console.groupEnd();
+    console.log("Final fish state:", currentFishState);
+    // Update button states - enable start, disable stop
+    updateFishButtonStates(false);
+    return state.done;
+  } catch (error) {
+    console.error("Error in fish analysis:", error);
+    // Reset button states on error
+    updateFishButtonStates(false);
+    // Update UI status
+    updateFishStatus("Analysis failed");
+    showToast(
+      `Fish analysis failed: ${error instanceof Error ? error.message : String(error)}`,
+      "#dc3545",
+      5000,
+    );
+    throw error; // Re-throw to let caller handle it
   }
-  console.log(
-    "Fish analysis END. Wip len:",
-    state.wip.length,
-    ", done len:",
-    state.done.length,
-  );
-  console.log("Final done lines:", state.done);
-  // Update final results in UI
-  updateFishStatus("Analysis complete");
-  updateFishProgress(state);
-  updateFishResults(state.done);
-  // Update global state one final time
-  currentFishState = state;
-  console.log(
-    "Final global state updated. WIP count:",
-    state.wip.length,
-    "Done count:",
-    state.done.length,
-  );
-  console.log("Final fish state:", currentFishState);
-  return state.done;
 }
 /**
  * Calculate delta for a move score against the baseline
@@ -627,7 +699,10 @@ function updateFishConfigDisplay(config) {
       threadsDisplay.textContent = threads.toString();
     }
     // Add total nodes, lines, and formulas to config display
-    const configDetails = document.querySelector(".line-fisher-config-details");
+    const configDetails = querySelectorOrThrow(
+      document,
+      ".line-fisher-config-details",
+    );
     if (configDetails) {
       // Check if total nodes element already exists
       let totalNodesElement = configDetails.querySelector(".fish-total-nodes");
@@ -779,7 +854,10 @@ function updateFishProgress(state) {
 function updateFishRootScore(score) {
   try {
     // Add root score to config display
-    const configDetails = document.querySelector(".line-fisher-config-details");
+    const configDetails = querySelectorOrThrow(
+      document,
+      ".line-fisher-config-details",
+    );
     if (configDetails) {
       // Check if root score element already exists
       let rootScoreElement = configDetails.querySelector(".fish-root-score");
@@ -890,7 +968,7 @@ function updateFishResultsRealTime(state) {
 function updateFishLineNode(line, state) {
   try {
     const lineId = generateLineId(line.sans);
-    const resultsElement = document.getElementById("line-fisher-results");
+    const resultsElement = getElementByIdOrThrow("line-fisher-results");
     if (!resultsElement) return;
     // Find existing line node
     const existingLineElement = resultsElement.querySelector(

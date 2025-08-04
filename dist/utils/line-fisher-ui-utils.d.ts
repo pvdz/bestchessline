@@ -63,11 +63,6 @@ export declare const validateLineFisherConfig: (config: LineFisherConfig) => {
  */
 export declare const showLineFisherConfigError: (message: string) => void;
 /**
- * Add helpful tooltips to Line Fisher UI elements
- * Explain configuration options, show usage hints, and provide error explanations
- */
-export declare const addLineFisherTooltips: () => void;
-/**
  * Show usage hints for Line Fisher
  */
 export declare const showLineFisherUsageHints: () => void;

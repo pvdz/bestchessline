@@ -4,7 +4,11 @@ import { parseFEN } from "./fen-utils.js";
 import { validateMove } from "../move-validator.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 import { moveToNotation } from "./notation-utils.js";
-import { getCheckedRadioByName } from "./dom-helpers.js";
+import {
+  getCheckedRadioByName,
+  getElementByIdOrThrow,
+  querySelectorOrThrow,
+} from "./dom-helpers.js";
 import { log, logError } from "./logging.js";
 import { compareAnalysisMoves } from "./analysis-utils.js";
 import { getAnalysisOptions, updateButtonStates } from "./analysis-config.js";
@@ -92,7 +96,7 @@ export function updateResults(result) {
  * Update results panel
  */
 export function actuallyUpdateResultsPanel(moves) {
-  const resultsPanel = document.getElementById("analysis-results");
+  const resultsPanel = getElementByIdOrThrow("analysis-results");
   if (!resultsPanel) return;
   // Clear existing arrows
   hideMoveArrow();
@@ -138,7 +142,7 @@ export function actuallyUpdateResultsPanel(moves) {
     filteredMoves.push(...nonMateLines.slice(0, remainingSlots));
   }
   // Add analysis status indicator to the results section (after controls, before results panel)
-  const resultsSection = document.querySelector(".results-section");
+  const resultsSection = querySelectorOrThrow(document, ".results-section");
   if (resultsSection) {
     // Remove any existing status indicator
     const existingStatus = resultsSection.querySelector(".analysis-status");
@@ -176,7 +180,7 @@ export function actuallyUpdateResultsPanel(moves) {
     `;
     // Insert after the status div but before the results-panel
     const statusDiv = resultsSection.querySelector(".status");
-    const resultsPanel = resultsSection.querySelector("#analysis-results");
+    const resultsPanel = getElementByIdOrThrow("analysis-results");
     if (statusDiv && resultsPanel) {
       resultsSection.insertBefore(statusIndicator, resultsPanel);
     }
@@ -261,7 +265,7 @@ export function makeAnalysisMove(move) {
  */
 export function addPVClickListeners() {
   // Use event delegation on the results panel
-  const resultsPanel = document.getElementById("analysis-results");
+  const resultsPanel = getElementByIdOrThrow("analysis-results");
   if (!resultsPanel) return;
   // Remove any existing listeners to prevent duplicates
   resultsPanel.removeEventListener("click", handlePVClick);

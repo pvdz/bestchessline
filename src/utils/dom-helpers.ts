@@ -9,7 +9,7 @@
  * Safely get an HTML input element by ID
  */
 export function getInputElement(id: string): HTMLInputElement | null {
-  const element = document.getElementById(id);
+  const element = getElementByIdOrThrow(id);
   return element instanceof HTMLInputElement ? element : null;
 }
 
@@ -17,7 +17,7 @@ export function getInputElement(id: string): HTMLInputElement | null {
  * Safely get an HTML textarea element by ID
  */
 export function getTextAreaElement(id: string): HTMLTextAreaElement | null {
-  const element = document.getElementById(id);
+  const element = getElementByIdOrThrow(id);
   return element instanceof HTMLTextAreaElement ? element : null;
 }
 
@@ -25,7 +25,7 @@ export function getTextAreaElement(id: string): HTMLTextAreaElement | null {
  * Safely get an HTML button element by ID
  */
 export function getButtonElement(id: string): HTMLButtonElement | null {
-  const element = document.getElementById(id);
+  const element = getElementByIdOrThrow(id);
   return element instanceof HTMLButtonElement ? element : null;
 }
 
@@ -36,7 +36,8 @@ export function getCheckedRadio(
   name: string,
   value: string,
 ): HTMLInputElement | null {
-  const element = document.querySelector(
+  const element = querySelectorOrThrow(
+    document,
     `input[name="${name}"][value="${value}"]`,
   );
   return element instanceof HTMLInputElement ? element : null;
@@ -46,7 +47,10 @@ export function getCheckedRadio(
  * Safely get a checked radio button by name
  */
 export function getCheckedRadioByName(name: string): HTMLInputElement | null {
-  const element = document.querySelector(`input[name="${name}"]:checked`);
+  const element = querySelectorOrThrow(
+    document,
+    `input[name="${name}"]:checked`,
+  );
   return element instanceof HTMLInputElement ? element : null;
 }
 
@@ -87,7 +91,7 @@ export function querySelectorButton(
 export function querySelectorHTMLElementBySelector(
   selector: string,
 ): HTMLElement | null {
-  const element = document.querySelector(selector);
+  const element = querySelectorOrThrow(document, selector);
   return element instanceof HTMLElement ? element : null;
 }
 
@@ -102,11 +106,24 @@ export const getElementByIdOrThrow = (id: string): HTMLElement => {
     console.error(errorMessage);
 
     // Show error in UI
-    const statusElement = document.getElementById("line-fisher-status");
+    const statusElement = getElementByIdOrThrow("line-fisher-status");
     if (statusElement) {
       statusElement.textContent = errorMessage;
     }
 
+    throw new Error(errorMessage);
+  }
+  return element;
+};
+
+export const querySelectorOrThrow = (
+  parent: HTMLElement | Document,
+  selector: string,
+): HTMLElement => {
+  const element = parent.querySelector(selector) as HTMLElement | null;
+  if (!element) {
+    const errorMessage = `Required element selector '${selector}' did not find anything. This is a bug.`;
+    console.error(errorMessage);
     throw new Error(errorMessage);
   }
   return element;

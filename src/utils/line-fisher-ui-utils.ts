@@ -1,6 +1,6 @@
 import type { LineFisherConfig } from "../line_fisher.js";
 import { log } from "./logging.js";
-import { getInputElement } from "./dom-helpers.js";
+import { getInputElement, getElementByIdOrThrow } from "./dom-helpers.js";
 import { getFEN } from "../chess-board.js";
 
 // ============================================================================
@@ -217,7 +217,7 @@ export const initializeLineFisherUIControls = (): void => {
 export const updateLineFisherSliderValues = (): void => {
   // TODO: Update depth slider value display
   const depthInput = getInputElement("line-fisher-depth");
-  const depthValue = document.getElementById("line-fisher-depth-value");
+  const depthValue = getElementByIdOrThrow("line-fisher-depth-value");
   if (depthInput && depthValue) {
     depthValue.textContent = depthInput.value;
   }
@@ -226,7 +226,7 @@ export const updateLineFisherSliderValues = (): void => {
   const defaultResponderInput = getInputElement(
     "line-fisher-default-responder-count",
   );
-  const defaultResponderValue = document.getElementById(
+  const defaultResponderValue = getElementByIdOrThrow(
     "line-fisher-default-responder-count-value",
   );
   if (defaultResponderInput && defaultResponderValue) {
@@ -235,7 +235,7 @@ export const updateLineFisherSliderValues = (): void => {
 
   // TODO: Update threads slider value display
   const threadsInput = getInputElement("line-fisher-threads");
-  const threadsValue = document.getElementById("line-fisher-threads-value");
+  const threadsValue = getElementByIdOrThrow("line-fisher-threads-value");
   if (threadsInput && threadsValue) {
     threadsValue.textContent = threadsInput.value;
   }
@@ -316,14 +316,14 @@ export const showLineFisherConfigError = (message: string): void => {
   log(`Line Fisher config error: ${message}`);
 
   // Show error in status area
-  const statusElement = document.getElementById("line-fisher-status");
+  const statusElement = getElementByIdOrThrow("line-fisher-status");
   if (statusElement) {
     statusElement.textContent = `Error: ${message}`;
     statusElement.className = "line-fisher-status error";
   }
 
   // Show toast notification if available
-  const toastElement = document.getElementById("toast");
+  const toastElement = getElementByIdOrThrow("toast");
   if (toastElement) {
     toastElement.textContent = message;
     toastElement.className = "toast error show";
@@ -338,82 +338,6 @@ export const showLineFisherConfigError = (message: string): void => {
 // ============================================================================
 
 /**
- * Add helpful tooltips to Line Fisher UI elements
- * Explain configuration options, show usage hints, and provide error explanations
- */
-export const addLineFisherTooltips = (): void => {
-  // Add tooltips to configuration elements
-  const addTooltip = (elementId: string, tooltipText: string): void => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.title = tooltipText;
-      element.setAttribute("data-tooltip", tooltipText);
-    }
-  };
-
-  // Configuration tooltips
-  addTooltip(
-    "line-fisher-initiator-moves",
-    "Enter space-separated chess moves (e.g., 'Nf3 g3'). These moves will be played first by White. Leave empty to use Stockfish analysis.",
-  );
-
-  addTooltip(
-    "line-fisher-responder-counts",
-    "Enter space-separated numbers (e.g., '2 3'). These specify how many responses to analyze for each initiator move.",
-  );
-
-  addTooltip(
-    "line-fisher-depth",
-    "Maximum analysis depth (1-15). Higher depths explore more lines but take longer to analyze.",
-  );
-
-  addTooltip(
-    "line-fisher-threads",
-    "Number of CPU threads to use (1-16). More threads can speed up analysis but use more resources.",
-  );
-
-  // Button tooltips
-
-  addTooltip(
-    "stop-line-fisher",
-    "Stop the current analysis. Partial results will be preserved and can be continued later.",
-  );
-
-  addTooltip(
-    "reset-line-fisher",
-    "Clear all analysis results and reset to initial state. This cannot be undone.",
-  );
-
-  addTooltip(
-    "continue-line-fisher",
-    "Continue analysis from where it left off. Only available if there are partial results.",
-  );
-
-  // State management tooltips
-  addTooltip(
-    "copy-line-fisher-state",
-    "Copy current analysis state to clipboard. Can be pasted into another session.",
-  );
-
-  addTooltip(
-    "export-line-fisher-state",
-    "Export current analysis state to a JSON file. Useful for sharing or backup.",
-  );
-
-  addTooltip(
-    "import-line-fisher-state",
-    "Import analysis state from a JSON file. This will replace current state.",
-  );
-
-  addTooltip(
-    "paste-line-fisher-state",
-    "Import analysis state from clipboard. Useful for sharing between sessions.",
-  );
-
-  log("Line Fisher tooltips added successfully");
-};
-
-/**
  * Show usage hints for Line Fisher
  */
 export const showLineFisherUsageHints = (): void => {
@@ -426,7 +350,7 @@ export const showLineFisherUsageHints = (): void => {
   ];
 
   // Show hints in a rotating banner or help section
-  const hintsElement = document.getElementById("line-fisher-hints");
+  const hintsElement = getElementByIdOrThrow("line-fisher-hints");
   if (hintsElement) {
     const currentHint = hints[Math.floor(Math.random() * hints.length)];
     hintsElement.innerHTML = `<div class="line-fisher-hint">${currentHint}</div>`;
@@ -459,7 +383,7 @@ export const showLineFisherErrorExplanation = (error: string): void => {
     "An unexpected error occurred. Please try again.";
 
   // Show explanation in a user-friendly way
-  const explanationElement = document.getElementById(
+  const explanationElement = getElementByIdOrThrow(
     "line-fisher-error-explanation",
   );
   if (explanationElement) {

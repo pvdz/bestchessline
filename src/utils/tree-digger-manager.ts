@@ -2,7 +2,11 @@ import { TreeDiggerNode, TreeDiggerAnalysis } from "../types.js";
 import { getAppState, updateAppState } from "../main.js";
 import { moveToNotation } from "./notation-utils.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
-import { getButtonElement } from "./dom-helpers.js";
+import {
+  getButtonElement,
+  getElementByIdOrThrow,
+  querySelectorOrThrow,
+} from "./dom-helpers.js";
 import { log, logError } from "./logging.js";
 import { updateTreeDiggerStatus } from "./status-management.js";
 import {
@@ -13,7 +17,6 @@ import { formatNodeScore } from "./node-utils.js";
 import { getLineCompletion } from "./line-analysis.js";
 import { clearTreeNodeDOMMap } from "./debug-utils.js";
 import { buildShadowTree, findNodeById, UITreeNode } from "./tree-building.js";
-import { updateTreeFontSize } from "./ui-utils.js";
 import { handleTreeNodeClick } from "./tree-debug-utils.js";
 import {
   startTreeDiggerAnalysis,
@@ -43,10 +46,12 @@ import { getFEN } from "../chess-board.js";
  * Show tree digger status and state info boxes
  */
 const showTreeDiggerInfoBoxes = (): void => {
-  const statusElement = document.querySelector(
+  const statusElement = querySelectorOrThrow(
+    document,
     ".tree-digger-status",
   ) as HTMLElement;
-  const stateInfoElement = document.querySelector(
+  const stateInfoElement = querySelectorOrThrow(
+    document,
     ".tree-digger-state-info",
   ) as HTMLElement;
   if (statusElement) statusElement.style.display = "block";
@@ -169,7 +174,7 @@ export const recoverFromCrash = (): void => {
     updateTreeDiggerStatus("Recovered from crash - ready");
 
     // Hide recovery button
-    const recoveryBtn = document.getElementById("recover-from-crash");
+    const recoveryBtn = getElementByIdOrThrow("recover-from-crash");
     if (recoveryBtn) {
       recoveryBtn.style.display = "none";
     }
@@ -193,7 +198,7 @@ export const updateTreeDiggerButtonStates = (): void => {
   const copyBtn = getButtonElement("copy-tree-digger-state");
   const importBtn = getButtonElement("import-tree-digger-state");
   const pasteBtn = getButtonElement("paste-tree-digger-state");
-  const recoveryBtn = document.getElementById("recover-from-crash");
+  const recoveryBtn = getElementByIdOrThrow("recover-from-crash");
 
   const appState = getAppState();
   const currentlyAnalyzing = isAnalyzing();
@@ -396,17 +401,6 @@ export const updateTreeDiggerTreeIncrementally = (
     treeSection = document.createElement("div");
     treeSection.className = "tree-digger-tree";
     resultsElement.appendChild(treeSection);
-
-    // Apply current font size to newly created tree section
-    const treeFontSizeInput = document.getElementById(
-      "tree-font-size",
-    ) as HTMLInputElement;
-    if (treeFontSizeInput) {
-      const currentFontSize = parseInt(treeFontSizeInput.value);
-      updateTreeFontSize(currentFontSize);
-    } else {
-      updateTreeFontSize(16);
-    }
   }
 
   // Always update the tree section, even when there are no nodes
@@ -429,18 +423,6 @@ export const updateTreeDiggerTreeIncrementally = (
 
   // Sync DOM with shadow tree
   syncDOMWithShadowTree(treeSection, shadowNodes, analysis);
-
-  // Apply current font size to the updated tree
-  const treeFontSizeInput = document.getElementById(
-    "tree-font-size",
-  ) as HTMLInputElement;
-  if (treeFontSizeInput) {
-    const currentFontSize = parseInt(treeFontSizeInput.value);
-    updateTreeFontSize(currentFontSize);
-  } else {
-    // If no input found, apply default font size
-    updateTreeFontSize(16);
-  }
 
   // Add click event delegation to the tree section for better performance
   // Only add the listener if it doesn't already exist
@@ -726,7 +708,7 @@ export const updateTreeDiggerStateInfo = (
   _stateExport?: unknown,
   validation?: ValidationResult,
 ): void => {
-  const stateInfoElement = document.getElementById("tree-digger-state-info");
+  const stateInfoElement = getElementByIdOrThrow("tree-digger-state-info");
   if (!stateInfoElement) {
     logError("State info element not found");
     return;

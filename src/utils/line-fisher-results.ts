@@ -201,29 +201,6 @@ export const updateLineFisherProgressDisplay = (
 };
 
 /**
- * Update Line Fisher activity monitor
- * Show events per second and total events.
- * Display events per second, show total events, and provide real-time activity updates
- */
-export const updateLineFisherActivityMonitor = (
-  progress: LineFisherProgress,
-): void => {
-  // Display events per second and total events
-  const activityElement = document.getElementById("line-fisher-activity");
-  if (!activityElement) return;
-
-  // Update time elapsed
-  const timeElapsed =
-    progress.startTime > 0 ? (Date.now() - progress.startTime) / 1000 : 0;
-  const timeElapsedElement = activityElement.querySelector(
-    ".line-fisher-time-elapsed",
-  );
-  if (timeElapsedElement) {
-    timeElapsedElement.textContent = `${timeElapsed.toFixed(1)}s`;
-  }
-};
-
-/**
  * Update Line Fisher explored lines display
  * Show all explored lines with their moves, scores, and completion status
  */
@@ -440,58 +417,6 @@ const updateGameMovesDisplay = (result: LineFisherResult): void => {
 };
 
 /**
- * Create Line Fisher results HTML structure
- * TODO: Generate HTML structure for results display
- */
-export const createLineFisherResultsHTML = (
-  _state: LineFisherState,
-): string => {
-  // TODO: Generate HTML structure for:
-  // - Configuration display
-  // - Progress bar
-  // - Activity monitor
-  // - Explored lines list
-  return `
-    <div class="line-fisher-results">
-      <div class="line-fisher-config">
-        <h3>Configuration</h3>
-        <div id="line-fisher-config"></div>
-      </div>
-      <div class="line-fisher-progress">
-        <h3>Progress</h3>
-        <div id="line-fisher-progress"></div>
-      </div>
-      <div class="line-fisher-results">
-        <h3>Results</h3>
-        <div id="line-fisher-results"></div>
-      </div>
-    </div>
-  `;
-};
-
-/**
- * Update Line Fisher results incrementally
- * TODO: Update results display incrementally
- */
-export const updateLineFisherResultsIncrementally = (
-  _state: LineFisherState,
-): void => {
-  // TODO: Update results display incrementally
-};
-
-/**
- * Clear Line Fisher results display
- * TODO: Clear all results and reset display
- */
-export const clearLineFisherResultsDisplay = (): void => {
-  // TODO: Clear results display and show empty state
-  const resultsElement = document.getElementById("line-fisher-results");
-  if (!resultsElement) return;
-
-  // TODO: Clear display and show "No results yet" message
-};
-
-/**
  * Create Line Fisher configuration HTML structure
  * Create configuration HTML structure with layout for settings display,
  * statistics display, and board position display
@@ -684,54 +609,3 @@ const getPieceFromFEN = (
 // ============================================================================
 // LINE FISHER UI OPTIMIZATION
 // ============================================================================
-
-/**
- * Debounced UI update function to reduce unnecessary re-renders
- */
-let uiUpdateTimeout: number | null = null;
-
-const debouncedUIUpdate = (
-  updateFunction: () => void,
-  delay: number = 100,
-): void => {
-  if (uiUpdateTimeout) {
-    clearTimeout(uiUpdateTimeout);
-  }
-  uiUpdateTimeout = window.setTimeout(() => {
-    updateFunction();
-    uiUpdateTimeout = null;
-  }, delay);
-};
-
-/**
- * Optimize progress tracking updates
- */
-export const updateLineFisherProgressDisplayOptimized = (
-  progress: LineFisherProgress,
-): void => {
-  debouncedUIUpdate(async () => {
-    await updateLineFisherProgressDisplay(progress);
-  }, 50); // Update every 50ms for smoother progress
-};
-
-/**
- * Optimize activity monitor updates
- */
-export const updateLineFisherActivityMonitorOptimized = (
-  progress: LineFisherProgress,
-): void => {
-  debouncedUIUpdate(() => {
-    updateLineFisherActivityMonitor(progress);
-  }, 200); // Update every 200ms for activity monitor
-};
-
-/**
- * Optimize results display updates
- */
-export const updateLineFisherExploredLinesOptimized = (
-  results: LineFisherResult[],
-): void => {
-  debouncedUIUpdate(() => {
-    updateLineFisherExploredLines(results);
-  }, 300); // Update every 300ms for results display
-};

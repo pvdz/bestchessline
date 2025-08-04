@@ -878,7 +878,7 @@
       }
 
       function runTestCases() {
-        const container = document.getElementById("testCases");
+        const container = getElementByIdOrThrow("testCases");
         const resultsSummary = [];
 
         testCases.forEach((testCase, index) => {
@@ -1072,7 +1072,7 @@
       }
 
       window.copyResults = function () {
-        const textarea = document.getElementById("resultsCopy");
+        const textarea = getElementByIdOrThrow("resultsCopy");
         textarea.select();
         document.execCommand("copy");
         alert("Results copied to clipboard!");
@@ -1115,7 +1115,7 @@
       };
 
       function renderBoard(fen) {
-        const board = document.getElementById("board");
+        const board = getElementByIdOrThrow("board");
         board.innerHTML = "";
 
         const position = parseFEN(fen);
@@ -1167,17 +1167,17 @@
           document
             .querySelector(`[data-square="${square}"]`)
             .classList.add("selected");
-          document.getElementById("selectedSquare").textContent = square;
+          getElementByIdOrThrow("selectedSquare").textContent = square;
         } else {
           // Second click - select to square and test move
           const targetSquare = square;
           document
             .querySelector(`[data-square="${square}"]`)
             .classList.add("target");
-          document.getElementById("targetSquare").textContent = square;
+          getElementByIdOrThrow("targetSquare").textContent = square;
 
           // Get the piece at the selected square
-          const position = parseFEN(document.getElementById("fenInput").value);
+          const position = parseFEN(getElementByIdOrThrow("fenInput").value);
           const [rank, file] = selectedSquare.split("");
           const rankIndex = 8 - parseInt(rank);
           const fileIndex = file.charCodeAt(0) - 97;
@@ -1194,14 +1194,14 @@
           }
 
           selectedSquare = null;
-          document.getElementById("selectedSquare").textContent = "None";
-          document.getElementById("targetSquare").textContent = "None";
+          getElementByIdOrThrow("selectedSquare").textContent = "None";
+          getElementByIdOrThrow("targetSquare").textContent = "None";
         }
       }
 
       function testMove() {
-        const moveText = document.getElementById("moveInput").value;
-        const fen = document.getElementById("fenInput").value;
+        const moveText = getElementByIdOrThrow("moveInput").value;
+        const fen = getElementByIdOrThrow("fenInput").value;
 
         // Try to parse as short notation first
         const parsedMove = parseShortNotation(moveText, fen);
@@ -1563,10 +1563,10 @@
       }
 
       function testMoveWithData(move) {
-        const fen = document.getElementById("fenInput").value;
+        const fen = getElementByIdOrThrow("fenInput").value;
         const result = analyzeMove(fen, move);
 
-        const resultDiv = document.getElementById("moveResult");
+        const resultDiv = getElementByIdOrThrow("moveResult");
         resultDiv.innerHTML = `
                 <div class="result ${result.isValid ? "valid" : "invalid"}">
                     <h3>Move Analysis: ${move.from}-${move.to}</h3>
@@ -1587,7 +1587,7 @@
 
       // Initialize
       window.testMove = testMove;
-      renderBoard(document.getElementById("fenInput").value);
+      renderBoard(getElementByIdOrThrow("fenInput").value);
       runTestCases();
 
       // Update board when FEN changes

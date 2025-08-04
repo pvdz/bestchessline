@@ -56,3 +56,7 @@ export declare function querySelectorHTMLElementBySelector(
  * Use this when an element is required for the application to function
  */
 export declare const getElementByIdOrThrow: (id: string) => HTMLElement;
+export declare const querySelectorOrThrow: (
+  parent: HTMLElement | Document,
+  selector: string,
+) => HTMLElement;

@@ -1,4 +1,5 @@
 import { clearLastMoveHighlight } from "../chess-board.js";
+import { querySelectorOrThrow } from "./dom-helpers.js";
 /**
  * Board Utility Functions
  *
@@ -12,8 +13,11 @@ export function highlightLastMove(move) {
   // Clear previous highlights
   clearLastMoveHighlight();
   // Add highlights for the last move
-  const fromSquare = document.querySelector(`[data-square="${move.from}"]`);
-  const toSquare = document.querySelector(`[data-square="${move.to}"]`);
+  const fromSquare = querySelectorOrThrow(
+    document,
+    `[data-square="${move.from}"]`,
+  );
+  const toSquare = querySelectorOrThrow(document, `[data-square="${move.to}"]`);
   if (fromSquare) {
     fromSquare.classList.add("last-move-from");
   }

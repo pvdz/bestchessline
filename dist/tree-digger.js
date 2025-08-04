@@ -22,6 +22,7 @@ import {
 } from "./utils/ui-getters.js";
 import { log, logError } from "./utils/logging.js";
 import { getFEN, getPosition } from "./chess-board.js";
+import { getElementByIdOrThrow } from "./utils/dom-helpers.js";
 import {
   analyzePosition,
   stopAnalysis,
@@ -449,7 +450,7 @@ const processInitiatorMoveInTree = async (fen, analysis, parentNode, depth) => {
         log(
           `ROOT NODE CREATED: with predefined move: ${moveToNotation(node.move)}`,
         );
-        const treeSection = document.getElementById(
+        const treeSection = getElementByIdOrThrow(
           "tree-digger-tree-empty-message",
         );
         if (treeSection) {
@@ -524,9 +525,7 @@ const processInitiatorMoveInTree = async (fen, analysis, parentNode, depth) => {
     // Root node - add to root nodes array
     analysis.nodes.push(node);
     log(`ROOT NODE CREATED: with dynamic move: ${moveToNotation(node.move)}`);
-    const treeSection = document.getElementById(
-      "tree-digger-tree-empty-message",
-    );
+    const treeSection = getElementByIdOrThrow("tree-digger-tree-empty-message");
     if (treeSection) {
       treeSection.remove();
     }

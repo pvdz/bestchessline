@@ -5,7 +5,7 @@ import {
   PLAYER_COLORS,
 } from "./types.js";
 import { setGlobalCurrentMoveIndex } from "./utils.js";
-import { showToast, updateTreeFontSize } from "./utils/ui-utils.js";
+import { showToast } from "./utils/ui-utils.js";
 import { formatScoreWithMateIn } from "./utils/formatting-utils.js";
 import { compareAnalysisMoves } from "./utils/analysis-utils.js";
 import { applyMoveToFEN } from "./utils/fen-manipulation.js";
@@ -17,6 +17,7 @@ import {
   getTextAreaElement,
   getCheckedRadioByName,
   getElementByIdOrThrow,
+  querySelectorOrThrow,
 } from "./utils/dom-helpers.js";
 
 import { initializeCopyButton } from "./utils/copy-utils.js";
@@ -36,7 +37,6 @@ import {
 import { getAnalysisOptions } from "./utils/analysis-config.js";
 import {
   updateTreeDiggerStatus,
-  updateAnalysisStatus,
   updateLineFisherStatus,
 } from "./utils/status-management.js";
 import { updateTreeDiggerResults } from "./utils/tree-digger-results.js";
@@ -88,6 +88,7 @@ import {
   copyFishStateToClipboard,
   importFishStateFromClipboard,
   continueFishAnalysis,
+  stopFishAnalysis,
 } from "./fish.js";
 import { hideMoveArrow } from "./utils/arrow-utils.js";
 
@@ -397,18 +398,6 @@ const initializeEventListeners = (): void => {
 
   stateFileInput.addEventListener("change", handleStateFileInput);
 
-  // Tree font size control
-  const treeFontSizeInput = getElementByIdOrThrow(
-    "tree-font-size",
-  ) as HTMLInputElement;
-  // Initialize with default value
-  updateTreeFontSize(16);
-
-  treeFontSizeInput.addEventListener("input", () => {
-    const fontSize = treeFontSizeInput.value;
-    updateTreeFontSize(parseInt(fontSize));
-  });
-
   // Thread control for tree digger analysis
   const treeDiggerThreadsInput = getElementByIdOrThrow(
     "tree-digger-threads",
@@ -436,10 +425,13 @@ const initializeEventListeners = (): void => {
   });
 
   stopLineFisherBtn.addEventListener("click", () => {
-    console.log(
-      "USER PRESSED STOP BUTTON - Line Fisher analysis manually stopped",
-    );
-    stopLineFisherAnalysisFromManager();
+    console.log("USER PRESSED STOP BUTTON - trying Fish stop first");
+    try {
+      stopFishAnalysis();
+    } catch (error) {
+      console.log("Fish stop failed, falling back to Line Fisher stop");
+      stopLineFisherAnalysisFromManager();
+    }
   });
 
   resetLineFisherBtn.addEventListener("click", () =>
@@ -576,13 +568,11 @@ const initializeEventListeners = (): void => {
     const customEvent = event as CustomEvent;
     const message = customEvent.detail?.message || "Loading Stockfish...";
     updateTreeDiggerStatus(message);
-    updateAnalysisStatus(message);
     updateLineFisherStatus(message);
   }) as EventListener);
 
   window.addEventListener("stockfish-ready", (() => {
     updateTreeDiggerStatus("Stockfish ready");
-    updateAnalysisStatus("Stockfish ready");
     updateLineFisherStatus("Stockfish ready");
   }) as EventListener);
 
@@ -591,7 +581,6 @@ const initializeEventListeners = (): void => {
     const message = customEvent.detail?.message || "Analyzing...";
     const position = customEvent.detail?.position || "";
     updateTreeDiggerStatus(`${message} ${position}`);
-    updateAnalysisStatus(`${message} ${position}`);
     updateLineFisherStatus(`${message} ${position}`);
   }) as EventListener);
 
@@ -600,7 +589,6 @@ const initializeEventListeners = (): void => {
     const message = customEvent.detail?.message || "Analysis complete";
     const movesFound = customEvent.detail?.movesFound || 0;
     updateTreeDiggerStatus(`${message} (${movesFound} moves)`);
-    updateAnalysisStatus(`${message} (${movesFound} moves)`);
     updateLineFisherStatus(`${message} (${movesFound} moves)`);
   }) as EventListener);
 
@@ -654,9 +642,6 @@ const initializeEventListeners = (): void => {
     // Reset tree digger state
     updateTreeDiggerButtonStates();
     updateTreeDiggerStatus(
-      "Stockfish crashed - click 'Recover from Crash' to restart",
-    );
-    updateAnalysisStatus(
       "Stockfish crashed - click 'Recover from Crash' to restart",
     );
     updateLineFisherStatus(
@@ -897,7 +882,7 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
   }
 
   // Add analysis status indicator to the results section (after controls, before results panel)
-  const resultsSection = document.querySelector(".results-section");
+  const resultsSection = querySelectorOrThrow(document, ".results-section");
   if (resultsSection) {
     // Remove any existing status indicator
     const existingStatus = resultsSection.querySelector(".analysis-status");
@@ -945,7 +930,7 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
 
     // Insert after the status div but before the results-panel
     const statusDiv = resultsSection.querySelector(".status");
-    const resultsPanel = resultsSection.querySelector("#analysis-results");
+    const resultsPanel = getElementByIdOrThrow("analysis-results");
 
     if (statusDiv && resultsPanel) {
       resultsSection.insertBefore(statusIndicator, resultsPanel);

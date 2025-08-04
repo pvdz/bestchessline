@@ -1,3 +1,5 @@
+import { querySelectorOrThrow } from "./dom-helpers.js";
+
 /**
  * Arrow Utility Functions
  *
@@ -52,9 +54,10 @@ export function positionArrow(
   from: string,
   to: string,
 ): void {
-  const fromElement = document.querySelector(`[data-square="${from}"]`);
-  const toElement = document.querySelector(`[data-square="${to}"]`);
-  const boardContainer = document.querySelector(
+  const fromElement = querySelectorOrThrow(document, `[data-square="${from}"]`);
+  const toElement = querySelectorOrThrow(document, `[data-square="${to}"]`);
+  const boardContainer = querySelectorOrThrow(
+    document,
     ".board-section",
   ) as HTMLElement;
 

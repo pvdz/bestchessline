@@ -29,30 +29,6 @@ export interface LineFisherState {
   rootNodes: LineFisherNode[];
 }
 /**
- * OneFishLine represents a single line of analysis
- * Each line represents an initiator move and its response moves
- * The final move of a line has no response moves (isFull = true)
- * This can be because max depth was reached, mate was reached, or it's a transposition
- */
-export interface OneFishLine {
-  sans: string[];
-  score: number;
-  isFull: boolean;
-  isDone: boolean;
-  isTransposition: boolean;
-}
-/**
- * FishLineNewState - Sleeker alternative to LineFisherState
- * Simplified state management focusing on lines rather than tree nodes
- */
-export interface FishLineNewState {
-  isFishing: boolean;
-  config: LineFisherConfig;
-  analyzedPartianFens: Set<string>;
-  linesWip: OneFishLine[];
-  linesDone: OneFishLine[];
-}
-/**
  * Line Fisher progress tracking
  */
 export interface LineFisherProgress {
@@ -94,55 +70,6 @@ export interface LineFisherNode {
   parent?: LineFisherNode;
   analysisResult?: AnalysisResult;
 }
-/**
- * Create initial FishLineNewState
- */
-export declare const createInitialFishLineNewState: () => FishLineNewState;
-/**
- * Verify that FishLineNewState represents a valid LineFisherState
- * This function checks if the new state structure can represent the same analysis
- * as the original LineFisherState
- */
-export declare const verifyFishLineNewState: (
-  fishState: FishLineNewState,
-  originalState: LineFisherState,
-) => {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-};
-/**
- * Convert LineFisherState to FishLineNewState
- * This function creates a new state representation from the original
- */
-export declare const convertLineFisherStateToFishLineNewState: (
-  originalState: LineFisherState,
-) => FishLineNewState;
-/**
- * Convert FishLineNewState to LineFisherState
- * This function creates the original state representation from the new state
- */
-export declare const convertFishLineNewStateToLineFisherState: (
-  fishState: FishLineNewState,
-) => LineFisherState;
-/**
- * Get current FishLineNewState (for testing and comparison)
- */
-export declare const getFishLineNewState: () => FishLineNewState;
-/**
- * Update FishLineNewState (for testing and comparison)
- */
-export declare const updateFishLineNewState: (
-  newState: Partial<FishLineNewState>,
-) => void;
-/**
- * Test verification function with current state
- */
-export declare const testFishLineNewStateVerification: () => {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-};
 /**
  * Initialize Line Fisher with default configuration
  * Sets up the initial state and prepares for analysis
