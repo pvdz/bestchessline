@@ -2,86 +2,88 @@
  * Default pagination configuration
  */
 export const DEFAULT_PAGINATION_CONFIG = {
-    pageSize: 50,
-    currentPage: 1,
-    maxVisibleNodes: 200,
-    showProgressInsteadOfTree: false,
-    progressThreshold: 1000, // Show progress instead of tree when node count exceeds this
+  pageSize: 50,
+  currentPage: 1,
+  maxVisibleNodes: 200,
+  showProgressInsteadOfTree: false,
+  progressThreshold: 1000, // Show progress instead of tree when node count exceeds this
 };
 /**
  * Calculate tree statistics for pagination
  */
 export const calculateTreeStatistics = (analysis) => {
-    let totalNodes = 0;
-    let totalLeafs = 0;
-    let maxDepth = 0;
-    let totalDepth = 0;
-    const traverseTree = (nodes, depth) => {
-        for (const node of nodes) {
-            totalNodes++;
-            totalDepth += depth;
-            maxDepth = Math.max(maxDepth, depth);
-            if (node.children.length === 0) {
-                totalLeafs++;
-            }
-            else {
-                traverseTree(node.children, depth + 1);
-            }
-        }
-    };
-    traverseTree(analysis.nodes, 0);
-    return {
-        totalNodes,
-        totalLeafs,
-        maxDepth,
-        averageDepth: totalNodes > 0 ? totalDepth / totalNodes : 0,
-    };
+  let totalNodes = 0;
+  let totalLeafs = 0;
+  let maxDepth = 0;
+  let totalDepth = 0;
+  const traverseTree = (nodes, depth) => {
+    for (const node of nodes) {
+      totalNodes++;
+      totalDepth += depth;
+      maxDepth = Math.max(maxDepth, depth);
+      if (node.children.length === 0) {
+        totalLeafs++;
+      } else {
+        traverseTree(node.children, depth + 1);
+      }
+    }
+  };
+  traverseTree(analysis.nodes, 0);
+  return {
+    totalNodes,
+    totalLeafs,
+    maxDepth,
+    averageDepth: totalNodes > 0 ? totalDepth / totalNodes : 0,
+  };
 };
 /**
  * Get paginated tree nodes
  */
-export const getPaginatedTreeNodes = (analysis, config = DEFAULT_PAGINATION_CONFIG) => {
-    const stats = calculateTreeStatistics(analysis);
-    const isLargeTree = stats.totalNodes > config.progressThreshold;
-    if (isLargeTree && config.showProgressInsteadOfTree) {
-        // Return progress state instead of tree nodes
-        return {
-            config,
-            totalNodes: stats.totalNodes,
-            totalPages: 0,
-            visibleNodes: [],
-            isLargeTree: true,
-        };
-    }
-    // Flatten tree nodes for pagination
-    const allNodes = [];
-    const flattenTree = (nodes) => {
-        for (const node of nodes) {
-            allNodes.push(node);
-            if (node.children.length > 0) {
-                flattenTree(node.children);
-            }
-        }
-    };
-    flattenTree(analysis.nodes);
-    const totalPages = Math.ceil(allNodes.length / config.pageSize);
-    const startIndex = (config.currentPage - 1) * config.pageSize;
-    const endIndex = Math.min(startIndex + config.pageSize, allNodes.length);
-    const visibleNodes = allNodes.slice(startIndex, endIndex);
+export const getPaginatedTreeNodes = (
+  analysis,
+  config = DEFAULT_PAGINATION_CONFIG,
+) => {
+  const stats = calculateTreeStatistics(analysis);
+  const isLargeTree = stats.totalNodes > config.progressThreshold;
+  if (isLargeTree && config.showProgressInsteadOfTree) {
+    // Return progress state instead of tree nodes
     return {
-        config,
-        totalNodes: stats.totalNodes,
-        totalPages,
-        visibleNodes,
-        isLargeTree: false,
+      config,
+      totalNodes: stats.totalNodes,
+      totalPages: 0,
+      visibleNodes: [],
+      isLargeTree: true,
     };
+  }
+  // Flatten tree nodes for pagination
+  const allNodes = [];
+  const flattenTree = (nodes) => {
+    for (const node of nodes) {
+      allNodes.push(node);
+      if (node.children.length > 0) {
+        flattenTree(node.children);
+      }
+    }
+  };
+  flattenTree(analysis.nodes);
+  const totalPages = Math.ceil(allNodes.length / config.pageSize);
+  const startIndex = (config.currentPage - 1) * config.pageSize;
+  const endIndex = Math.min(startIndex + config.pageSize, allNodes.length);
+  const visibleNodes = allNodes.slice(startIndex, endIndex);
+  return {
+    config,
+    totalNodes: stats.totalNodes,
+    totalPages,
+    visibleNodes,
+    isLargeTree: false,
+  };
 };
 /**
  * Render pagination controls
  */
 export const renderPaginationControls = (paginationState, _onPageChange) => {
-    if (paginationState.isLargeTree) {
-        return `
+  if (paginationState.isLargeTree) {
+    return `
       <div class="tree-pagination-large">
         <div class="pagination-warning">
           <strong>Large Tree Detected</strong>
@@ -90,37 +92,41 @@ export const renderPaginationControls = (paginationState, _onPageChange) => {
         </div>
       </div>
     `;
-    }
-    if (paginationState.totalPages <= 1) {
-        return "";
-    }
-    const { currentPage } = paginationState.config;
-    const { totalPages } = paginationState;
-    const pages = [];
-    // Add first page
-    if (currentPage > 1) {
-        pages.push(`<button class="pagination-btn" data-page="1">1</button>`);
-    }
-    // Add ellipsis if needed
-    if (currentPage > 3) {
-        pages.push(`<span class="pagination-ellipsis">...</span>`);
-    }
-    // Add pages around current page
-    const startPage = Math.max(2, currentPage - 1);
-    const endPage = Math.min(totalPages - 1, currentPage + 1);
-    for (let i = startPage; i <= endPage; i++) {
-        const isCurrent = i === currentPage;
-        pages.push(`<button class="pagination-btn ${isCurrent ? "current" : ""}" data-page="${i}">${i}</button>`);
-    }
-    // Add ellipsis if needed
-    if (currentPage < totalPages - 2) {
-        pages.push(`<span class="pagination-ellipsis">...</span>`);
-    }
-    // Add last page
-    if (currentPage < totalPages) {
-        pages.push(`<button class="pagination-btn" data-page="${totalPages}">${totalPages}</button>`);
-    }
-    return `
+  }
+  if (paginationState.totalPages <= 1) {
+    return "";
+  }
+  const { currentPage } = paginationState.config;
+  const { totalPages } = paginationState;
+  const pages = [];
+  // Add first page
+  if (currentPage > 1) {
+    pages.push(`<button class="pagination-btn" data-page="1">1</button>`);
+  }
+  // Add ellipsis if needed
+  if (currentPage > 3) {
+    pages.push(`<span class="pagination-ellipsis">...</span>`);
+  }
+  // Add pages around current page
+  const startPage = Math.max(2, currentPage - 1);
+  const endPage = Math.min(totalPages - 1, currentPage + 1);
+  for (let i = startPage; i <= endPage; i++) {
+    const isCurrent = i === currentPage;
+    pages.push(
+      `<button class="pagination-btn ${isCurrent ? "current" : ""}" data-page="${i}">${i}</button>`,
+    );
+  }
+  // Add ellipsis if needed
+  if (currentPage < totalPages - 2) {
+    pages.push(`<span class="pagination-ellipsis">...</span>`);
+  }
+  // Add last page
+  if (currentPage < totalPages) {
+    pages.push(
+      `<button class="pagination-btn" data-page="${totalPages}">${totalPages}</button>`,
+    );
+  }
+  return `
     <div class="tree-pagination">
       <div class="pagination-info">
         Showing ${(currentPage - 1) * paginationState.config.pageSize + 1}-${Math.min(currentPage * paginationState.config.pageSize, paginationState.totalNodes)} of ${paginationState.totalNodes.toLocaleString()} nodes
@@ -141,11 +147,13 @@ export const renderPaginationControls = (paginationState, _onPageChange) => {
  * Render progress summary for large trees
  */
 export const renderLargeTreeProgress = (analysis) => {
-    const stats = calculateTreeStatistics(analysis);
-    const progress = analysis.isComplete
-        ? 100
-        : Math.round((analysis.analyzedPositions.size / analysis.totalPositions) * 100);
-    return `
+  const stats = calculateTreeStatistics(analysis);
+  const progress = analysis.isComplete
+    ? 100
+    : Math.round(
+        (analysis.analyzedPositions.size / analysis.totalPositions) * 100,
+      );
+  return `
     <div class="tree-progress-summary">
       <h3>Tree Analysis Progress</h3>
       <div class="progress-stats">
@@ -187,11 +195,13 @@ export const renderLargeTreeProgress = (analysis) => {
  * Handle pagination button clicks
  */
 export const handlePaginationClick = (event, onPageChange) => {
-    const target = event.target;
-    if (target.classList.contains("pagination-btn") &&
-        !target.hasAttribute("disabled")) {
-        const page = parseInt(target.getAttribute("data-page") || "1");
-        onPageChange(page);
-    }
+  const target = event.target;
+  if (
+    target.classList.contains("pagination-btn") &&
+    !target.hasAttribute("disabled")
+  ) {
+    const page = parseInt(target.getAttribute("data-page") || "1");
+    onPageChange(page);
+  }
 };
 //# sourceMappingURL=tree-digger-pagination.js.map

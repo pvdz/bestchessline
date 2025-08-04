@@ -1,7 +1,7 @@
 import type { LineFisherConfig } from "../line_fisher.js";
 import { log } from "./logging.js";
-import { showToast } from "./ui-utils.js";
 import { getInputElement } from "./dom-helpers.js";
+import { getFEN } from "../chess-board.js";
 
 // ============================================================================
 // LINE FISHER UI UTILITY FUNCTIONS
@@ -14,13 +14,13 @@ import { getInputElement } from "./dom-helpers.js";
  */
 export const getLineFisherInitiatorMoves = (): string[] => {
   const initiatorMovesInput = getInputElement("line-fisher-initiator-moves");
-  if (!initiatorMovesInput) return ["Nf3", "g3"];
+  if (!initiatorMovesInput) return [];
 
   const movesText = initiatorMovesInput.value.trim();
   if (!movesText) {
     // Clear error styling for empty input
     initiatorMovesInput.classList.remove("error");
-    return ["Nf3", "g3"];
+    return [];
   }
 
   // Parse space-separated moves
@@ -58,7 +58,7 @@ export const getLineFisherInitiatorMoves = (): string[] => {
     initiatorMovesInput.classList.remove("error");
   }
 
-  return validMoves.length > 0 ? validMoves : ["Nf3", "g3"];
+  return validMoves.length > 0 ? validMoves : [];
 };
 
 /**
@@ -142,6 +142,7 @@ export const getLineFisherConfigFromUI = (): LineFisherConfig => {
     maxDepth: getLineFisherDepth(),
     threads: getLineFisherThreads(),
     defaultResponderCount: getLineFisherDefaultResponderCount(),
+    rootFEN: getFEN(),
   };
 };
 
@@ -372,10 +373,6 @@ export const addLineFisherTooltips = (): void => {
   );
 
   // Button tooltips
-  addTooltip(
-    "start-line-fisher",
-    "Start Line Fisher analysis with current configuration. This will explore multiple lines to the specified depth.",
-  );
 
   addTooltip(
     "stop-line-fisher",
@@ -474,149 +471,4 @@ export const showLineFisherErrorExplanation = (error: string): void => {
       </div>
     `;
   }
-};
-
-// ============================================================================
-// LINE FISHER KEYBOARD SHORTCUTS
-// ============================================================================
-
-/**
- * Add keyboard shortcuts for Line Fisher operations
- * Start/stop analysis, reset analysis, and copy results
- */
-export const addLineFisherKeyboardShortcuts = (): void => {
-  const shortcuts: Map<string, () => void> = new Map<string, () => void>();
-
-  // Define shortcuts
-  shortcuts.set("Ctrl+Shift+L", () => {
-    // Start Line Fisher analysis
-    const startBtn = document.getElementById(
-      "start-line-fisher",
-    ) as HTMLButtonElement;
-    if (startBtn && !startBtn.disabled) {
-      startBtn.click();
-    }
-  });
-
-  shortcuts.set("Ctrl+Shift+S", () => {
-    // Stop Line Fisher analysis
-    const stopBtn = document.getElementById(
-      "stop-line-fisher",
-    ) as HTMLButtonElement;
-    if (stopBtn && !stopBtn.disabled) {
-      stopBtn.click();
-    }
-  });
-
-  shortcuts.set("Ctrl+Shift+R", () => {
-    // Reset Line Fisher analysis
-    const resetBtn = document.getElementById(
-      "reset-line-fisher",
-    ) as HTMLButtonElement;
-    if (resetBtn && !resetBtn.disabled) {
-      resetBtn.click();
-    }
-  });
-
-  shortcuts.set("Ctrl+Shift+C", () => {
-    // Copy Line Fisher state
-    const copyBtn = document.getElementById(
-      "copy-line-fisher-state",
-    ) as HTMLButtonElement;
-    if (copyBtn && !copyBtn.disabled) {
-      copyBtn.click();
-    }
-  });
-
-  shortcuts.set("Ctrl+Shift+V", () => {
-    // Paste Line Fisher state
-    const pasteBtn = document.getElementById(
-      "paste-line-fisher-state",
-    ) as HTMLButtonElement;
-    if (pasteBtn && !pasteBtn.disabled) {
-      pasteBtn.click();
-    }
-  });
-
-  shortcuts.set("Ctrl+Shift+E", () => {
-    // Export Line Fisher state
-    const exportBtn = document.getElementById(
-      "export-line-fisher-state",
-    ) as HTMLButtonElement;
-    if (exportBtn && !exportBtn.disabled) {
-      exportBtn.click();
-    }
-  });
-
-  shortcuts.set("Ctrl+Shift+I", () => {
-    // Import Line Fisher state
-    const importBtn = document.getElementById(
-      "import-line-fisher-state",
-    ) as HTMLButtonElement;
-    if (importBtn && !importBtn.disabled) {
-      importBtn.click();
-    }
-  });
-
-  // Add event listener for keyboard shortcuts
-  document.addEventListener("keydown", (event: KeyboardEvent) => {
-    const key = [
-      event.ctrlKey ? "Ctrl" : "",
-      event.shiftKey ? "Shift" : "",
-      event.key.toUpperCase(),
-    ]
-      .filter(Boolean)
-      .join("+");
-
-    const action = shortcuts.get(key);
-    if (action) {
-      event.preventDefault();
-      action();
-
-      // Show shortcut feedback
-      showToast(`Shortcut executed: ${key}`, "#4CAF50", 1000);
-    }
-  });
-
-  // Show shortcuts help
-  const showShortcutsHelp = (): void => {
-    const helpText = `
-      <div class="line-fisher-shortcuts-help">
-        <h4>Line Fisher Keyboard Shortcuts</h4>
-        <ul>
-          <li><strong>Ctrl+Shift+L:</strong> Start analysis</li>
-          <li><strong>Ctrl+Shift+S:</strong> Stop analysis</li>
-          <li><strong>Ctrl+Shift+R:</strong> Reset analysis</li>
-          <li><strong>Ctrl+Shift+C:</strong> Copy state</li>
-          <li><strong>Ctrl+Shift+V:</strong> Paste state</li>
-          <li><strong>Ctrl+Shift+E:</strong> Export state</li>
-          <li><strong>Ctrl+Shift+I:</strong> Import state</li>
-        </ul>
-      </div>
-    `;
-
-    const helpElement = document.getElementById("line-fisher-shortcuts-help");
-    if (helpElement) {
-      helpElement.innerHTML = helpText;
-    }
-  };
-
-  // Add help button
-  const addShortcutsHelpButton = (): void => {
-    const helpBtn = document.createElement("button");
-    helpBtn.textContent = "⌨️ Shortcuts";
-    helpBtn.className = "line-fisher-shortcuts-help-btn";
-    helpBtn.title = "Show keyboard shortcuts";
-    helpBtn.onclick = showShortcutsHelp;
-
-    const controlsElement = document.getElementById("line-fisher-controls");
-    if (controlsElement) {
-      controlsElement.appendChild(helpBtn);
-    }
-  };
-
-  // Initialize shortcuts
-  addShortcutsHelpButton();
-
-  log("Line Fisher keyboard shortcuts added successfully");
 };

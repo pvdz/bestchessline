@@ -35,7 +35,9 @@ export declare const getLineFisherConfigFromUI: () => LineFisherConfig;
  * Update Line Fisher UI from configuration
  * TODO: Update UI elements with configuration values
  */
-export declare const updateLineFisherUIFromConfig: (config: LineFisherConfig) => void;
+export declare const updateLineFisherUIFromConfig: (
+  config: LineFisherConfig,
+) => void;
 /**
  * Initialize Line Fisher UI controls
  * Set up event listeners and initialize UI state
@@ -52,8 +54,8 @@ export declare const updateLineFisherSliderValues: () => void;
  * check depth is between 1 and 15, check threads is between 1 and 16, and return boolean and error message
  */
 export declare const validateLineFisherConfig: (config: LineFisherConfig) => {
-    isValid: boolean;
-    errorMessage: string;
+  isValid: boolean;
+  errorMessage: string;
 };
 /**
  * Show Line Fisher configuration error
@@ -73,8 +75,3 @@ export declare const showLineFisherUsageHints: () => void;
  * Provide detailed error explanations
  */
 export declare const showLineFisherErrorExplanation: (error: string) => void;
-/**
- * Add keyboard shortcuts for Line Fisher operations
- * Start/stop analysis, reset analysis, and copy results
- */
-export declare const addLineFisherKeyboardShortcuts: () => void;

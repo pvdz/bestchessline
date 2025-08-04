@@ -645,7 +645,6 @@ export const showMoveArrow = (
       // Calculate delta from best move
       const delta = currentScore - bestScore;
 
-
       // Calculate the rounded delta to match the display logic
       let roundedDeltaInPawns;
       if (Math.abs(delta) < 100) {

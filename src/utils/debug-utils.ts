@@ -190,10 +190,16 @@ const updateTreeInfo = (): void => {
  */
 import type { TreeDiggerAnalysis, TreeDiggerNode } from "../types.js";
 
-const getMoveNotationFromFen = (fen: string, analysis: TreeDiggerAnalysis): string => {
+const getMoveNotationFromFen = (
+  fen: string,
+  analysis: TreeDiggerAnalysis,
+): string => {
   try {
     // Find the node that corresponds to this FEN
-    const findNodeByFen = (nodes: TreeDiggerNode[], targetFen: string): TreeDiggerNode | null => {
+    const findNodeByFen = (
+      nodes: TreeDiggerNode[],
+      targetFen: string,
+    ): TreeDiggerNode | null => {
       for (const node of nodes) {
         if (node.fen === targetFen) {
           return node;

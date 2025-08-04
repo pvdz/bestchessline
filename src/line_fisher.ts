@@ -1,4 +1,4 @@
-import type { ChessMove, AnalysisResult, AnalysisMove } from "./types.js";
+import type { ChessMove, AnalysisResult } from "./types.js";
 import { log } from "./utils/logging.js";
 import { applyMoveToFEN } from "./utils/fen-manipulation.js";
 import { parseMove } from "./utils/move-parsing.js";
@@ -13,11 +13,9 @@ import {
   updateLineFisherProgressDisplay,
   updateLineFisherExploredLines,
 } from "./utils/line-fisher-results.js";
+import { updateLineFisherButtonStates } from "./utils/line-fisher-manager.js";
 import { updateLineFisherStatus } from "./utils/status-management.js";
-import {
-  addLineFisherTooltips,
-  addLineFisherKeyboardShortcuts,
-} from "./utils/line-fisher-ui-utils.js";
+import { addLineFisherTooltips } from "./utils/line-fisher-ui-utils.js";
 
 import { getFEN } from "./chess-board.js";
 
@@ -42,6 +40,9 @@ export interface LineFisherConfig {
   maxDepth: number; // Maximum analysis depth
   threads: number; // Number of CPU threads
   defaultResponderCount: number; // Default responder count for levels not specified
+  rootFEN: string; // Root position for analysis
+  baselineScore?: number; // Score of the root position for delta calculations
+  baselineMoves?: { move: string; score: number }[]; // Top moves from root position
 }
 
 /**
@@ -52,12 +53,40 @@ export interface LineFisherState {
   config: LineFisherConfig;
   progress: LineFisherProgress;
   results: LineFisherResult[];
-  analyzedPositions: Set<string>;
+  analyzedPositions: Set<string>; // Used to detect transpositions
   analysisQueue: string[];
   isComplete: boolean; // Reached max depth or mate
   rootNodes: LineFisherNode[]; // Track root nodes for building results
-  baselineScore?: number; // Score of the root position for delta calculations
-  baselineMoves?: { move: string; score: number }[]; // Top 5 moves from root position (simplified)
+}
+
+// ============================================================================
+// ONE FISH LINE - NEW SLEEKER STATE SYSTEM
+// ============================================================================
+
+/**
+ * OneFishLine represents a single line of analysis
+ * Each line represents an initiator move and its response moves
+ * The final move of a line has no response moves (isFull = true)
+ * This can be because max depth was reached, mate was reached, or it's a transposition
+ */
+export interface OneFishLine {
+  sans: string[]; // SAN notation for moves in this line
+  score: number; // Evaluation score for this line
+  isFull: boolean; // True if this line cannot be extended further
+  isDone: boolean; // True if this line is complete and won't be updated
+  isTransposition: boolean; // True if this line leads to a transposed position
+}
+
+/**
+ * FishLineNewState - Sleeker alternative to LineFisherState
+ * Simplified state management focusing on lines rather than tree nodes
+ */
+export interface FishLineNewState {
+  isFishing: boolean; // Whether analysis is currently running
+  config: LineFisherConfig; // Analysis configuration
+  analyzedPartianFens: Set<string>; // FEN positions without move counters for transposition detection
+  linesWip: OneFishLine[]; // Lines currently being worked on
+  linesDone: OneFishLine[]; // Completed lines
 }
 
 /**
@@ -80,7 +109,7 @@ export interface LineFisherProgress {
  */
 export interface LineFisherResult {
   lineIndex: number;
-  moves: ChessMove[];
+  sans: string[]; // Parallel array to plies containing SAN notation for each move
   scores: number[];
   deltas: number[];
   notation: string;
@@ -106,6 +135,233 @@ export interface LineFisherNode {
 }
 
 // ============================================================================
+// ONE FISH LINE VERIFICATION AND UTILITIES
+// ============================================================================
+
+/**
+ * Create initial FishLineNewState
+ */
+export const createInitialFishLineNewState = (): FishLineNewState => ({
+  isFishing: false,
+  config: {
+    initiatorMoves: [],
+    responderMoveCounts: [2, 2, 2, 2, 2], // Default: 2 responses per level
+    maxDepth: 3,
+    threads: 4,
+    defaultResponderCount: 3, // Default responder count
+    rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Default starting position
+  },
+  analyzedPartianFens: new Set<string>(),
+  linesWip: [],
+  linesDone: [],
+});
+
+/**
+ * Verify that FishLineNewState represents a valid LineFisherState
+ * This function checks if the new state structure can represent the same analysis
+ * as the original LineFisherState
+ */
+export const verifyFishLineNewState = (
+  fishState: FishLineNewState,
+  originalState: LineFisherState,
+): { isValid: boolean; errors: string[]; warnings: string[] } => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Check basic structure
+  if (!fishState.config) {
+    errors.push("FishLineNewState missing config");
+  }
+
+  if (!fishState.analyzedPartianFens) {
+    errors.push("FishLineNewState missing analyzedPartianFens");
+  }
+
+  if (!Array.isArray(fishState.linesWip)) {
+    errors.push("FishLineNewState linesWip must be an array");
+  }
+
+  if (!Array.isArray(fishState.linesDone)) {
+    errors.push("FishLineNewState linesDone must be an array");
+  }
+
+  // Check config compatibility
+  if (fishState.config && originalState.config) {
+    if (fishState.config.rootFEN !== originalState.config.rootFEN) {
+      errors.push("Config rootFEN mismatch");
+    }
+    if (fishState.config.maxDepth !== originalState.config.maxDepth) {
+      errors.push("Config maxDepth mismatch");
+    }
+    if (fishState.config.threads !== originalState.config.threads) {
+      errors.push("Config threads mismatch");
+    }
+  }
+
+  // Check analyzed positions compatibility
+  if (fishState.analyzedPartianFens && originalState.analyzedPositions) {
+    // Convert original analyzed positions to partial FENs for comparison
+    const originalPartialFens = new Set<string>();
+    for (const fen of originalState.analyzedPositions) {
+      const partialFen = fen.split(" ").slice(0, 5).join(" ");
+      originalPartialFens.add(partialFen);
+    }
+
+    // Check if all original positions are covered
+    for (const partialFen of originalPartialFens) {
+      if (!fishState.analyzedPartianFens.has(partialFen)) {
+        warnings.push(`Original position not in new state: ${partialFen}`);
+      }
+    }
+  }
+
+  // Check lines compatibility
+  const totalNewLines = fishState.linesWip.length + fishState.linesDone.length;
+  const totalOriginalResults = originalState.results.length;
+
+  if (totalNewLines !== totalOriginalResults) {
+    warnings.push(
+      `Line count mismatch: new=${totalNewLines}, original=${totalOriginalResults}`,
+    );
+  }
+
+  // Check baseline score compatibility
+  if (fishState.config.baselineScore !== originalState.config.baselineScore) {
+    warnings.push("Baseline score mismatch");
+  }
+
+  // Check analysis state compatibility
+  if (fishState.isFishing !== originalState.isAnalyzing) {
+    warnings.push("Analysis state mismatch: isFishing vs isAnalyzing");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
+};
+
+/**
+ * Convert LineFisherState to FishLineNewState
+ * This function creates a new state representation from the original
+ */
+export const convertLineFisherStateToFishLineNewState = (
+  originalState: LineFisherState,
+): FishLineNewState => {
+  // Convert analyzed positions to partial FENs
+  const analyzedPartianFens = new Set<string>();
+  for (const fen of originalState.analyzedPositions) {
+    const partialFen = fen.split(" ").slice(0, 5).join(" ");
+    analyzedPartianFens.add(partialFen);
+  }
+
+  // Convert results to OneFishLine format
+  const linesDone: OneFishLine[] = originalState.results.map((result) => ({
+    sans: result.sans,
+    score:
+      result.scores.length > 0 ? result.scores[result.scores.length - 1] : 0,
+    isFull: result.isComplete,
+    isDone: result.isDone,
+    isTransposition: result.isTransposition || false,
+  }));
+
+  return {
+    isFishing: originalState.isAnalyzing,
+    config: originalState.config,
+    analyzedPartianFens,
+    linesWip: [], // Original state doesn't have WIP lines concept
+    linesDone,
+  };
+};
+
+/**
+ * Convert FishLineNewState to LineFisherState
+ * This function creates the original state representation from the new state
+ */
+export const convertFishLineNewStateToLineFisherState = (
+  fishState: FishLineNewState,
+): LineFisherState => {
+  // Convert partial FENs back to full FENs with move counters
+  const analyzedPositions = new Set<string>();
+  for (const partialFen of fishState.analyzedPartianFens) {
+    // Add default move counters (this is approximate)
+    const fullFen = `${partialFen} 0 1`;
+    analyzedPositions.add(fullFen);
+  }
+
+  // Convert OneFishLine back to LineFisherResult format
+  const results: LineFisherResult[] = fishState.linesDone.map(
+    (line, index) => ({
+      lineIndex: index,
+      sans: line.sans,
+      scores: line.sans.length > 0 ? [line.score] : [], // Simplified - original has scores for each move
+      deltas: [], // Would need to calculate from baseline
+      notation: line.sans.join(" "),
+      isComplete: line.isFull,
+      isDone: line.isDone,
+      isTransposition: line.isTransposition,
+      updateCount: 1, // Default value
+    }),
+  );
+
+  return {
+    isAnalyzing: fishState.isFishing,
+    config: fishState.config,
+    progress: {
+      totalNodes: 0, // Would need to calculate from lines
+      processedNodes: 0,
+      totalLines: fishState.linesDone.length + fishState.linesWip.length,
+      completedLines: fishState.linesDone.length,
+      currentPosition: "",
+      currentAction: "",
+      eventsPerSecond: 0,
+      totalEvents: 0,
+      startTime: 0,
+    },
+    results,
+    analyzedPositions,
+    analysisQueue: [], // New state doesn't have queue concept
+    isComplete: fishState.linesWip.length === 0,
+    rootNodes: [], // New state doesn't have tree nodes
+  };
+};
+
+/**
+ * Get current FishLineNewState (for testing and comparison)
+ */
+export const getFishLineNewState = (): FishLineNewState => {
+  return convertLineFisherStateToFishLineNewState(lineFisherState);
+};
+
+/**
+ * Update FishLineNewState (for testing and comparison)
+ */
+export const updateFishLineNewState = (
+  newState: Partial<FishLineNewState>,
+): void => {
+  // Convert back to LineFisherState for now
+  const currentFishState = getFishLineNewState();
+  const updatedFishState = { ...currentFishState, ...newState };
+  const convertedState =
+    convertFishLineNewStateToLineFisherState(updatedFishState);
+  lineFisherState = convertedState;
+};
+
+/**
+ * Test verification function with current state
+ */
+export const testFishLineNewStateVerification = (): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} => {
+  const currentState = getLineFisherState();
+  const fishState = getFishLineNewState();
+  return verifyFishLineNewState(fishState, currentState);
+};
+
+// ============================================================================
 // LINE FISHER CORE ANALYSIS ENGINE
 // ============================================================================
 
@@ -120,18 +376,19 @@ const createInitialLineFisherState = (): LineFisherState => ({
     maxDepth: 3,
     threads: 4,
     defaultResponderCount: 3, // Default responder count
+    rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Default starting position
   },
-      progress: {
-      totalNodes: 0,
-      processedNodes: 0,
-      totalLines: 0,
-      completedLines: 0,
-      currentPosition: "",
-      currentAction: "Ready",
-      eventsPerSecond: 0,
-      totalEvents: 0,
-      startTime: 0,
-    },
+  progress: {
+    totalNodes: 0,
+    processedNodes: 0,
+    totalLines: 0,
+    completedLines: 0,
+    currentPosition: "",
+    currentAction: "Ready",
+    eventsPerSecond: 0,
+    totalEvents: 0,
+    startTime: 0,
+  },
   results: [],
   analyzedPositions: new Set<string>(),
   analysisQueue: [],
@@ -198,12 +455,7 @@ export const initializeLineFisher = async (): Promise<void> => {
   initializeLineFisherProgress(lineFisherState);
 
   // Initialize UI enhancements
-  try {
-    addLineFisherTooltips();
-    addLineFisherKeyboardShortcuts();
-  } catch (error) {
-    // UI enhancements failed, continue without them
-  }
+  addLineFisherTooltips();
 };
 
 /**
@@ -234,6 +486,28 @@ const isPositionAnalyzed = (fen: string, state: LineFisherState): boolean => {
 /**
  * Find the result index for a given node
  */
+/**
+ * Find the LineFisherResult that corresponds to a given LineFisherNode
+ *
+ * PURPOSE: During the recursive tree building process, when we reach a node (position),
+ * we need to find which result line this node belongs to so we can update that line's
+ * properties (like marking it as complete, adding scores, etc.).
+ *
+ * BEHAVIOR:
+ * - Takes a LineFisherNode (representing a chess position with a move that led to it)
+ * - Searches through all LineFisherResult objects to find the one that ends with the same move
+ * - Compares the last move in each result's SAN array with the node's move
+ * - Returns the index of the matching result, or -1 if not found
+ *
+ * USAGE CONTEXTS:
+ * 1. When a transposition is detected - mark the parent line as complete
+ * 2. When max depth is reached - mark the parent line as complete
+ * 3. When adding scores to incomplete lines - find the line to update
+ *
+ * NOTE: This function assumes that each node's move corresponds to the last move
+ * in exactly one result line. This works because the tree is built depth-first,
+ * so each node represents a unique path from the root.
+ */
 const findResultForNode = (
   node: LineFisherNode,
   results: LineFisherResult[],
@@ -242,9 +516,9 @@ const findResultForNode = (
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
     if (
-      result.moves.length > 0 &&
-      result.moves[result.moves.length - 1].from === node.move.from &&
-      result.moves[result.moves.length - 1].to === node.move.to
+      result.sans.length > 0 &&
+      result.sans[result.sans.length - 1] ===
+        (node.move.san || `${node.move.from}${node.move.to}`)
     ) {
       return i;
     }
@@ -266,6 +540,447 @@ const calculateDelta = (
 };
 
 /**
+ * Process Line Fisher analysis using WIP list as a queue
+ * This is the proper queue-based approach that feeds from the WIP list
+ */
+const processLineFisherQueue = async (
+  state: LineFisherState,
+): Promise<void> => {
+  console.log("=== STARTING QUEUE-BASED ANALYSIS ===");
+  console.log("Initial state:", {
+    isAnalyzing: state.isAnalyzing,
+    maxDepth: state.config.maxDepth,
+    initiatorMoves: state.config.initiatorMoves,
+    responderMoveCounts: state.config.responderMoveCounts,
+  });
+
+  // Create a separate queue for processing
+  const processingQueue: LineFisherResult[] = [];
+
+  // Add initial empty line to processing queue
+  const initialLine: LineFisherResult = {
+    lineIndex: 0,
+    sans: [],
+    scores: [],
+    deltas: [],
+    notation: "",
+    isComplete: false,
+    isDone: false,
+    updateCount: 0,
+  };
+  processingQueue.push(initialLine);
+  console.log("Added initial empty line to queue");
+
+  let iterationCount = 0;
+  // Process lines from queue until it's empty
+  while (processingQueue.length > 0 && state.isAnalyzing) {
+    iterationCount++;
+    console.log(`\n=== ITERATION ${iterationCount} ===`);
+    console.log(`Queue length: ${processingQueue.length}`);
+    console.log(`isAnalyzing: ${state.isAnalyzing}`);
+
+    // Take the first line from the queue
+    const currentLine = processingQueue.shift()!;
+    console.log(
+      `Processing line: "${currentLine.sans.join(" ")}" (depth: ${currentLine.sans.length})`,
+    );
+
+    // Process this line
+    await processLineInQueue(state, currentLine, processingQueue);
+
+    console.log(`After processing - Queue length: ${processingQueue.length}`);
+    console.log(`Completed lines: ${state.progress.completedLines}`);
+
+    // Update UI periodically with all results (both completed and in queue)
+    const allLines = [...state.results, ...processingQueue];
+
+    // Ensure all lines have proper notation for display
+    const displayLines = allLines.map((line) => ({
+      ...line,
+      notation: line.notation || formatMovesWithNumbers(line.sans),
+    }));
+
+    updateLineFisherExploredLines(displayLines);
+    updateLineFisherProgressDisplay(state.progress);
+  }
+
+  console.log("=== QUEUE-BASED ANALYSIS COMPLETE ===");
+  console.log(
+    `Final stats - Completed: ${state.progress.completedLines}, Queue empty: ${processingQueue.length === 0}`,
+  );
+};
+
+/**
+ * Process a single line from the queue
+ */
+const processLineInQueue = async (
+  state: LineFisherState,
+  line: LineFisherResult,
+  processingQueue: LineFisherResult[],
+): Promise<void> => {
+  // Calculate the current FEN for this line
+  const currentFEN = calculateFENForLine(state.config.rootFEN, line.sans);
+  const depth = line.sans.length;
+
+  console.log(
+    `\n--- Processing line at depth ${depth}: "${line.sans.join(" ")}" ---`,
+  );
+  console.log(`Current FEN: ${currentFEN}`);
+  console.log(
+    `Max depth: ${state.config.maxDepth * 2}, Current depth: ${depth}`,
+  );
+
+  // Check if we've reached max depth
+  if (depth >= state.config.maxDepth * 2) {
+    console.log(`✅ Line reached max depth: "${line.sans.join(" ")}"`);
+    line.isComplete = true;
+    line.isDone = true;
+    state.progress.completedLines++;
+    // Add completed line to results for display
+    state.results.push(line);
+    console.log(
+      `Marked as complete. Total completed: ${state.progress.completedLines}`,
+    );
+    return;
+  }
+
+  // Check if position has already been analyzed (transposition detection)
+  if (state.analyzedPositions.has(currentFEN)) {
+    console.log(`✅ Transposition detected: "${line.sans.join(" ")}"`);
+    line.isTransposition = true;
+    line.isComplete = true;
+    line.isDone = true;
+    state.progress.completedLines++;
+    // Add completed line to results for display
+    state.results.push(line);
+    console.log(
+      `Marked as complete. Total completed: ${state.progress.completedLines}`,
+    );
+    return;
+  }
+
+  // Mark position as analyzed
+  state.analyzedPositions.add(currentFEN);
+  console.log(`📝 Marked position as analyzed: ${currentFEN}`);
+
+  // Process moves based on depth
+  if (depth % 2 === 0) {
+    console.log(`🤍 White's turn - processing initiator moves`);
+    await processInitiatorMovesForQueue(
+      state,
+      line,
+      currentFEN,
+      depth,
+      processingQueue,
+    );
+  } else {
+    console.log(`⚫ Black's turn - processing responder moves`);
+    await processResponderMovesForQueue(
+      state,
+      line,
+      currentFEN,
+      depth,
+      processingQueue,
+    );
+  }
+
+  console.log(`--- Finished processing line: "${line.sans.join(" ")}" ---`);
+};
+
+/**
+ * Calculate FEN for a given line of moves
+ */
+const calculateFENForLine = (rootFEN: string, sans: string[]): string => {
+  let currentFEN = rootFEN;
+  for (const san of sans) {
+    const move = parseMove(san, currentFEN);
+    if (move) {
+      currentFEN = applyMoveToFEN(currentFEN, move);
+    }
+  }
+  return currentFEN;
+};
+
+/**
+ * Format moves with move numbers
+ */
+const formatMovesWithNumbers = (sans: string[]): string => {
+  let result = "";
+  for (let i = 0; i < sans.length; i++) {
+    if (i % 2 === 0) {
+      // White's move - add move number
+      const moveNumber = Math.floor(i / 2) + 1;
+      result += `${moveNumber}. ${sans[i]}`;
+    } else {
+      // Black's move - just add the move
+      result += ` ${sans[i]}`;
+    }
+    if (i < sans.length - 1) {
+      result += " ";
+    }
+  }
+  return result;
+};
+
+/**
+ * Process initiator moves for queue-based analysis
+ */
+const processInitiatorMovesForQueue = async (
+  state: LineFisherState,
+  parentLine: LineFisherResult,
+  fen: string,
+  _depth: number,
+  processingQueue: LineFisherResult[],
+): Promise<void> => {
+  const moveNumber = Math.floor(_depth / 2) + 1;
+  const moveIndex = moveNumber - 1;
+
+  console.log(
+    `🤍 Processing initiator moves for move number ${moveNumber} (index: ${moveIndex})`,
+  );
+  console.log(
+    `📋 Available predefined moves: ${state.config.initiatorMoves.join(", ")}`,
+  );
+
+  // Check if there's a predefined move for this move number
+  const predefinedMove = state.config.initiatorMoves[moveIndex];
+
+  if (predefinedMove) {
+    console.log(`✅ Found predefined move: ${predefinedMove}`);
+    await processInitiatorPredefinedMoveForQueue(
+      state,
+      parentLine,
+      fen,
+      _depth,
+      moveNumber,
+      predefinedMove,
+      processingQueue,
+    );
+  } else {
+    console.log(`🔍 No predefined move found, using Stockfish`);
+    await processInitiatorStockfishMoveForQueue(
+      state,
+      parentLine,
+      fen,
+      _depth,
+      moveNumber,
+      processingQueue,
+    );
+  }
+};
+
+/**
+ * Process responder moves for queue-based analysis
+ */
+const processResponderMovesForQueue = async (
+  state: LineFisherState,
+  parentLine: LineFisherResult,
+  fen: string,
+  depth: number,
+  processingQueue: LineFisherResult[],
+): Promise<void> => {
+  const moveNumber = Math.floor(depth / 2) + 1;
+
+  // For responder moves, we need to determine which initiator move we're responding to
+  // The initiator move index is the previous move number (since we're responding to the initiator's move)
+  const initiatorMoveIndex = Math.floor((depth - 1) / 2); // Previous move was initiator's move
+
+  // Determine how many responder moves to analyze
+  const responderCountIndex = Math.min(
+    initiatorMoveIndex,
+    state.config.responderMoveCounts.length - 1,
+  );
+  const responderCount =
+    state.config.responderMoveCounts.length > 0 && responderCountIndex >= 0
+      ? state.config.responderMoveCounts[responderCountIndex]
+      : state.config.defaultResponderCount;
+
+  console.log(
+    `🔍 Analyzing position for responder moves (depth: ${depth}, moveNumber: ${moveNumber})`,
+  );
+  console.log(
+    `📊 Initiator move index: ${initiatorMoveIndex}, Responder count: ${responderCount}`,
+  );
+  console.log(
+    `📋 ResponderMoveCounts: [${state.config.responderMoveCounts.join(", ")}]`,
+  );
+
+  try {
+    const analysisResult = await Stockfish.analyzePosition(fen, {
+      depth: 20,
+      multiPV: responderCount,
+      threads: state.config.threads,
+    });
+
+    trackStockfishEvent();
+
+    if (
+      analysisResult &&
+      analysisResult.moves &&
+      analysisResult.moves.length > 0
+    ) {
+      console.log(`✅ Found ${analysisResult.moves.length} responder moves`);
+
+      // Create new lines for each responder move (limit to responderCount)
+      const movesToProcess = analysisResult.moves.slice(0, responderCount);
+      console.log(
+        `📊 Processing ${movesToProcess.length} out of ${analysisResult.moves.length} available moves`,
+      );
+
+      for (const moveAnalysis of movesToProcess) {
+        const move = moveAnalysis.move;
+        const score = moveAnalysis.score;
+
+        // Create new line extending the parent
+        const newLine: LineFisherResult = {
+          lineIndex: state.results.length,
+          sans: [
+            ...parentLine.sans,
+            move.san || rawMoveToSAN(`${move.from}${move.to}`, fen),
+          ],
+          scores: [...parentLine.scores, score],
+          deltas: [
+            ...parentLine.deltas,
+            calculateDelta(score, state.config.baselineScore),
+          ],
+          notation: formatMovesWithNumbers([
+            ...parentLine.sans,
+            move.san || rawMoveToSAN(`${move.from}${move.to}`, fen),
+          ]),
+          isComplete: false,
+          isDone: false,
+          updateCount: 0,
+        };
+
+        // Add to processing queue for further processing
+        processingQueue.push(newLine);
+        console.log(
+          `➕ Added responder line to queue: "${newLine.sans.join(" ")}" (score: ${score})`,
+        );
+      }
+    } else {
+      console.log(`❌ No responder moves found - marking parent as complete`);
+      // No moves found - mark parent line as complete
+      parentLine.isComplete = true;
+      parentLine.isDone = true;
+      state.progress.completedLines++;
+    }
+  } catch (error) {
+    console.error("❌ Error processing responder moves:", error);
+  }
+};
+
+/**
+ * Process predefined initiator move for queue-based analysis
+ */
+async function processInitiatorPredefinedMoveForQueue(
+  state: LineFisherState,
+  parentLine: LineFisherResult,
+  fen: string,
+  _depth: number,
+  _moveNumber: number,
+  predefinedMove: string,
+  processingQueue: LineFisherResult[],
+): Promise<void> {
+  try {
+    const move = parseMove(predefinedMove, fen);
+    if (!move) {
+      console.error(`❌ Failed to parse predefined move: ${predefinedMove}`);
+      return;
+    }
+
+    // Create new line extending the parent
+    const newLine: LineFisherResult = {
+      lineIndex: state.results.length,
+      sans: [...parentLine.sans, move.san || predefinedMove],
+      scores: [...parentLine.scores, 0], // Will be updated later
+      deltas: [...parentLine.deltas, 0],
+      notation: formatMovesWithNumbers([
+        ...parentLine.sans,
+        move.san || predefinedMove,
+      ]),
+      isComplete: false,
+      isDone: false,
+      updateCount: 0,
+    };
+
+    // Add to processing queue for further processing
+    processingQueue.push(newLine);
+    console.log(
+      `➕ Added predefined initiator line to queue: "${newLine.sans.join(" ")}"`,
+    );
+  } catch (error) {
+    console.error("❌ Error processing predefined move:", error);
+  }
+}
+
+/**
+ * Process Stockfish initiator move for queue-based analysis
+ */
+async function processInitiatorStockfishMoveForQueue(
+  state: LineFisherState,
+  parentLine: LineFisherResult,
+  fen: string,
+  _depth: number,
+  _moveNumber: number,
+  processingQueue: LineFisherResult[],
+): Promise<void> {
+  try {
+    const analysisResult = await Stockfish.analyzePosition(fen, {
+      depth: 20,
+      multiPV: 1,
+      threads: state.config.threads,
+    });
+
+    trackStockfishEvent();
+
+    if (
+      analysisResult &&
+      analysisResult.moves &&
+      analysisResult.moves.length > 0
+    ) {
+      const bestMove = analysisResult.moves[0];
+      const move = bestMove.move;
+      const score = bestMove.score;
+
+      // Create new line extending the parent
+      const newLine: LineFisherResult = {
+        lineIndex: state.results.length,
+        sans: [
+          ...parentLine.sans,
+          move.san || rawMoveToSAN(`${move.from}${move.to}`, fen),
+        ],
+        scores: [...parentLine.scores, score],
+        deltas: [
+          ...parentLine.deltas,
+          calculateDelta(score, state.config.baselineScore),
+        ],
+        notation: formatMovesWithNumbers([
+          ...parentLine.sans,
+          move.san || rawMoveToSAN(`${move.from}${move.to}`, fen),
+        ]),
+        isComplete: false,
+        isDone: false,
+        updateCount: 0,
+      };
+
+      // Add to processing queue for further processing
+      processingQueue.push(newLine);
+      console.log(
+        `➕ Added Stockfish initiator line to queue: "${newLine.sans.join(" ")}" (score: ${score})`,
+      );
+    } else {
+      // No moves found - mark parent line as complete
+      parentLine.isComplete = true;
+      parentLine.isDone = true;
+      state.progress.completedLines++;
+    }
+  } catch (error) {
+    console.error("Error processing Stockfish move:", error);
+  }
+}
+
+/**
  * Build Line Fisher analysis tree
  * Recursively build the analysis tree by processing moves at each depth
  */
@@ -284,10 +999,10 @@ const buildLineFisherTree = async (
   // Lines should end with initiator's move, so we need odd number of half-moves
   if (depth >= state.config.maxDepth * 2 + 1) {
     log("Max depth reached for this line, stopping analysis");
-          // Log completion immediately when work is done
-      if (parentNode) {
-        // Log completion when max depth is reached
-      }
+    // Log completion immediately when work is done
+    if (parentNode) {
+      // Log completion when max depth is reached
+    }
     return;
   }
 
@@ -336,13 +1051,13 @@ const buildLineFisherTree = async (
       const result = state.results[resultIndex];
       // If the line has moves but no scores, add the score from the parent node
       if (
-        result.moves.length > 0 &&
+        result.sans.length > 0 &&
         result.scores.length === 0 &&
         parentNode.score !== 0
       ) {
         result.scores.push(parentNode.score);
         result.deltas.push(
-          calculateDelta(parentNode.score, state.baselineScore),
+          calculateDelta(parentNode.score, state.config.baselineScore),
         );
         result.isDone = true; // Line is now done (has received its score)
         result.updateCount++;
@@ -475,7 +1190,7 @@ async function processInitiatorPredefinedMove(
 
         state.results.push({
           lineIndex: state.results.length,
-          moves: [move],
+          sans: [move.san || predefinedMove],
           scores: [], // No score yet
           deltas: [0],
           notation,
@@ -489,7 +1204,7 @@ async function processInitiatorPredefinedMove(
 
         state.results.push({
           lineIndex: state.results.length,
-          moves: [move],
+          sans: [move.san || predefinedMove],
           scores: [], // No score yet
           deltas: [0],
           notation,
@@ -531,16 +1246,16 @@ async function processInitiatorPredefinedMove(
       const bestMove = analysisResult.moves[0];
       const score = bestMove.score;
 
-              const newNode: LineFisherNode = {
-          fen,
-          move,
-          score,
-          depth,
-          moveNumber,
-          children: [],
-          parent: parentNode || undefined,
-          analysisResult,
-        };
+      const newNode: LineFisherNode = {
+        fen,
+        move,
+        score,
+        depth,
+        moveNumber,
+        children: [],
+        parent: parentNode || undefined,
+        analysisResult,
+      };
 
       // Add to parent's children
       if (parentNode) {
@@ -558,9 +1273,9 @@ async function processInitiatorPredefinedMove(
             // Black move - just add the move
             result.notation += ` ${predefinedMove}`;
           }
-          result.moves.push(move);
+          result.sans.push(move.san || predefinedMove);
           result.scores.push(score);
-          result.deltas.push(calculateDelta(score, state.baselineScore));
+          result.deltas.push(calculateDelta(score, state.config.baselineScore));
           result.isDone = true; // Line is now done (has received its score)
           result.updateCount++;
 
@@ -664,10 +1379,10 @@ async function processInitiatorStockfishMove(
               // Black move - just add the move
               result.notation += ` ${moveNotation}`;
             }
-            result.moves.push(move);
+            result.sans.push(move.san || moveNotation);
             result.scores.push(bestMove.score);
             result.deltas.push(
-              calculateDelta(bestMove.score, state.baselineScore),
+              calculateDelta(bestMove.score, state.config.baselineScore),
             );
             result.isDone = true; // Line is now done (has received its score)
             result.updateCount++;
@@ -691,9 +1406,11 @@ async function processInitiatorStockfishMove(
 
             state.results.push({
               lineIndex: state.results.length,
-              moves: [move],
+              sans: [move.san || moveNotation],
               scores: [bestMove.score], // We already have the score from Stockfish
-              deltas: [calculateDelta(bestMove.score, state.baselineScore)], // We can calculate delta immediately
+              deltas: [
+                calculateDelta(bestMove.score, state.config.baselineScore),
+              ], // We can calculate delta immediately
               notation,
               isComplete: depth + 1 >= state.config.maxDepth * 2, // Mark as complete if this reaches max depth
               isDone: true, // Line is done (we have the score and won't update it further)
@@ -705,9 +1422,11 @@ async function processInitiatorStockfishMove(
 
             state.results.push({
               lineIndex: state.results.length,
-              moves: [move],
+              sans: [move.san || moveNotation],
               scores: [bestMove.score], // We already have the score from Stockfish
-              deltas: [calculateDelta(bestMove.score, state.baselineScore)], // We can calculate delta immediately
+              deltas: [
+                calculateDelta(bestMove.score, state.config.baselineScore),
+              ], // We can calculate delta immediately
               notation,
               isComplete: depth + 1 >= state.config.maxDepth * 2, // Mark as complete if this reaches max depth
               isDone: true, // Line is done (we have the score and won't update it further)
@@ -853,7 +1572,7 @@ const processResponderMovesInTree = async (
               // Create new result line
               const newResult: LineFisherResult = {
                 lineIndex: state.results.length,
-                moves: [...parentResult.moves, move],
+                sans: [...parentResult.sans, moveNotation],
                 scores: [...parentResult.scores], // Don't add score yet - will be added when analyzed
                 deltas: [...parentResult.deltas], // Don't add delta yet
                 notation:
@@ -879,12 +1598,18 @@ const processResponderMovesInTree = async (
         if (parentResultIndex !== -1) {
           const parentResult = state.results[parentResultIndex];
           // Store the top 5 responder moves and their scores in simplified format
-          parentResult.responderMoveList = sortedMoves.slice(0, 5).map((moveData) => {
-            const moveNotation = moveData.move.san || `${moveData.move.from}${moveData.move.to}`;
-            const scoreInPawns = moveData.score / 100;
-            const scoreText = scoreInPawns > 0 ? `+${scoreInPawns.toFixed(1)}` : scoreInPawns.toFixed(1);
-            return `${moveNotation} (${scoreText})`;
-          });
+          parentResult.responderMoveList = sortedMoves
+            .slice(0, 5)
+            .map((moveData) => {
+              const moveNotation =
+                moveData.move.san || `${moveData.move.from}${moveData.move.to}`;
+              const scoreInPawns = moveData.score / 100;
+              const scoreText =
+                scoreInPawns > 0
+                  ? `+${scoreInPawns.toFixed(1)}`
+                  : scoreInPawns.toFixed(1);
+              return `${moveNotation} (${scoreText})`;
+            });
           // Mark the parent line as done since it has received its responder moves
           parentResult.isDone = true;
         }
@@ -930,7 +1655,6 @@ const processResponderMovesInTree = async (
  * Update Line Fisher progress
  * Update progress tracking with current analysis state
  */
-
 
 /**
  * Initialize Line Fisher progress
@@ -984,7 +1708,6 @@ const resumeLineFisherAnalysis = (_state: LineFisherState): void => {
 /**
  * Handle Line Fisher interruption
  */
-
 
 // ============================================================================
 // LINE FISHER CORE ANALYSIS ENGINE
@@ -1065,6 +1788,9 @@ export const startLineFisherAnalysis = async (): Promise<void> => {
       // UI update failed, continue analysis
     }
 
+    // Store the root FEN for this analysis
+    lineFisherState.config.rootFEN = startFEN;
+
     // Begin recursive tree building from the current position
     lineFisherState.progress.currentAction = "Starting analysis...";
     updateLineFisherProgressDisplay(lineFisherState.progress);
@@ -1086,18 +1812,22 @@ export const startLineFisherAnalysis = async (): Promise<void> => {
         baselineAnalysis.moves &&
         baselineAnalysis.moves.length > 0
       ) {
-        lineFisherState.baselineScore = baselineAnalysis.moves[0].score;
+        lineFisherState.config.baselineScore = baselineAnalysis.moves[0].score;
         // Convert to simplified format with just move notation and score
-      lineFisherState.baselineMoves = baselineAnalysis.moves.slice(0, 5).map((move) => ({
-        move: move.move.san || rawMoveToSAN(`${move.move.from}${move.move.to}`, startFEN),
-        score: move.score,
-      }));
+        lineFisherState.config.baselineMoves = baselineAnalysis.moves
+          .slice(0, 5)
+          .map((move) => ({
+            move:
+              move.move.san ||
+              rawMoveToSAN(`${move.move.from}${move.move.to}`, startFEN),
+            score: move.score,
+          }));
       }
     } catch (error) {
       console.warn("Failed to get baseline score:", error);
     }
 
-    await buildLineFisherTree(startFEN, lineFisherState, null, 0);
+    await processLineFisherQueue(lineFisherState);
 
     // Mark analysis as complete
     lineFisherState.isAnalyzing = false;
@@ -1110,6 +1840,9 @@ export const startLineFisherAnalysis = async (): Promise<void> => {
       await updateLineFisherConfigDisplay(lineFisherState);
       updateLineFisherProgressDisplay(lineFisherState.progress);
       updateLineFisherExploredLines(lineFisherState.results);
+
+      // Update button states to restore start button
+      updateLineFisherButtonStates();
 
       // Final status update
       updateLineFisherStatus(
@@ -1151,7 +1884,10 @@ export const resetLineFisherAnalysis = (): void => {
 /**
  * Find parent node for a given position
  */
-const findParentNodeForPosition = (fen: string, rootNodes: LineFisherNode[]): LineFisherNode | null => {
+const findParentNodeForPosition = (
+  fen: string,
+  rootNodes: LineFisherNode[],
+): LineFisherNode | null => {
   for (const rootNode of rootNodes) {
     const found = findNodeInTree(rootNode, fen);
     if (found && found.parent) {
@@ -1164,7 +1900,10 @@ const findParentNodeForPosition = (fen: string, rootNodes: LineFisherNode[]): Li
 /**
  * Calculate depth for a given position
  */
-const calculateDepthForPosition = (fen: string, rootNodes: LineFisherNode[]): number => {
+const calculateDepthForPosition = (
+  fen: string,
+  rootNodes: LineFisherNode[],
+): number => {
   for (const rootNode of rootNodes) {
     const found = findNodeInTree(rootNode, fen);
     if (found) {
@@ -1177,7 +1916,10 @@ const calculateDepthForPosition = (fen: string, rootNodes: LineFisherNode[]): nu
 /**
  * Find a node in the tree by FEN
  */
-const findNodeInTree = (node: LineFisherNode, fen: string): LineFisherNode | null => {
+const findNodeInTree = (
+  node: LineFisherNode,
+  fen: string,
+): LineFisherNode | null => {
   if (node.fen === fen) {
     return node;
   }
@@ -1207,12 +1949,26 @@ export const continueLineFisherAnalysis = async (): Promise<void> => {
     // Continue from the analysis queue
     while (lineFisherState.analysisQueue.length > 0) {
       const nextPosition = lineFisherState.analysisQueue.shift();
-      if (nextPosition && !lineFisherState.analyzedPositions.has(nextPosition)) {
+      if (
+        nextPosition &&
+        !lineFisherState.analyzedPositions.has(nextPosition)
+      ) {
         // Find the parent node for this position
-        const parentNode = findParentNodeForPosition(nextPosition, lineFisherState.rootNodes);
-        const depth = calculateDepthForPosition(nextPosition, lineFisherState.rootNodes);
-        
-        await buildLineFisherTree(nextPosition, lineFisherState, parentNode, depth);
+        const parentNode = findParentNodeForPosition(
+          nextPosition,
+          lineFisherState.rootNodes,
+        );
+        const depth = calculateDepthForPosition(
+          nextPosition,
+          lineFisherState.rootNodes,
+        );
+
+        await buildLineFisherTree(
+          nextPosition,
+          lineFisherState,
+          parentNode,
+          depth,
+        );
       }
     }
 
@@ -1224,6 +1980,9 @@ export const continueLineFisherAnalysis = async (): Promise<void> => {
     lineFisherState.isAnalyzing = false;
     lineFisherState.progress.currentAction = "Analysis complete";
     updateLineFisherProgressDisplay(lineFisherState.progress);
+
+    // Update button states to restore start button
+    updateLineFisherButtonStates();
   } catch (error) {
     // Update UI status with error
     updateLineFisherStatus(
@@ -1232,6 +1991,9 @@ export const continueLineFisherAnalysis = async (): Promise<void> => {
     lineFisherState.isAnalyzing = false;
     lineFisherState.progress.currentAction = "Error occurred";
     updateLineFisherProgressDisplay(lineFisherState.progress);
+
+    // Update button states to restore start button
+    updateLineFisherButtonStates();
     throw error;
   }
 };

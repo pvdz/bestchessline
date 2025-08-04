@@ -1,6 +1,6 @@
 import { log } from "./logging.js";
-import { showToast } from "./ui-utils.js";
 import { getInputElement } from "./dom-helpers.js";
+import { getFEN } from "../chess-board.js";
 // ============================================================================
 // LINE FISHER UI UTILITY FUNCTIONS
 // ============================================================================
@@ -10,47 +10,45 @@ import { getInputElement } from "./dom-helpers.js";
  * handle empty input with default values, and return array of move strings
  */
 export const getLineFisherInitiatorMoves = () => {
-    const initiatorMovesInput = getInputElement("line-fisher-initiator-moves");
-    if (!initiatorMovesInput)
-        return ["Nf3", "g3"];
-    const movesText = initiatorMovesInput.value.trim();
-    if (!movesText) {
-        // Clear error styling for empty input
-        initiatorMovesInput.classList.remove("error");
-        return ["Nf3", "g3"];
+  const initiatorMovesInput = getInputElement("line-fisher-initiator-moves");
+  if (!initiatorMovesInput) return [];
+  const movesText = initiatorMovesInput.value.trim();
+  if (!movesText) {
+    // Clear error styling for empty input
+    initiatorMovesInput.classList.remove("error");
+    return [];
+  }
+  // Parse space-separated moves
+  const moves = movesText.split(/\s+/).filter((move) => move.length > 0);
+  // Validate each move is a valid chess move
+  const validMoves = [];
+  let hasInvalidMoves = false;
+  for (const move of moves) {
+    try {
+      // Basic validation - check if move is in algebraic notation
+      if (
+        /^[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?$/.test(move) ||
+        /^[a-h]x[a-h][1-8](=[QRBN])?[+#]?$/.test(move) ||
+        /^[a-h][1-8](=[QRBN])?[+#]?$/.test(move) ||
+        /^O-O(-O)?[+#]?$/.test(move)
+      ) {
+        validMoves.push(move);
+      } else {
+        log(`Invalid move format: ${move}`);
+        hasInvalidMoves = true;
+      }
+    } catch (error) {
+      log(`Error validating move ${move}: ${error}`);
+      hasInvalidMoves = true;
     }
-    // Parse space-separated moves
-    const moves = movesText.split(/\s+/).filter((move) => move.length > 0);
-    // Validate each move is a valid chess move
-    const validMoves = [];
-    let hasInvalidMoves = false;
-    for (const move of moves) {
-        try {
-            // Basic validation - check if move is in algebraic notation
-            if (/^[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?$/.test(move) ||
-                /^[a-h]x[a-h][1-8](=[QRBN])?[+#]?$/.test(move) ||
-                /^[a-h][1-8](=[QRBN])?[+#]?$/.test(move) ||
-                /^O-O(-O)?[+#]?$/.test(move)) {
-                validMoves.push(move);
-            }
-            else {
-                log(`Invalid move format: ${move}`);
-                hasInvalidMoves = true;
-            }
-        }
-        catch (error) {
-            log(`Error validating move ${move}: ${error}`);
-            hasInvalidMoves = true;
-        }
-    }
-    // Apply error styling if there are invalid moves
-    if (hasInvalidMoves) {
-        initiatorMovesInput.classList.add("error");
-    }
-    else {
-        initiatorMovesInput.classList.remove("error");
-    }
-    return validMoves.length > 0 ? validMoves : ["Nf3", "g3"];
+  }
+  // Apply error styling if there are invalid moves
+  if (hasInvalidMoves) {
+    initiatorMovesInput.classList.add("error");
+  } else {
+    initiatorMovesInput.classList.remove("error");
+  }
+  return validMoves.length > 0 ? validMoves : [];
 };
 /**
  * Get Line Fisher responder move counts from UI
@@ -58,151 +56,155 @@ export const getLineFisherInitiatorMoves = () => {
  * handle empty input with default values, and return array of integers
  */
 export const getLineFisherResponderMoveCounts = () => {
-    const responderCountsInput = getInputElement("line-fisher-responder-counts");
-    if (!responderCountsInput)
-        return [];
-    const countsText = responderCountsInput.value.trim();
-    if (!countsText) {
-        // Clear error styling for empty input
-        responderCountsInput.classList.remove("error");
-        return [];
-    }
-    // Parse space-separated numbers
-    const counts = countsText
-        .split(/\s+/)
-        .map((count) => parseInt(count, 10))
-        .filter((count) => !isNaN(count) && count > 0);
-    // Apply error styling if there are invalid counts
-    if (counts.length === 0 || counts.some((count) => count <= 0)) {
-        responderCountsInput.classList.add("error");
-    }
-    else {
-        responderCountsInput.classList.remove("error");
-    }
-    return counts;
+  const responderCountsInput = getInputElement("line-fisher-responder-counts");
+  if (!responderCountsInput) return [];
+  const countsText = responderCountsInput.value.trim();
+  if (!countsText) {
+    // Clear error styling for empty input
+    responderCountsInput.classList.remove("error");
+    return [];
+  }
+  // Parse space-separated numbers
+  const counts = countsText
+    .split(/\s+/)
+    .map((count) => parseInt(count, 10))
+    .filter((count) => !isNaN(count) && count > 0);
+  // Apply error styling if there are invalid counts
+  if (counts.length === 0 || counts.some((count) => count <= 0)) {
+    responderCountsInput.classList.add("error");
+  } else {
+    responderCountsInput.classList.remove("error");
+  }
+  return counts;
 };
 /**
  * Get Line Fisher depth from UI
  * TODO: Read depth from slider input
  */
 export const getLineFisherDepth = () => {
-    const depthInput = getInputElement("line-fisher-depth");
-    if (!depthInput)
-        return 2; // Increased default to allow for more analysis
-    const depth = parseInt(depthInput.value, 10);
-    return isNaN(depth) ? 2 : Math.max(1, Math.min(15, depth)); // Increased default
+  const depthInput = getInputElement("line-fisher-depth");
+  if (!depthInput) return 2; // Increased default to allow for more analysis
+  const depth = parseInt(depthInput.value, 10);
+  return isNaN(depth) ? 2 : Math.max(1, Math.min(15, depth)); // Increased default
 };
 /**
  * Get Line Fisher threads from UI
  * TODO: Read threads from slider input
  */
 export const getLineFisherThreads = () => {
-    const threadsInput = getInputElement("line-fisher-threads");
-    if (!threadsInput)
-        return 10;
-    const threads = parseInt(threadsInput.value, 10);
-    return isNaN(threads) ? 10 : Math.max(1, Math.min(16, threads));
+  const threadsInput = getInputElement("line-fisher-threads");
+  if (!threadsInput) return 10;
+  const threads = parseInt(threadsInput.value, 10);
+  return isNaN(threads) ? 10 : Math.max(1, Math.min(16, threads));
 };
 /**
  * Get Line Fisher default responder count from UI
  * Read default responder count from slider input
  */
 export const getLineFisherDefaultResponderCount = () => {
-    const defaultResponderInput = getInputElement("line-fisher-default-responder-count");
-    if (!defaultResponderInput)
-        return 3; // Default to 3
-    const count = parseInt(defaultResponderInput.value, 10);
-    return isNaN(count) ? 3 : Math.max(1, Math.min(15, count));
+  const defaultResponderInput = getInputElement(
+    "line-fisher-default-responder-count",
+  );
+  if (!defaultResponderInput) return 3; // Default to 3
+  const count = parseInt(defaultResponderInput.value, 10);
+  return isNaN(count) ? 3 : Math.max(1, Math.min(15, count));
 };
 /**
  * Get Line Fisher configuration from UI
  * TODO: Read all configuration values from UI elements
  */
 export const getLineFisherConfigFromUI = () => {
-    return {
-        initiatorMoves: getLineFisherInitiatorMoves(),
-        responderMoveCounts: getLineFisherResponderMoveCounts(),
-        maxDepth: getLineFisherDepth(),
-        threads: getLineFisherThreads(),
-        defaultResponderCount: getLineFisherDefaultResponderCount(),
-    };
+  return {
+    initiatorMoves: getLineFisherInitiatorMoves(),
+    responderMoveCounts: getLineFisherResponderMoveCounts(),
+    maxDepth: getLineFisherDepth(),
+    threads: getLineFisherThreads(),
+    defaultResponderCount: getLineFisherDefaultResponderCount(),
+    rootFEN: getFEN(),
+  };
 };
 /**
  * Update Line Fisher UI from configuration
  * TODO: Update UI elements with configuration values
  */
 export const updateLineFisherUIFromConfig = (config) => {
-    // TODO: Update initiator moves input
-    const initiatorMovesInput = getInputElement("line-fisher-initiator-moves");
-    if (initiatorMovesInput) {
-        initiatorMovesInput.value = config.initiatorMoves.join(" ");
-    }
-    // TODO: Update responder counts input
-    const responderCountsInput = getInputElement("line-fisher-responder-counts");
-    if (responderCountsInput) {
-        responderCountsInput.value = config.responderMoveCounts.join(" ");
-    }
-    // TODO: Update default responder count slider
-    const defaultResponderInput = getInputElement("line-fisher-default-responder-count");
-    if (defaultResponderInput) {
-        defaultResponderInput.value = config.defaultResponderCount.toString();
-    }
-    // TODO: Update depth slider
-    const depthInput = getInputElement("line-fisher-depth");
-    if (depthInput) {
-        depthInput.value = config.maxDepth.toString();
-    }
-    // TODO: Update threads slider
-    const threadsInput = getInputElement("line-fisher-threads");
-    if (threadsInput) {
-        threadsInput.value = config.threads.toString();
-    }
+  // TODO: Update initiator moves input
+  const initiatorMovesInput = getInputElement("line-fisher-initiator-moves");
+  if (initiatorMovesInput) {
+    initiatorMovesInput.value = config.initiatorMoves.join(" ");
+  }
+  // TODO: Update responder counts input
+  const responderCountsInput = getInputElement("line-fisher-responder-counts");
+  if (responderCountsInput) {
+    responderCountsInput.value = config.responderMoveCounts.join(" ");
+  }
+  // TODO: Update default responder count slider
+  const defaultResponderInput = getInputElement(
+    "line-fisher-default-responder-count",
+  );
+  if (defaultResponderInput) {
+    defaultResponderInput.value = config.defaultResponderCount.toString();
+  }
+  // TODO: Update depth slider
+  const depthInput = getInputElement("line-fisher-depth");
+  if (depthInput) {
+    depthInput.value = config.maxDepth.toString();
+  }
+  // TODO: Update threads slider
+  const threadsInput = getInputElement("line-fisher-threads");
+  if (threadsInput) {
+    threadsInput.value = config.threads.toString();
+  }
 };
 /**
  * Initialize Line Fisher UI controls
  * Set up event listeners and initialize UI state
  */
 export const initializeLineFisherUIControls = () => {
-    // Add real-time validation for initiator moves input
-    const initiatorMovesInput = getInputElement("line-fisher-initiator-moves");
-    if (initiatorMovesInput) {
-        initiatorMovesInput.addEventListener("input", () => {
-            // Trigger validation on input change
-            getLineFisherInitiatorMoves();
-        });
-    }
-    // Add real-time validation for responder counts input
-    const responderCountsInput = getInputElement("line-fisher-responder-counts");
-    if (responderCountsInput) {
-        responderCountsInput.addEventListener("input", () => {
-            // Trigger validation on input change
-            getLineFisherResponderMoveCounts();
-        });
-    }
+  // Add real-time validation for initiator moves input
+  const initiatorMovesInput = getInputElement("line-fisher-initiator-moves");
+  if (initiatorMovesInput) {
+    initiatorMovesInput.addEventListener("input", () => {
+      // Trigger validation on input change
+      getLineFisherInitiatorMoves();
+    });
+  }
+  // Add real-time validation for responder counts input
+  const responderCountsInput = getInputElement("line-fisher-responder-counts");
+  if (responderCountsInput) {
+    responderCountsInput.addEventListener("input", () => {
+      // Trigger validation on input change
+      getLineFisherResponderMoveCounts();
+    });
+  }
 };
 /**
  * Update Line Fisher slider value displays
  * TODO: Update slider value labels
  */
 export const updateLineFisherSliderValues = () => {
-    // TODO: Update depth slider value display
-    const depthInput = getInputElement("line-fisher-depth");
-    const depthValue = document.getElementById("line-fisher-depth-value");
-    if (depthInput && depthValue) {
-        depthValue.textContent = depthInput.value;
-    }
-    // TODO: Update default responder count slider value display
-    const defaultResponderInput = getInputElement("line-fisher-default-responder-count");
-    const defaultResponderValue = document.getElementById("line-fisher-default-responder-count-value");
-    if (defaultResponderInput && defaultResponderValue) {
-        defaultResponderValue.textContent = defaultResponderInput.value;
-    }
-    // TODO: Update threads slider value display
-    const threadsInput = getInputElement("line-fisher-threads");
-    const threadsValue = document.getElementById("line-fisher-threads-value");
-    if (threadsInput && threadsValue) {
-        threadsValue.textContent = threadsInput.value;
-    }
+  // TODO: Update depth slider value display
+  const depthInput = getInputElement("line-fisher-depth");
+  const depthValue = document.getElementById("line-fisher-depth-value");
+  if (depthInput && depthValue) {
+    depthValue.textContent = depthInput.value;
+  }
+  // TODO: Update default responder count slider value display
+  const defaultResponderInput = getInputElement(
+    "line-fisher-default-responder-count",
+  );
+  const defaultResponderValue = document.getElementById(
+    "line-fisher-default-responder-count-value",
+  );
+  if (defaultResponderInput && defaultResponderValue) {
+    defaultResponderValue.textContent = defaultResponderInput.value;
+  }
+  // TODO: Update threads slider value display
+  const threadsInput = getInputElement("line-fisher-threads");
+  const threadsValue = document.getElementById("line-fisher-threads-value");
+  if (threadsInput && threadsValue) {
+    threadsValue.textContent = threadsInput.value;
+  }
 };
 /**
  * Validate Line Fisher configuration
@@ -210,74 +212,79 @@ export const updateLineFisherSliderValues = () => {
  * check depth is between 1 and 15, check threads is between 1 and 16, and return boolean and error message
  */
 export const validateLineFisherConfig = (config) => {
-    // Check initiator moves are valid chess moves
-    if (config.initiatorMoves.length === 0) {
-        return {
-            isValid: false,
-            errorMessage: "At least one initiator move is required",
-        };
+  // Check initiator moves are valid chess moves
+  if (config.initiatorMoves.length === 0) {
+    return {
+      isValid: false,
+      errorMessage: "At least one initiator move is required",
+    };
+  }
+  // Check responder counts are positive integers (empty is allowed if default responder count is set)
+  if (
+    config.responderMoveCounts.length === 0 &&
+    config.defaultResponderCount <= 0
+  ) {
+    return {
+      isValid: false,
+      errorMessage:
+        "At least one responder move count is required, or set a default responder count",
+    };
+  }
+  for (const count of config.responderMoveCounts) {
+    if (count <= 0 || !Number.isInteger(count)) {
+      return {
+        isValid: false,
+        errorMessage: `Invalid responder move count: ${count}. Must be a positive integer.`,
+      };
     }
-    // Check responder counts are positive integers (empty is allowed if default responder count is set)
-    if (config.responderMoveCounts.length === 0 &&
-        config.defaultResponderCount <= 0) {
-        return {
-            isValid: false,
-            errorMessage: "At least one responder move count is required, or set a default responder count",
-        };
-    }
-    for (const count of config.responderMoveCounts) {
-        if (count <= 0 || !Number.isInteger(count)) {
-            return {
-                isValid: false,
-                errorMessage: `Invalid responder move count: ${count}. Must be a positive integer.`,
-            };
-        }
-    }
-    // Check depth is between 1 and 15
-    if (config.maxDepth < 1 || config.maxDepth > 15) {
-        return {
-            isValid: false,
-            errorMessage: `Invalid depth: ${config.maxDepth}. Must be between 1 and 15.`,
-        };
-    }
-    // Check threads is between 1 and 16
-    if (config.threads < 1 || config.threads > 16) {
-        return {
-            isValid: false,
-            errorMessage: `Invalid threads: ${config.threads}. Must be between 1 and 16.`,
-        };
-    }
-    // Check that responder counts array length matches initiator moves array length (only if responder counts are provided)
-    if (config.responderMoveCounts.length > 0 &&
-        config.responderMoveCounts.length !== config.initiatorMoves.length) {
-        return {
-            isValid: false,
-            errorMessage: `Mismatch: ${config.initiatorMoves.length} initiator moves but ${config.responderMoveCounts.length} responder counts.`,
-        };
-    }
-    return { isValid: true, errorMessage: "" };
+  }
+  // Check depth is between 1 and 15
+  if (config.maxDepth < 1 || config.maxDepth > 15) {
+    return {
+      isValid: false,
+      errorMessage: `Invalid depth: ${config.maxDepth}. Must be between 1 and 15.`,
+    };
+  }
+  // Check threads is between 1 and 16
+  if (config.threads < 1 || config.threads > 16) {
+    return {
+      isValid: false,
+      errorMessage: `Invalid threads: ${config.threads}. Must be between 1 and 16.`,
+    };
+  }
+  // Check that responder counts array length matches initiator moves array length (only if responder counts are provided)
+  if (
+    config.responderMoveCounts.length > 0 &&
+    config.responderMoveCounts.length !== config.initiatorMoves.length
+  ) {
+    return {
+      isValid: false,
+      errorMessage: `Mismatch: ${config.initiatorMoves.length} initiator moves but ${config.responderMoveCounts.length} responder counts.`,
+    };
+  }
+  return { isValid: true, errorMessage: "" };
 };
 /**
  * Show Line Fisher configuration error
  * Display error messages to user using toast notifications or status updates
  */
 export const showLineFisherConfigError = (message) => {
-    log(`Line Fisher config error: ${message}`);
-    // Show error in status area
-    const statusElement = document.getElementById("line-fisher-status");
-    if (statusElement) {
-        statusElement.textContent = `Error: ${message}`;
-        statusElement.className = "line-fisher-status error";
-    }
-    // Show toast notification if available
-    const toastElement = document.getElementById("toast");
-    if (toastElement) {
-        toastElement.textContent = message;
-        toastElement.className = "toast error show";
-        setTimeout(() => {
-            toastElement.className = "toast error";
-        }, 5000);
-    }
+  log(`Line Fisher config error: ${message}`);
+  // Show error in status area
+  const statusElement = document.getElementById("line-fisher-status");
+  if (statusElement) {
+    statusElement.textContent = `Error: ${message}`;
+    statusElement.className = "line-fisher-status error";
+  }
+  // Show toast notification if available
+  const toastElement = document.getElementById("toast");
+  if (toastElement) {
+    toastElement.textContent = message;
+    toastElement.className = "toast error show";
+    setTimeout(() => {
+      toastElement.className = "toast error";
+    }, 5000);
+  }
 };
 // ============================================================================
 // LINE FISHER TOOLTIPS AND HELP
@@ -287,187 +294,116 @@ export const showLineFisherConfigError = (message) => {
  * Explain configuration options, show usage hints, and provide error explanations
  */
 export const addLineFisherTooltips = () => {
-    // Add tooltips to configuration elements
-    const addTooltip = (elementId, tooltipText) => {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.title = tooltipText;
-            element.setAttribute("data-tooltip", tooltipText);
-        }
-    };
-    // Configuration tooltips
-    addTooltip("line-fisher-initiator-moves", "Enter space-separated chess moves (e.g., 'Nf3 g3'). These moves will be played first by White. Leave empty to use Stockfish analysis.");
-    addTooltip("line-fisher-responder-counts", "Enter space-separated numbers (e.g., '2 3'). These specify how many responses to analyze for each initiator move.");
-    addTooltip("line-fisher-depth", "Maximum analysis depth (1-15). Higher depths explore more lines but take longer to analyze.");
-    addTooltip("line-fisher-threads", "Number of CPU threads to use (1-16). More threads can speed up analysis but use more resources.");
-    // Button tooltips
-    addTooltip("start-line-fisher", "Start Line Fisher analysis with current configuration. This will explore multiple lines to the specified depth.");
-    addTooltip("stop-line-fisher", "Stop the current analysis. Partial results will be preserved and can be continued later.");
-    addTooltip("reset-line-fisher", "Clear all analysis results and reset to initial state. This cannot be undone.");
-    addTooltip("continue-line-fisher", "Continue analysis from where it left off. Only available if there are partial results.");
-    // State management tooltips
-    addTooltip("copy-line-fisher-state", "Copy current analysis state to clipboard. Can be pasted into another session.");
-    addTooltip("export-line-fisher-state", "Export current analysis state to a JSON file. Useful for sharing or backup.");
-    addTooltip("import-line-fisher-state", "Import analysis state from a JSON file. This will replace current state.");
-    addTooltip("paste-line-fisher-state", "Import analysis state from clipboard. Useful for sharing between sessions.");
-    log("Line Fisher tooltips added successfully");
+  // Add tooltips to configuration elements
+  const addTooltip = (elementId, tooltipText) => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.title = tooltipText;
+      element.setAttribute("data-tooltip", tooltipText);
+    }
+  };
+  // Configuration tooltips
+  addTooltip(
+    "line-fisher-initiator-moves",
+    "Enter space-separated chess moves (e.g., 'Nf3 g3'). These moves will be played first by White. Leave empty to use Stockfish analysis.",
+  );
+  addTooltip(
+    "line-fisher-responder-counts",
+    "Enter space-separated numbers (e.g., '2 3'). These specify how many responses to analyze for each initiator move.",
+  );
+  addTooltip(
+    "line-fisher-depth",
+    "Maximum analysis depth (1-15). Higher depths explore more lines but take longer to analyze.",
+  );
+  addTooltip(
+    "line-fisher-threads",
+    "Number of CPU threads to use (1-16). More threads can speed up analysis but use more resources.",
+  );
+  // Button tooltips
+  addTooltip(
+    "stop-line-fisher",
+    "Stop the current analysis. Partial results will be preserved and can be continued later.",
+  );
+  addTooltip(
+    "reset-line-fisher",
+    "Clear all analysis results and reset to initial state. This cannot be undone.",
+  );
+  addTooltip(
+    "continue-line-fisher",
+    "Continue analysis from where it left off. Only available if there are partial results.",
+  );
+  // State management tooltips
+  addTooltip(
+    "copy-line-fisher-state",
+    "Copy current analysis state to clipboard. Can be pasted into another session.",
+  );
+  addTooltip(
+    "export-line-fisher-state",
+    "Export current analysis state to a JSON file. Useful for sharing or backup.",
+  );
+  addTooltip(
+    "import-line-fisher-state",
+    "Import analysis state from a JSON file. This will replace current state.",
+  );
+  addTooltip(
+    "paste-line-fisher-state",
+    "Import analysis state from clipboard. Useful for sharing between sessions.",
+  );
+  log("Line Fisher tooltips added successfully");
 };
 /**
  * Show usage hints for Line Fisher
  */
 export const showLineFisherUsageHints = () => {
-    const hints = [
-        "💡 Tip: Start with depth 2-3 for quick analysis",
-        "💡 Tip: Use 4-8 threads for optimal performance",
-        "💡 Tip: Leave initiator moves empty to use Stockfish's best moves",
-        "💡 Tip: Export your analysis to share with others",
-        "💡 Tip: Use the continue button to resume interrupted analysis",
-    ];
-    // Show hints in a rotating banner or help section
-    const hintsElement = document.getElementById("line-fisher-hints");
-    if (hintsElement) {
-        const currentHint = hints[Math.floor(Math.random() * hints.length)];
-        hintsElement.innerHTML = `<div class="line-fisher-hint">${currentHint}</div>`;
-    }
+  const hints = [
+    "💡 Tip: Start with depth 2-3 for quick analysis",
+    "💡 Tip: Use 4-8 threads for optimal performance",
+    "💡 Tip: Leave initiator moves empty to use Stockfish's best moves",
+    "💡 Tip: Export your analysis to share with others",
+    "💡 Tip: Use the continue button to resume interrupted analysis",
+  ];
+  // Show hints in a rotating banner or help section
+  const hintsElement = document.getElementById("line-fisher-hints");
+  if (hintsElement) {
+    const currentHint = hints[Math.floor(Math.random() * hints.length)];
+    hintsElement.innerHTML = `<div class="line-fisher-hint">${currentHint}</div>`;
+  }
 };
 /**
  * Provide detailed error explanations
  */
 export const showLineFisherErrorExplanation = (error) => {
-    const errorExplanations = {
-        "Invalid move format": "Chess moves must be in algebraic notation (e.g., 'Nf3', 'e4', 'O-O').",
-        "Invalid depth": "Depth must be between 1 and 15. Higher depths take longer to analyze.",
-        "Invalid threads": "Threads must be between 1 and 16. More threads use more CPU resources.",
-        "Configuration mismatch": "The number of responder counts must match the number of initiator moves.",
-        "No analysis to continue": "Start an analysis first before trying to continue.",
-        "File import failed": "The file must be a valid Line Fisher state JSON file.",
-        "Clipboard import failed": "The clipboard must contain valid Line Fisher state JSON data.",
-    };
-    const explanation = errorExplanations[error] ||
-        "An unexpected error occurred. Please try again.";
-    // Show explanation in a user-friendly way
-    const explanationElement = document.getElementById("line-fisher-error-explanation");
-    if (explanationElement) {
-        explanationElement.innerHTML = `
+  const errorExplanations = {
+    "Invalid move format":
+      "Chess moves must be in algebraic notation (e.g., 'Nf3', 'e4', 'O-O').",
+    "Invalid depth":
+      "Depth must be between 1 and 15. Higher depths take longer to analyze.",
+    "Invalid threads":
+      "Threads must be between 1 and 16. More threads use more CPU resources.",
+    "Configuration mismatch":
+      "The number of responder counts must match the number of initiator moves.",
+    "No analysis to continue":
+      "Start an analysis first before trying to continue.",
+    "File import failed":
+      "The file must be a valid Line Fisher state JSON file.",
+    "Clipboard import failed":
+      "The clipboard must contain valid Line Fisher state JSON data.",
+  };
+  const explanation =
+    errorExplanations[error] ||
+    "An unexpected error occurred. Please try again.";
+  // Show explanation in a user-friendly way
+  const explanationElement = document.getElementById(
+    "line-fisher-error-explanation",
+  );
+  if (explanationElement) {
+    explanationElement.innerHTML = `
       <div class="line-fisher-error-detail">
         <strong>Error:</strong> ${error}
         <br>
         <strong>Explanation:</strong> ${explanation}
       </div>
     `;
-    }
-};
-// ============================================================================
-// LINE FISHER KEYBOARD SHORTCUTS
-// ============================================================================
-/**
- * Add keyboard shortcuts for Line Fisher operations
- * Start/stop analysis, reset analysis, and copy results
- */
-export const addLineFisherKeyboardShortcuts = () => {
-    const shortcuts = new Map();
-    // Define shortcuts
-    shortcuts.set("Ctrl+Shift+L", () => {
-        // Start Line Fisher analysis
-        const startBtn = document.getElementById("start-line-fisher");
-        if (startBtn && !startBtn.disabled) {
-            startBtn.click();
-        }
-    });
-    shortcuts.set("Ctrl+Shift+S", () => {
-        // Stop Line Fisher analysis
-        const stopBtn = document.getElementById("stop-line-fisher");
-        if (stopBtn && !stopBtn.disabled) {
-            stopBtn.click();
-        }
-    });
-    shortcuts.set("Ctrl+Shift+R", () => {
-        // Reset Line Fisher analysis
-        const resetBtn = document.getElementById("reset-line-fisher");
-        if (resetBtn && !resetBtn.disabled) {
-            resetBtn.click();
-        }
-    });
-    shortcuts.set("Ctrl+Shift+C", () => {
-        // Copy Line Fisher state
-        const copyBtn = document.getElementById("copy-line-fisher-state");
-        if (copyBtn && !copyBtn.disabled) {
-            copyBtn.click();
-        }
-    });
-    shortcuts.set("Ctrl+Shift+V", () => {
-        // Paste Line Fisher state
-        const pasteBtn = document.getElementById("paste-line-fisher-state");
-        if (pasteBtn && !pasteBtn.disabled) {
-            pasteBtn.click();
-        }
-    });
-    shortcuts.set("Ctrl+Shift+E", () => {
-        // Export Line Fisher state
-        const exportBtn = document.getElementById("export-line-fisher-state");
-        if (exportBtn && !exportBtn.disabled) {
-            exportBtn.click();
-        }
-    });
-    shortcuts.set("Ctrl+Shift+I", () => {
-        // Import Line Fisher state
-        const importBtn = document.getElementById("import-line-fisher-state");
-        if (importBtn && !importBtn.disabled) {
-            importBtn.click();
-        }
-    });
-    // Add event listener for keyboard shortcuts
-    document.addEventListener("keydown", (event) => {
-        const key = [
-            event.ctrlKey ? "Ctrl" : "",
-            event.shiftKey ? "Shift" : "",
-            event.key.toUpperCase(),
-        ]
-            .filter(Boolean)
-            .join("+");
-        const action = shortcuts.get(key);
-        if (action) {
-            event.preventDefault();
-            action();
-            // Show shortcut feedback
-            showToast(`Shortcut executed: ${key}`, "#4CAF50", 1000);
-        }
-    });
-    // Show shortcuts help
-    const showShortcutsHelp = () => {
-        const helpText = `
-      <div class="line-fisher-shortcuts-help">
-        <h4>Line Fisher Keyboard Shortcuts</h4>
-        <ul>
-          <li><strong>Ctrl+Shift+L:</strong> Start analysis</li>
-          <li><strong>Ctrl+Shift+S:</strong> Stop analysis</li>
-          <li><strong>Ctrl+Shift+R:</strong> Reset analysis</li>
-          <li><strong>Ctrl+Shift+C:</strong> Copy state</li>
-          <li><strong>Ctrl+Shift+V:</strong> Paste state</li>
-          <li><strong>Ctrl+Shift+E:</strong> Export state</li>
-          <li><strong>Ctrl+Shift+I:</strong> Import state</li>
-        </ul>
-      </div>
-    `;
-        const helpElement = document.getElementById("line-fisher-shortcuts-help");
-        if (helpElement) {
-            helpElement.innerHTML = helpText;
-        }
-    };
-    // Add help button
-    const addShortcutsHelpButton = () => {
-        const helpBtn = document.createElement("button");
-        helpBtn.textContent = "⌨️ Shortcuts";
-        helpBtn.className = "line-fisher-shortcuts-help-btn";
-        helpBtn.title = "Show keyboard shortcuts";
-        helpBtn.onclick = showShortcutsHelp;
-        const controlsElement = document.getElementById("line-fisher-controls");
-        if (controlsElement) {
-            controlsElement.appendChild(helpBtn);
-        }
-    };
-    // Initialize shortcuts
-    addShortcutsHelpButton();
-    log("Line Fisher keyboard shortcuts added successfully");
+  }
 };
 //# sourceMappingURL=line-fisher-ui-utils.js.map

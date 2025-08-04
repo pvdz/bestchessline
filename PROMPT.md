@@ -2,6 +2,49 @@
 
 This file serves as the AI memory/description for this application. It should reflect the current project status such that an AI can take a task for this project and complete it without having to analyze every file in detail.
 
+## CRITICAL DEVELOPMENT RULES
+
+**NEVER run `npm start`, `npx`, or any server commands without explicit user permission.**
+**NEVER assume the user wants to test the application immediately after implementation.**
+**ALWAYS ask the user how they want to proceed after completing a task.**
+**ALWAYS follow the established patterns in the codebase.**
+**ALWAYS check TypeScript compilation before asking to test.**
+**ALWAYS provide a summary of what was implemented before asking for next steps.**
+
+## Current Project Status
+
+### Fish Function Implementation - COMPLETED ✅
+
+The `fish()` function has been fully implemented in `src/fish.ts` with the following features:
+
+- **Queue-based analysis**: Uses WIP (work-in-progress) and done lists
+- **Initiator/Responder logic**: Alternates between initiator and responder moves
+- **Predefined moves**: Supports `initiatorPredefinedMoves` array
+- **Responder overrides**: Supports `responderCountOverrides` array
+- **Stockfish integration**: Uses `analyzePosition` for move generation
+- **Delta calculations**: Calculates deltas from baseline score
+- **UI integration**: Real-time progress and results display
+- **Export functionality**: Clipboard export for WIP and done lines
+
+### Recent Changes:
+
+- ✅ **Disabled old Fish button** (temporarily disabled)
+- ✅ **Default depth set to 1** (max-depth input and line-fisher slider)
+- ✅ **Delta system implemented** (baseline scoring and delta calculations)
+- ✅ **Comprehensive debugging added** (state tracking throughout analysis)
+
+### Current Issue:
+
+- **Export functionality**: WIP and done lines not appearing in clipboard
+- **Debugging added**: Comprehensive logging to track state throughout analysis
+- **Ready for testing**: Can diagnose export issue by running analysis and checking console
+
+## Development Workflow
+
+1. **Implement the requested feature** following existing patterns
+2. **Fix any TypeScript compilation errors**
+3. **Provide a clear summary** of what was implemented
+
 ## Application Overview
 
 A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, enhanced move validation with effect detection, and a tree digger for deep position analysis. Built with simple vanilla TypeScript and HTML/CSS.
@@ -775,9 +818,6 @@ await exportLineFisherStateFromManager();
 
 // Import state from file
 await importLineFisherStateFromManager();
-
-// Import state from clipboard
-await importLineFisherStateFromClipboardFromManager();
 ```
 
 #### Performance Optimizations
@@ -1025,6 +1065,60 @@ npm run serve        # Start development server (human runs this)
 
 **Important**: The AI should never run `npm run watch` or `npm run dev` - the human will handle the watch process and notify if there are TypeScript errors.
 
+### Common Mistakes to Avoid
+
+!CRITICAL!
+
+**Build Process Mistakes:**
+
+- ❌ **NEVER use `npx tsc`** - Always use `node_modules/.bin/tsc`
+- ❌ **NEVER suggest `npx`** - The human handles package management
+- ❌ **NEVER run `npm run watch` or `npm run dev`** - Human handles watch process
+- ❌ **NEVER install packages** - Human handles dependencies
+- ❌ **NEVER serve the application** - Human handles serving
+
+**Correct Build Process:**
+
+- ✅ **Use `node_modules/.bin/tsc --noUnusedLocals --noUnusedParameters --noEmit`** for TypeScript validation
+- ✅ **Ask human to run compilation** when you need to check for errors
+- ✅ **Wait for human to notify** of TypeScript compilation errors
+- ✅ **Fix errors systematically** when human reports them
+
+**Interface Changes:**
+
+- ✅ **When making interfaces non-nullable**, update all test files and utility functions
+- ✅ **When adding required properties**, add them to all test configurations
+- ✅ **When removing optional properties**, update all references to use new location
+- ✅ **Check for unused imports** after interface changes
+- ✅ **Update all utility functions** that create or use the changed interface
+
+**State Management:**
+
+- ✅ **When moving properties between interfaces**, update all references systematically
+- ✅ **When changing from optional to required**, provide default values in initializers
+- ✅ **When changing property locations**, update all getter/setter functions
+- ✅ **Test compilation after each change** to catch errors early
+
+**Line Fisher Specific Changes:**
+
+- ✅ **When modifying `LineFisherConfig`**, update `getLineFisherConfigFromUI()` function
+- ✅ **When modifying `LineFisherState`**, update `createInitialLineFisherState()` function
+- ✅ **When adding required properties to config**, add to all test configurations in `line-fisher-calculations.test.ts`
+- ✅ **When moving properties from state to config**, update all references in manager and results files
+- ✅ **When changing property names or types**, update all utility functions that create or use the interface
+
+**Interface Change Workflow Checklist:**
+
+1. ✅ **Identify all files** that use the interface being changed
+2. ✅ **Update the interface definition** with the new structure
+3. ✅ **Update all initializer functions** that create instances of the interface
+4. ✅ **Update all getter/setter functions** that access the interface properties
+5. ✅ **Update all test files** that create test instances of the interface
+6. ✅ **Update all utility functions** that create or modify the interface
+7. ✅ **Remove unused imports** that are no longer needed
+8. ✅ **Run TypeScript compilation** to verify all errors are fixed
+9. ✅ **Ask human to verify** the changes work correctly
+
 ### Development Guidelines
 
 !IMPORTANT!
@@ -1095,7 +1189,7 @@ The application relies heavily on TypeScript compilation for error detection:
 
 - `src/types.ts`: Changes affect multiple files
 - `src/stockfish-client.ts`: Core engine integration
-- `index.html`: Main UI structure
+- `src/index.html`: Main UI structure
 
 **Avoid Modifying**:
 
@@ -1202,7 +1296,7 @@ The application has been refactored into modular utility files for better organi
 - **`test/move-validator/test-move-validator.html`**: Interactive move validation testing
 - **`test/enhanced-notation/test-enhanced-notation.html`**: Enhanced notation demonstration
 - **`test/stockfish/test-stockfish.html`**: Stockfish integration testing
-- **`index.html`**: Main application with test page links
+- **`src/index.html`**: Main application with test page links
 
 ## Key Insights
 
@@ -1295,6 +1389,51 @@ The Line Fisher is a comprehensive deep position analysis tool that builds recur
    - Input error handling with visual feedback
    - Tooltips and keyboard shortcuts
    - Usage hints and error explanations
+
+### Recent Improvements and Bug Fixes
+
+#### Button State Management Fix
+
+**Issue**: Start buttons were not being restored after analysis completed naturally
+**Solution**: Added `updateLineFisherButtonStates()` calls in completion handlers
+**Files Modified**:
+
+- `src/line_fisher.ts`: Added button state updates in `startLineFisherAnalysis` and `continueLineFisherAnalysis`
+- Added import for `updateLineFisherButtonStates` from `line-fisher-manager.js`
+
+#### Empty Initiator Moves Fix
+
+**Issue**: Empty initiator moves input was still applying default moves
+**Solution**: Modified `getLineFisherInitiatorMoves()` to return empty array instead of defaults
+**Files Modified**:
+
+- `src/utils/line-fisher-ui-utils.ts`: Updated fallback logic to return `[]` instead of `["Nf3", "g3"]`
+
+#### FEN Manipulation Fix
+
+**Issue**: `loadLineOnBoard` was using wrong FEN when applying moves sequentially
+**Solution**: Fixed to use current `fen` instead of `rootFEN` when calling `applyMoveToFEN`
+**Files Modified**:
+
+- `src/utils/line-fisher-results.ts`: Changed `applyMoveToFEN(rootFEN, move)` to `applyMoveToFEN(fen, move)`
+
+#### Move Parsing Fix
+
+**Issue**: `parseMove` failed for pawn moves when it was black's turn
+**Solution**: Modified pawn move parsing to try both colors when ambiguous
+**Files Modified**:
+
+- `src/utils/move-parsing.ts`: Updated pawn move logic to try both white and black pawns
+
+#### LineFisherResult.plies Elimination
+
+**Progress**: Successfully eliminated functional usage of `plies` in favor of `sans`
+**Changes Made**:
+
+- Updated `findResultForNode` to compare SAN strings instead of ChessMove objects
+- Removed `result.plies.push()` calls in favor of `result.sans.push()`
+- Updated score checking to use `result.sans.length` instead of `result.plies.length`
+- Added comprehensive documentation for `findResultForNode` function
 
 ### Key Learnings from Implementation
 

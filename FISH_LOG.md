@@ -1,5 +1,115 @@
 # Line Fisher Implementation Log
 
+## Current Status: Fish Function Implementation - COMPLETED
+
+### Fish Function Implementation (Latest Session)
+
+**Date**: Current session
+**Status**: ✅ COMPLETED with debugging added
+
+#### **Core Implementation Completed:**
+
+1. **`fish()` function in `src/fish.ts`**
+   - ✅ **Queue-based analysis**: Uses WIP (work-in-progress) and done lists
+   - ✅ **Initiator/Responder logic**: Alternates between initiator and responder moves
+   - ✅ **Predefined moves**: Supports `initiatorPredefinedMoves` array
+   - ✅ **Responder overrides**: Supports `responderCountOverrides` array
+   - ✅ **Stockfish integration**: Uses `analyzePosition` for move generation
+   - ✅ **Delta calculations**: Calculates deltas from baseline score
+   - ✅ **UI updates**: Real-time progress and results display
+   - ✅ **Export functionality**: Clipboard export for WIP and done lines
+
+2. **Fish Configuration Interface**
+   - ✅ **`FishConfig`**: Complete configuration with all required fields
+   - ✅ **`FishLine`**: Line representation with SAN moves, scores, deltas
+   - ✅ **`FishState`**: State management with WIP and done lists
+   - ✅ **Baseline scoring**: Root position score for delta calculations
+
+3. **UI Integration**
+   - ✅ **Fish2 button**: Added to index.html and connected in main.ts
+   - ✅ **Export button**: "Export Fish to Clipboard" functionality
+   - ✅ **Progress display**: Real-time progress bar and status updates
+   - ✅ **Results display**: Line-fisher results integration
+   - ✅ **Board rendering**: Position display using existing components
+
+4. **Delta Calculation System**
+   - ✅ **`calculateDelta()`**: Delta calculation from baseline score
+   - ✅ **Baseline setting**: Root position score as baseline
+   - ✅ **Delta tracking**: Deltas calculated for all moves
+   - ✅ **Display integration**: Deltas passed to line-fisher display
+
+5. **Export/Copy Functionality**
+   - ✅ **`exportFishStateToClipboard()`**: Export WIP and done lines
+   - ✅ **`copyFishStateToClipboard()`**: Copy WIP and done lines
+   - ✅ **Global state tracking**: `currentFishState` for export access
+   - ✅ **Toast notifications**: Success/error feedback to user
+
+#### **Recent Changes (Current Session):**
+
+1. **Disabled Old Fish Button**
+   - ✅ Added `disabled` attribute to "Fish" button
+   - ✅ Added CSS styling for disabled state
+
+2. **Default Depth Setting**
+   - ✅ Changed max-depth input default from 20 to 1
+   - ✅ Updated line-fisher depth slider default to 1
+
+3. **Delta System Implementation**
+   - ✅ Added `baselineScore?: number` to `FishConfig`
+   - ✅ Added `deltas: number[]` to `FishLine`
+   - ✅ Implemented `calculateDelta()` function
+   - ✅ Updated all line creation points to calculate deltas
+   - ✅ Updated display format to include actual deltas
+
+4. **Debugging Added**
+   - ✅ **Comprehensive logging**: Added throughout fish() function
+   - ✅ **State tracking**: Logs WIP and done counts at each step
+   - ✅ **Export debugging**: Logs state contents during export
+   - ✅ **Final state logging**: Logs final analysis results
+
+#### **Technical Implementation Details:**
+
+**Fish Analysis Flow:**
+
+1. **Initialization**: Create state, get root score, set baseline
+2. **Initial move**: Create first move (predefined or Stockfish)
+3. **Main loop**: Process WIP queue until empty
+4. **Initiator moves**: Get best move (predefined or Stockfish)
+5. **Responder moves**: Get N best moves, create new lines
+6. **State updates**: Update global state for export functionality
+
+**Delta Calculation:**
+
+- **Baseline**: Root position score (0.0 delta)
+- **Formula**: `delta = moveScore - baselineScore`
+- **Display**: Formatted as "+0.5", "-0.3", "="
+
+**Export System:**
+
+- **Global state**: `currentFishState` updated throughout analysis
+- **Combined lines**: `[...wip, ...done]` for export
+- **Formatting**: `formatMovesWithNumbers()` for display
+- **Notifications**: Toast with WIP/done counts
+
+#### **Current Issue Being Debugged:**
+
+- **Export functionality**: WIP and done lines not appearing in clipboard
+- **Debugging added**: Comprehensive logging to track state throughout analysis
+- **Next step**: Test analysis and export to identify root cause
+
+#### **Files Modified:**
+
+- ✅ `src/fish.ts`: Complete fish function implementation
+- ✅ `src/main.ts`: Fish2 button integration and export handlers
+- ✅ `index.html`: Fish2 and export buttons
+- ✅ `src/stockfish-client.ts`: MultiPV fix for analysis
+- ✅ `src/utils/line-fisher-results.ts`: Display integration
+- ✅ `src/utils/line-fisher-calculations.ts`: Calculation reuse
+
+#### **Ready for Testing:**
+
+The fish function is fully implemented with comprehensive debugging. The export issue can be diagnosed by running a fish analysis and checking the browser console for the debugging output.
+
 ## Phase 1.1: Configuration Parsing and Validation - COMPLETED
 
 ### Completed Functions:
@@ -255,13 +365,6 @@ All tree building logic, Stockfish integration, and progress tracking have been 
    - ✅ Load state into UI
    - ✅ Added file validation and proper state restoration
 
-4. **`importLineFisherStateFromClipboardFromManager()` in `line-fisher-manager.ts`**
-   - ✅ Read clipboard content
-   - ✅ Parse JSON state
-   - ✅ Validate state format
-   - ✅ Load state into UI
-   - ✅ Added clipboard API integration and error handling
-
 ### Phase 4.3: Error Handling - COMPLETED
 
 1. **`recoverLineFisherFromCrash()` in `line-fisher-manager.ts`**
@@ -505,3 +608,41 @@ The Line Fisher is now fully integrated into the Best Chess Line Discovery appli
 - Full keyboard shortcut support
 - Complete documentation and inline comments
 - Clean, well-organized codebase with proper separation of concerns
+
+## Recent Bug Fixes and Improvements
+
+### Button State Management Fix ✅
+
+- **Issue**: Start buttons were not being restored after analysis completed naturally
+- **Solution**: Added `updateLineFisherButtonStates()` calls in completion handlers
+- **Files Modified**: `src/line_fisher.ts`
+- **Date**: Recent session
+
+### Empty Initiator Moves Fix ✅
+
+- **Issue**: Empty initiator moves input was still applying default moves
+- **Solution**: Modified `getLineFisherInitiatorMoves()` to return empty array instead of defaults
+- **Files Modified**: `src/utils/line-fisher-ui-utils.ts`
+- **Date**: Recent session
+
+### FEN Manipulation Fix ✅
+
+- **Issue**: `loadLineOnBoard` was using wrong FEN when applying moves sequentially
+- **Solution**: Fixed to use current `fen` instead of `rootFEN` when calling `applyMoveToFEN`
+- **Files Modified**: `src/utils/line-fisher-results.ts`
+- **Date**: Recent session
+
+### Move Parsing Fix ✅
+
+- **Issue**: `parseMove` failed for pawn moves when it was black's turn
+- **Solution**: Modified pawn move parsing to try both colors when ambiguous
+- **Files Modified**: `src/utils/move-parsing.ts`
+- **Date**: Recent session
+
+### LineFisherResult.plies Elimination ✅
+
+- **Progress**: Successfully eliminated functional usage of `plies` in favor of `sans`
+- **Changes Made**: Updated `findResultForNode`, removed push operations, updated score checking
+- **Files Modified**: `src/line_fisher.ts`
+- **Date**: Recent session
+- **Documentation**: Added comprehensive comment explaining the function's purpose and behavior

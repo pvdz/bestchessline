@@ -1,16 +1,20 @@
 // Test file for line-fisher-calculations module
 // Tests the new 2n-1 formula where n is the tree formula result
-import { calculateTotalNodes, calculateTotalLines, } from "./line-fisher-calculations.js";
+import {
+  calculateTotalNodes,
+  calculateTotalLines,
+} from "./line-fisher-calculations.js";
 import { generateLineFisherFormula } from "./line-fisher-results.js";
 console.log("=== NODE AND LINE COUNT TESTS ===\n");
 // Test 1: Flat responder count of 3, depth 1
 console.log("Test 1: Flat responder count of 3, depth 1");
 const config1 = {
-    initiatorMoves: [],
-    maxDepth: 1,
-    responderMoveCounts: [],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 1,
+  responderMoveCounts: [],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result1 = generateLineFisherFormula(config1);
 const actualNodes1 = calculateTotalNodes(config1);
@@ -25,11 +29,12 @@ console.log("");
 // Test 2: Flat responder count of 3, depth 2
 console.log("Test 2: Flat responder count of 3, depth 2");
 const config2 = {
-    initiatorMoves: [],
-    maxDepth: 2,
-    responderMoveCounts: [],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 2,
+  responderMoveCounts: [],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result2 = generateLineFisherFormula(config2);
 const actualNodes2 = calculateTotalNodes(config2);
@@ -44,11 +49,12 @@ console.log("");
 // Test 3: Flat responder count of 3, depth 3
 console.log("Test 3: Flat responder count of 3, depth 3");
 const config3 = {
-    initiatorMoves: [],
-    maxDepth: 3,
-    responderMoveCounts: [],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 3,
+  responderMoveCounts: [],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result3 = generateLineFisherFormula(config3);
 const actualNodes3 = calculateTotalNodes(config3);
@@ -63,11 +69,12 @@ console.log("");
 // Test 4: Overrides of 6, 7, and default of 3, depth 4
 console.log("Test 4: Overrides of 6, 7, and default of 3, depth 4");
 const config4 = {
-    initiatorMoves: [],
-    maxDepth: 4,
-    responderMoveCounts: [6, 7],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 4,
+  responderMoveCounts: [6, 7],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result4 = generateLineFisherFormula(config4);
 const actualNodes4 = calculateTotalNodes(config4);
@@ -82,11 +89,12 @@ console.log("");
 // Test 5: Mixed overrides and defaults, depth 3
 console.log("Test 5: Mixed overrides and defaults, depth 3");
 const config5 = {
-    initiatorMoves: [],
-    maxDepth: 3,
-    responderMoveCounts: [2, 5],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 3,
+  responderMoveCounts: [2, 5],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result5 = generateLineFisherFormula(config5);
 const actualNodes5 = calculateTotalNodes(config5);
@@ -101,11 +109,12 @@ console.log("");
 // Test 6: All overrides, depth 2
 console.log("Test 6: All overrides, depth 2");
 const config6 = {
-    initiatorMoves: [],
-    maxDepth: 2,
-    responderMoveCounts: [4, 5],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 2,
+  responderMoveCounts: [4, 5],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result6 = generateLineFisherFormula(config6);
 const actualNodes6 = calculateTotalNodes(config6);
@@ -120,11 +129,12 @@ console.log("");
 // Test 7: Single override, depth 3
 console.log("Test 7: Single override, depth 3");
 const config7 = {
-    initiatorMoves: [],
-    maxDepth: 3,
-    responderMoveCounts: [4],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 3,
+  responderMoveCounts: [4],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result7 = generateLineFisherFormula(config7);
 const actualNodes7 = calculateTotalNodes(config7);
@@ -139,11 +149,12 @@ console.log("");
 // Test 8: High responder counts, depth 2
 console.log("Test 8: High responder counts, depth 2");
 const config8 = {
-    initiatorMoves: [],
-    maxDepth: 2,
-    responderMoveCounts: [8, 10],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 2,
+  responderMoveCounts: [8, 10],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result8 = generateLineFisherFormula(config8);
 const actualNodes8 = calculateTotalNodes(config8);
@@ -158,11 +169,12 @@ console.log("");
 // Test 9: Example from problem statement: k = [2, 3, 2], h = 3
 console.log("Test 9: Example from problem statement: k = [2, 3, 2], h = 3");
 const config9 = {
-    initiatorMoves: [],
-    maxDepth: 3,
-    responderMoveCounts: [2, 3, 2],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 3,
+  responderMoveCounts: [2, 3, 2],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result9 = generateLineFisherFormula(config9);
 const actualNodes = calculateTotalNodes(config9);
@@ -178,11 +190,12 @@ console.log("");
 // Test 10: No overrides, depth 3
 console.log("Test 10: No overrides, depth 3");
 const config10 = {
-    initiatorMoves: [],
-    maxDepth: 3,
-    responderMoveCounts: [],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 3,
+  responderMoveCounts: [],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result10 = generateLineFisherFormula(config10);
 const actualNodes10 = calculateTotalNodes(config10);
@@ -197,11 +210,12 @@ console.log("");
 // Test 11: Overrides "3 3", default 3, depth 10
 console.log("Test 11: Overrides '3 3', default 3, depth 10");
 const config11 = {
-    initiatorMoves: [],
-    maxDepth: 10,
-    responderMoveCounts: [3, 3],
-    threads: 4,
-    defaultResponderCount: 3,
+  initiatorMoves: [],
+  maxDepth: 10,
+  responderMoveCounts: [3, 3],
+  threads: 4,
+  defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result11 = generateLineFisherFormula(config11);
 const actualNodes11 = calculateTotalNodes(config11);

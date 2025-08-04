@@ -18,6 +18,7 @@ const config1: LineFisherConfig = {
   responderMoveCounts: [],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result1 = generateLineFisherFormula(config1);
 const actualNodes1 = calculateTotalNodes(config1);
@@ -38,6 +39,7 @@ const config2: LineFisherConfig = {
   responderMoveCounts: [],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result2 = generateLineFisherFormula(config2);
 const actualNodes2 = calculateTotalNodes(config2);
@@ -58,6 +60,7 @@ const config3: LineFisherConfig = {
   responderMoveCounts: [],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result3 = generateLineFisherFormula(config3);
 const actualNodes3 = calculateTotalNodes(config3);
@@ -78,6 +81,7 @@ const config4: LineFisherConfig = {
   responderMoveCounts: [6, 7],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result4 = generateLineFisherFormula(config4);
 const actualNodes4 = calculateTotalNodes(config4);
@@ -98,6 +102,7 @@ const config5: LineFisherConfig = {
   responderMoveCounts: [2, 5],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result5 = generateLineFisherFormula(config5);
 const actualNodes5 = calculateTotalNodes(config5);
@@ -118,6 +123,7 @@ const config6: LineFisherConfig = {
   responderMoveCounts: [4, 5],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result6 = generateLineFisherFormula(config6);
 const actualNodes6 = calculateTotalNodes(config6);
@@ -138,6 +144,7 @@ const config7: LineFisherConfig = {
   responderMoveCounts: [4],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result7 = generateLineFisherFormula(config7);
 const actualNodes7 = calculateTotalNodes(config7);
@@ -158,6 +165,7 @@ const config8: LineFisherConfig = {
   responderMoveCounts: [8, 10],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result8 = generateLineFisherFormula(config8);
 const actualNodes8 = calculateTotalNodes(config8);
@@ -178,6 +186,7 @@ const config9: LineFisherConfig = {
   responderMoveCounts: [2, 3, 2],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result9 = generateLineFisherFormula(config9);
 const actualNodes = calculateTotalNodes(config9);
@@ -199,6 +208,7 @@ const config10: LineFisherConfig = {
   responderMoveCounts: [],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result10 = generateLineFisherFormula(config10);
 const actualNodes10 = calculateTotalNodes(config10);
@@ -219,6 +229,7 @@ const config11: LineFisherConfig = {
   responderMoveCounts: [3, 3],
   threads: 4,
   defaultResponderCount: 3,
+  rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 };
 const result11 = generateLineFisherFormula(config11);
 const actualNodes11 = calculateTotalNodes(config11);

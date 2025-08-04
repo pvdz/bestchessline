@@ -43,12 +43,6 @@ export declare const exportLineFisherStateFromManager: () => Promise<void>;
  */
 export declare const importLineFisherStateFromManager: () => Promise<void>;
 /**
- * Import Line Fisher state from clipboard
- * Import analysis state from clipboard.
- * Read clipboard content, parse JSON state, validate state format, and load state into UI
- */
-export declare const importLineFisherStateFromClipboardFromManager: () => Promise<void>;
-/**
  * Update Line Fisher button states
  * Enable/disable buttons based on analysis state, update visual feedback,
  * and handle button state transitions
@@ -59,13 +53,17 @@ export declare const updateLineFisherButtonStates: () => void;
  * Show current state information in the UI.
  * Show current state information in the UI
  */
-export declare const updateLineFisherStateInfo: (state: LineFisherState) => Promise<void>;
+export declare const updateLineFisherStateInfo: (
+  state: LineFisherState,
+) => Promise<void>;
 /**
  * Handle Line Fisher state file input
  * Process file input for state import.
  * Process file input event, validate file format, load state data, and update UI
  */
-export declare const handleLineFisherStateFileInput: (event: Event) => Promise<void>;
+export declare const handleLineFisherStateFileInput: (
+  event: Event,
+) => Promise<void>;
 /**
  * Recover Line Fisher from crash
  * Reset UI state after analysis crash.
@@ -76,7 +74,10 @@ export declare const recoverLineFisherFromCrash: () => Promise<void>;
  * Enhanced error handling for Line Fisher operations
  * Better error messages, graceful failure recovery, and user-friendly notifications
  */
-export declare const handleLineFisherError: (error: Error, context: string) => void;
+export declare const handleLineFisherError: (
+  error: Error,
+  context: string,
+) => void;
 /**
  * Graceful recovery from Line Fisher errors
  */
@@ -85,6 +86,6 @@ export declare const recoverFromLineFisherError: () => Promise<void>;
  * Validate Line Fisher state before operations
  */
 export declare const validateLineFisherState: (state: LineFisherState) => {
-    isValid: boolean;
-    errors: string[];
+  isValid: boolean;
+  errors: string[];
 };

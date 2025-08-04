@@ -719,6 +719,9 @@ export const analyzePosition = async (
       completed: false,
     };
 
+    // Clear any previous analysis results
+    log("Starting new analysis, clearing previous results");
+
     updateStockfishState({
       currentAnalysis: analysisResult,
       isAnalyzing: true,
@@ -764,7 +767,12 @@ export const analyzePosition = async (
       uciCmd(`setoption name Hash value ${options.hash}`);
     }
     if (options.multiPV) {
+      log(`Setting Stockfish MultiPV to ${options.multiPV}`);
       uciCmd(`setoption name MultiPV value ${options.multiPV}`);
+    } else {
+      // Reset MultiPV to 1 if not specified
+      log("Resetting Stockfish MultiPV to 1");
+      uciCmd("setoption name MultiPV value 1");
     }
 
     // Start analysis

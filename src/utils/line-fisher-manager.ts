@@ -67,7 +67,6 @@ export const startLineFisherAnalysisFromManager = async (): Promise<void> => {
       eventsPerSecond: 0,
       totalEvents: 0,
       startTime: Date.now(),
-
     };
 
     // Update state
@@ -276,8 +275,10 @@ export const copyLineFisherStateToClipboardFromManager =
       // Get current state
       const state = getLineFisherState();
 
-      const completedLines = state.results.filter((result) => result.isComplete);
-      
+      const completedLines = state.results.filter(
+        (result) => result.isComplete,
+      );
+
       if (completedLines.length === 0) {
         showToast("No completed lines to copy", "#FF9800", 3000);
         return;
@@ -293,7 +294,11 @@ export const copyLineFisherStateToClipboardFromManager =
       await navigator.clipboard.writeText(lines);
 
       // Show success notification
-      showToast(`Copied ${completedLines.length} completed lines to clipboard`, "#4CAF50", 3000);
+      showToast(
+        `Copied ${completedLines.length} completed lines to clipboard`,
+        "#4CAF50",
+        3000,
+      );
 
       log("Line Fisher lines copied to clipboard successfully");
     } catch (error) {
@@ -330,8 +335,8 @@ export const exportLineFisherStateFromManager = async (): Promise<void> => {
       progress: state.progress, // Essential for continuation
       isAnalyzing: state.isAnalyzing, // Essential for state management
       isComplete: state.isComplete, // Essential for state management
-      baselineScore: state.baselineScore,
-      baselineMoves: state.baselineMoves,
+      baselineScore: state.config.baselineScore,
+      baselineMoves: state.config.baselineMoves,
     };
 
     const stateJson = JSON.stringify(serializedState, null, 2);
@@ -429,103 +434,12 @@ export const importLineFisherStateFromManager = async (): Promise<void> => {
 };
 
 /**
- * Import Line Fisher state from clipboard
- * Import analysis state from clipboard.
- * Read clipboard content, parse JSON state, validate state format, and load state into UI
- */
-export const importLineFisherStateFromClipboardFromManager =
-  async (): Promise<void> => {
-    log("Importing Line Fisher state from clipboard");
-
-    try {
-      // Read clipboard content
-      const clipboardText = await navigator.clipboard.readText();
-
-      if (!clipboardText) {
-        showToast("No content in clipboard", "#FF9800", 3000);
-        return;
-      }
-
-      // Parse JSON state
-      const importedState = JSON.parse(clipboardText);
-
-      // Validate state format
-      if (!importedState.version || !importedState.config || !importedState.results) {
-        throw new Error("Invalid state format");
-      }
-
-      // Load state into UI
-      const currentState = getLineFisherState();
-      
-      // Update all essential fields for proper continuation
-      currentState.config = importedState.config;
-      currentState.results = importedState.results;
-      currentState.baselineScore = importedState.baselineScore;
-      currentState.baselineMoves = importedState.baselineMoves;
-      
-      // Restore analyzed positions for continuation
-      if (importedState.analyzedPositions) {
-        currentState.analyzedPositions = new Set(importedState.analyzedPositions);
-      }
-      
-      // Restore analysis queue for continuation
-      if (importedState.analysisQueue) {
-        currentState.analysisQueue = importedState.analysisQueue;
-      }
-      
-      // Restore progress for continuation
-      if (importedState.progress) {
-        currentState.progress = importedState.progress;
-      }
-      
-      // Restore state flags
-      if (importedState.isAnalyzing !== undefined) {
-        currentState.isAnalyzing = importedState.isAnalyzing;
-      }
-      if (importedState.isComplete !== undefined) {
-        currentState.isComplete = importedState.isComplete;
-      }
-
-      // Restore board position if rootFEN is provided
-      if (importedState.rootFEN) {
-        setPosition(importedState.rootFEN);
-      }
-
-      // Update state
-      updateLineFisherState(currentState);
-
-      // Update UI displays
-      updateLineFisherConfigDisplay(currentState);
-      updateLineFisherProgressDisplay(currentState.progress);
-      updateLineFisherExploredLines(currentState.results);
-
-      // Update button states
-      updateLineFisherButtonStates();
-
-      // Show success notification
-      const message = importedState.rootFEN
-        ? "State imported from clipboard (board position restored)"
-        : "State imported from clipboard";
-      showToast(message, "#4CAF50", 3000);
-
-      log("Line Fisher state imported from clipboard successfully");
-    } catch (error) {
-      console.error("Error importing Line Fisher state from clipboard:", error);
-      log(`Error importing Line Fisher state from clipboard: ${error}`);
-      showToast("Failed to import state from clipboard", "#f44336", 4000);
-    }
-  };
-
-/**
  * Update Line Fisher button states
  * Enable/disable buttons based on analysis state, update visual feedback,
  * and handle button state transitions
  */
 export const updateLineFisherButtonStates = (): void => {
   // Update button states based on analysis status
-  const startBtn = getElementByIdOrThrow(
-    "start-line-fisher",
-  ) as HTMLButtonElement;
   const stopBtn = getElementByIdOrThrow(
     "stop-line-fisher",
   ) as HTMLButtonElement;
@@ -551,7 +465,6 @@ export const updateLineFisherButtonStates = (): void => {
   const hasResults = lineFisherState.results.length > 0;
 
   // Update button states
-  startBtn.disabled = isAnalyzing;
   stopBtn.disabled = !isAnalyzing;
   resetBtn.disabled = isAnalyzing;
   continueBtn.disabled = isAnalyzing || !hasResults;
@@ -622,34 +535,38 @@ export const handleLineFisherStateFileInput = async (
     const importedState = JSON.parse(text);
 
     // Validate state format
-    if (!importedState.version || !importedState.config || !importedState.results) {
+    if (
+      !importedState.version ||
+      !importedState.config ||
+      !importedState.results
+    ) {
       throw new Error("Invalid state format");
     }
 
     // Load state into UI
     const currentState = getLineFisherState();
-    
+
     // Update all essential fields for proper continuation
     currentState.config = importedState.config;
     currentState.results = importedState.results;
-    currentState.baselineScore = importedState.baselineScore;
-    currentState.baselineMoves = importedState.baselineMoves;
-    
+    currentState.config.baselineScore = importedState.baselineScore;
+    currentState.config.baselineMoves = importedState.baselineMoves;
+
     // Restore analyzed positions for continuation
     if (importedState.analyzedPositions) {
       currentState.analyzedPositions = new Set(importedState.analyzedPositions);
     }
-    
+
     // Restore analysis queue for continuation
     if (importedState.analysisQueue) {
       currentState.analysisQueue = importedState.analysisQueue;
     }
-    
+
     // Restore progress for continuation
     if (importedState.progress) {
       currentState.progress = importedState.progress;
     }
-    
+
     // Restore state flags
     if (importedState.isAnalyzing !== undefined) {
       currentState.isAnalyzing = importedState.isAnalyzing;
@@ -659,8 +576,8 @@ export const handleLineFisherStateFileInput = async (
     }
 
     // Restore board position if rootFEN is provided
-    if (importedState.rootFEN) {
-      setPosition(importedState.rootFEN);
+    if (importedState.config?.rootFEN) {
+      setPosition(importedState.config.rootFEN);
     }
 
     // Update state
@@ -675,7 +592,7 @@ export const handleLineFisherStateFileInput = async (
     updateLineFisherButtonStates();
 
     // Show success notification
-    const message = importedState.rootFEN
+    const message = importedState.config?.rootFEN
       ? `State imported from ${file.name} (board position restored)`
       : `State imported from ${file.name}`;
     showToast(message, "#4CAF50", 3000);

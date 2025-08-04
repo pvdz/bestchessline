@@ -9,7 +9,7 @@
     "analysis",
     "web"
   ],
-  "main": "index.html",
+  "main": "src/index.html",
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc && npm run copy-stockfish",

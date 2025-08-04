@@ -2107,20 +2107,18 @@ input.error:focus {
   cursor: not-allowed;
 }
 
-#start-line-fisher {
-  background: #28a745;
-}
-
-#start-line-fisher:hover:not(:disabled) {
-  background: #1e7e34;
-}
-
 #stop-line-fisher {
   background: #dc3545;
 }
 
 #stop-line-fisher:hover:not(:disabled) {
   background: #c82333;
+}
+
+#stop-line-fisher:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 #reset-line-fisher {
@@ -2162,6 +2160,14 @@ input.error:focus {
 
 #continue-line-fisher:hover:not(:disabled) {
   background: #1ea085;
+}
+
+#start-fish2 {
+  background: #0056b3;
+}
+
+#start-fish2:hover:not(:disabled) {
+  background: #004085;
 }
 
 .line-fisher-initiator-moves {

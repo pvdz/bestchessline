@@ -75,8 +75,16 @@ export function parseMove(
   if (moveText.match(/^[a-h][1-8]$/)) {
     // Simple pawn move
     const toSquare = moveText;
-    const piece = isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN;
-    const fromSquare = findFromSquare(piece, toSquare, currentFEN);
+
+    // Try both colors to handle ambiguous cases
+    let fromSquare = findFromSquare(PIECES.WHITE_PAWN, toSquare, currentFEN);
+    let piece = PIECES.WHITE_PAWN;
+
+    if (!fromSquare) {
+      fromSquare = findFromSquare(PIECES.BLACK_PAWN, toSquare, currentFEN);
+      piece = PIECES.BLACK_PAWN;
+    }
+
     if (fromSquare) {
       return { from: fromSquare, to: toSquare, piece };
     }
@@ -85,8 +93,16 @@ export function parseMove(
   // Handle pawn captures (both white and black)
   if (moveText.match(/^[a-h]x[a-h][1-8]$/)) {
     const toSquare = moveText.substring(2);
-    const piece = isWhiteTurn ? PIECES.WHITE_PAWN : PIECES.BLACK_PAWN;
-    const fromSquare = findFromSquare(piece, toSquare, currentFEN);
+
+    // Try both colors to handle ambiguous cases
+    let fromSquare = findFromSquare(PIECES.WHITE_PAWN, toSquare, currentFEN);
+    let piece = PIECES.WHITE_PAWN;
+
+    if (!fromSquare) {
+      fromSquare = findFromSquare(PIECES.BLACK_PAWN, toSquare, currentFEN);
+      piece = PIECES.BLACK_PAWN;
+    }
+
     if (fromSquare) {
       return { from: fromSquare, to: toSquare, piece };
     }

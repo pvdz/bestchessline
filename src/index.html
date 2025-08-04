@@ -21,19 +21,23 @@
       <div class="test-links">
         <small>
           <strong>Test Pages:</strong>
-          <a href="test/move-validator/test-move-validator.html" target="_blank"
+          <a
+            href="../test/move-validator/test-move-validator.html"
+            target="_blank"
             >Move Validator</a
           >
           |
           <a
-            href="test/enhanced-notation/test-enhanced-notation.html"
+            href="../test/enhanced-notation/test-enhanced-notation.html"
             target="_blank"
             >Enhanced Notation</a
           >
           |
-          <a href="test/stockfish/test-stockfish.html" target="_blank"
+          <a href="../test/stockfish/test-stockfish.html" target="_blank"
             >Stockfish Test</a
           >
+          |
+          <a href="../test/fish-test.html" target="_blank">Fish Test</a>
         </small>
       </div>
 
@@ -203,7 +207,7 @@
           <h2>Line Fisher</h2>
           <div class="line-fisher-controls">
             <div class="line-fisher-buttons">
-              <button id="start-line-fisher">Fish</button>
+              <button id="start-fish2">Fish2</button>
               <button id="stop-line-fisher" disabled>Stop</button>
               <button id="reset-line-fisher">Reset</button>
               <button id="copy-line-fisher-state">Copy</button>
@@ -277,10 +281,10 @@
                   id="line-fisher-depth"
                   min="1"
                   max="10"
-                  value="2"
+                  value="1"
                   class="line-fisher-slider"
                 />
-                <span id="line-fisher-depth-value">2</span>
+                <span id="line-fisher-depth-value">1</span>
               </div>
             </div>
           </div>
@@ -569,7 +573,7 @@ Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0
       window.exports = {};
       window.Stockfish = window.exports.Stockfish;
     </script>
-    <script src="dist/stockfish.js"></script>
+    <script src="./dist/stockfish.js"></script>
 
     <!-- Application script -->
     <script type="module">

@@ -103,13 +103,10 @@ export function updateResults(result: AnalysisResult): void {
   updateStatus(`Analysis complete: ${result.moves.length} moves found`);
 }
 
-
-
 /**
  * Update results panel
  */
 export function actuallyUpdateResultsPanel(moves: AnalysisMove[]): void {
-
   const resultsPanel = document.getElementById("analysis-results");
   if (!resultsPanel) return;
 

@@ -13,7 +13,9 @@ import {
 } from "./line-fisher-calculations.js";
 import * as LineFisher from "../line_fisher.js";
 import { getFEN } from "../chess-board.js";
-import { setPosition, makeMove } from "../chess-board.js";
+import { setPosition } from "../chess-board.js";
+import { parseMove } from "./move-parsing.js";
+import { applyMoveToFEN } from "./fen-manipulation.js";
 
 // ============================================================================
 // LINE FISHER RESULTS DISPLAY FUNCTIONS
@@ -114,17 +116,19 @@ export const updateLineFisherConfigDisplay = async (
   // Get the best moves from the stored baseline (static, doesn't update)
   let baselineInfo = "Loading...";
   try {
-    if (state.baselineMoves && state.baselineMoves.length > 0) {
+    if (state.config.baselineMoves && state.config.baselineMoves.length > 0) {
       // Show top 5 moves from stored baseline
-      const topMoves = state.baselineMoves.slice(0, 5);
-      const moveInfos = topMoves.map((move) => {
-        const scoreInPawns = move.score / 100;
-        const scoreText =
-          scoreInPawns > 0
-            ? `+${scoreInPawns.toFixed(1)}`
-            : scoreInPawns.toFixed(1);
-        return `${move.move} (${scoreText})`;
-      });
+      const topMoves = state.config.baselineMoves.slice(0, 5);
+      const moveInfos = topMoves.map(
+        (move: { move: string; score: number }) => {
+          const scoreInPawns = move.score / 100;
+          const scoreText =
+            scoreInPawns > 0
+              ? `+${scoreInPawns.toFixed(1)}`
+              : scoreInPawns.toFixed(1);
+          return `${move.move} (${scoreText})`;
+        },
+      );
       baselineInfo = moveInfos.join(", ");
     } else {
       baselineInfo = "No baseline available";
@@ -188,7 +192,11 @@ export const updateLineFisherProgressDisplay = (
   // Update stats
   const actionDisplay = getElementByIdOrThrow("line-fisher-action-display");
   actionDisplay.textContent = progress.currentAction || "Ready";
-  linesDisplay.textContent = `${analyzedLines.toLocaleString()}/${maxLines.toLocaleString()}`;
+
+  // Show WIP/DONE counts in the lines display
+  const wipCount = state.results.filter((result) => !result.isDone).length;
+  const doneCount = analyzedLines;
+  linesDisplay.textContent = `${doneCount.toLocaleString()}/${maxLines.toLocaleString()} (WIP: ${wipCount}, DONE: ${doneCount})`;
   positionDisplay.textContent = progress.currentPosition || "Starting position";
 };
 
@@ -356,16 +364,39 @@ const addLineClickHandlers = (results: LineFisherResult[]): void => {
  */
 const loadLineOnBoard = async (result: LineFisherResult): Promise<void> => {
   try {
-    // Clear the board and set to starting position
-    setPosition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    // Get the root FEN from the Line Fisher state
+    const state = LineFisher.getLineFisherState();
+    const rootFEN = state.config.rootFEN;
+    if (!rootFEN) {
+      console.error("No root FEN found for this fishing line");
+      return;
+    }
 
-    // Add each move from the line
-    for (const move of result.moves) {
-      makeMove(move.from, move.to, move.piece);
+    // Set the board to the root position
+    setPosition(rootFEN);
+
+    console.log("Applying:", result.sans);
+    // Add each move from the line using the sans array
+    let fen = rootFEN;
+    for (let i = 0; i < result.sans.length; i++) {
+      const san = result.sans[i];
+      if (!san) {
+        console.error("No SAN notation found for move", i);
+        return;
+      }
+      const move = parseMove(san, fen);
+      if (!move) {
+        console.error("No move found for SAN", san);
+        continue;
+      }
+      // const was = fen;
+      fen = applyMoveToFEN(fen, move);
+      // console.log('FEN after applying move:', san, 'to', [was], 'is', [fen]);
     }
 
     // Update the game moves display
     updateGameMovesDisplay(result);
+    setPosition(fen);
   } catch (error) {
     console.error("Error loading line on board:", error);
   }
@@ -375,15 +406,14 @@ const loadLineOnBoard = async (result: LineFisherResult): Promise<void> => {
  * Update the game moves display with the line
  */
 const updateGameMovesDisplay = (result: LineFisherResult): void => {
-  const movesPanel = document.getElementById("game-moves");
-  if (!movesPanel) return;
+  const movesPanel = getElementByIdOrThrow("game-moves");
 
   // Clear existing moves
   movesPanel.innerHTML = "";
 
   // Add moves from the line
-  for (let i = 0; i < result.moves.length; i++) {
-    const move = result.moves[i];
+  for (let i = 0; i < result.sans.length; i++) {
+    const san = result.sans[i];
     const moveNumber = Math.floor(i / 2) + 1;
     const isWhiteMove = i % 2 === 0;
 
@@ -393,7 +423,7 @@ const updateGameMovesDisplay = (result: LineFisherResult): void => {
       moveEntry.className = "move-entry";
       moveEntry.innerHTML = `
         <span class="move-number">${moveNumber}.</span>
-        <span class="move-text">${move.san || `${move.from}${move.to}`}</span>
+        <span class="move-text">${san}</span>
       `;
       movesPanel.appendChild(moveEntry);
     } else {
@@ -402,7 +432,7 @@ const updateGameMovesDisplay = (result: LineFisherResult): void => {
       if (lastEntry) {
         const blackMoveSpan = document.createElement("span");
         blackMoveSpan.className = "move-text";
-        blackMoveSpan.textContent = move.san || `${move.from}${move.to}`;
+        blackMoveSpan.textContent = san;
         lastEntry.appendChild(blackMoveSpan);
       }
     }

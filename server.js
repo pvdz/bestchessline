@@ -39,6 +39,7 @@ const server = http.createServer((req, res) => {
   if (!disableSharedArrayBuffer) {
     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
     res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  } else {
   }
 
   // Set cache-busting headers to prevent any caching
@@ -53,7 +54,14 @@ const server = http.createServer((req, res) => {
 
   let filePath = "." + req.url;
   if (filePath === "./") {
-    filePath = "./index.html";
+    filePath = "./src/index.html";
+  }
+  // Fix relative paths for files served from src/
+  if (filePath === "./styles.css") {
+    filePath = "./src/styles.css";
+  }
+  if (filePath.startsWith("./src/dist/")) {
+    filePath = filePath.replace("./src/dist/", "./dist/");
   }
 
   // Handle worker file requests at root level
