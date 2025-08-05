@@ -107,4 +107,12 @@ export function isValidSquare(square) {
   const rank = square[1];
   return file >= "a" && file <= "h" && rank >= "1" && rank <= "8";
 }
+/**
+ * Get piece at a specific square from FEN string
+ */
+export function getPieceAtSquareFromFEN(square, fen) {
+  const position = parseFEN(fen);
+  const [rank, file] = squareToCoords(square);
+  return position.board[rank][file];
+}
 //# sourceMappingURL=fen-utils.js.map

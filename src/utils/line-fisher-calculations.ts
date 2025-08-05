@@ -1,4 +1,4 @@
-import type { LineFisherConfig } from "../line_fisher.js";
+import type { LineFisherConfig } from "../line/fish/fish.js";
 
 /**
  * Calculate total nodes in the analysis tree

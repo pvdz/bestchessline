@@ -22,7 +22,7 @@ export declare function showToast(
  * @param wait The number of milliseconds to delay
  * @returns A debounced version of the function
  */
-export declare function debounce<T extends (...args: unknown[]) => unknown>(
+export declare function debounce<T extends (...args: never[]) => void>(
   func: T,
   wait: number,
 ): (...args: Parameters<T>) => void;

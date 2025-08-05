@@ -3,6 +3,8 @@ import {
   squareToCoords,
   coordsToSquare,
 } from "../utils/fen-utils.js";
+import { makeMove } from "./practice-game.js";
+import { getPieceAtSquareFromFEN } from "../utils/fen-utils.js";
 // Unicode chess pieces
 export const CHESS_PIECES = {
   K: "♔",
@@ -74,7 +76,7 @@ export function addDragAndDropListeners(gameState, dom) {
     // Check if the target is a piece or a child of a piece
     const pieceElement = target.closest(".practice-piece");
     if (pieceElement) {
-      startDrag(pieceElement, event.clientX, event.clientY, gameState, dom);
+      startDrag(pieceElement, event.clientX, event.clientY, gameState);
     }
   };
   const handleTouchStart = (event) => {
@@ -84,14 +86,14 @@ export function addDragAndDropListeners(gameState, dom) {
     const pieceElement = target.closest(".practice-piece");
     if (pieceElement) {
       const touch = event.touches[0];
-      startDrag(pieceElement, touch.clientX, touch.clientY, gameState, dom);
+      startDrag(pieceElement, touch.clientX, touch.clientY, gameState);
     }
   };
-  const startDrag = (target, clientX, clientY, gameState, dom) => {
+  const startDrag = (target, clientX, clientY, gameState) => {
     const squareEl = target.closest(".practice-square");
     const square = squareEl?.dataset.square;
     if (!square) return;
-    const piece = getPieceAtSquare(square, gameState.currentFEN);
+    const piece = getPieceAtSquareFromFEN(square, gameState.currentFEN);
     if (!piece) return;
     const isWhitePiece = piece === piece.toUpperCase();
     const isWhiteTurn = gameState.currentFEN.includes(" w ");
@@ -211,18 +213,15 @@ export function addDragAndDropListeners(gameState, dom) {
     }
     // Process the move
     if (targetSquare && targetSquare !== dragState.originalSquare) {
-      console.log(
-        "Custom drag drop from",
-        dragState.originalSquare,
-        "to",
-        targetSquare,
-      );
       // Check if the move is valid
-      const fromPiece = getPieceAtSquare(
+      const fromPiece = getPieceAtSquareFromFEN(
         dragState.originalSquare,
         gameState.currentFEN,
       );
-      const toPiece = getPieceAtSquare(targetSquare, gameState.currentFEN);
+      const toPiece = getPieceAtSquareFromFEN(
+        targetSquare,
+        gameState.currentFEN,
+      );
       if (fromPiece) {
         const isWhiteFromPiece = fromPiece === fromPiece.toUpperCase();
         const isWhiteTurn = gameState.currentFEN.includes(" w ");
@@ -251,12 +250,8 @@ export function addDragAndDropListeners(gameState, dom) {
                 fromSquareEl.innerHTML = "";
               }
             }
-            // Then call the move handler for game logic validation
-            const moveHandler = window.handleSquareClick;
-            if (moveHandler) {
-              moveHandler(dragState.originalSquare, gameState, dom);
-              moveHandler(targetSquare, gameState, dom);
-            }
+            // Call the move handler for game logic validation
+            makeMove(dragState.originalSquare, targetSquare, gameState, dom);
           }
         }
       }
@@ -272,7 +267,6 @@ export function addDragAndDropListeners(gameState, dom) {
     };
   };
   setupEventListeners(boardGrid);
-  console.log("Custom drag and drop listeners added");
 }
 // Remove drag and drop event listeners
 export function removeDragAndDropListeners() {
@@ -312,12 +306,6 @@ export function renderBoard(fen) {
     }
   }
 }
-// Get piece at square
-export function getPieceAtSquare(square, fen) {
-  const position = parseFEN(fen);
-  const [rank, file] = squareToCoords(square);
-  return position.board[rank][file];
-}
 // Clear board selection
 export function clearBoardSelection() {
   // Clear selected square
@@ -334,7 +322,7 @@ export function clearBoardSelection() {
 export function selectSquare(square, fen) {
   clearBoardSelection();
   const squareEl = document.querySelector(`[data-square="${square}"]`);
-  const piece = getPieceAtSquare(square, fen);
+  const piece = getPieceAtSquareFromFEN(square, fen);
   if (!piece) return;
   // Check if it's the human's piece
   const isWhitePiece = piece === piece.toUpperCase();

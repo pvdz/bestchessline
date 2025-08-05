@@ -1,4 +1,4 @@
-import { ChessMove, PieceNotation } from "../types.js";
+import { ChessMove, PieceNotation } from "./types.js";
 /**
  * Move Parser and Validation Functions
  *

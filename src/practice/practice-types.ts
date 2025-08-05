@@ -2,14 +2,13 @@
 
 export interface GameState {
   currentFEN: string;
-  currentLineIndex: number;
-  currentMoveIndex: number;
   isPracticeActive: boolean;
   isHumanTurn: boolean;
   selectedSquare: string | null;
   validMoves: string[];
   openingLines: OpeningLine[];
   positionMap: Map<string, string[]>; // Map of FEN positions to expected moves
+  computerMoveStrategy: "random" | "serial" | "adaptive";
   statistics: {
     correctMoves: number;
     totalMoves: number;

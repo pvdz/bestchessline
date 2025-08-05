@@ -1,4 +1,4 @@
-import { PLAYER_COLORS } from "../types.js";
+import { PLAYER_COLORS } from "./types.js";
 import {
   parseFEN,
   toFEN,

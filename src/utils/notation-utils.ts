@@ -7,8 +7,10 @@ import {
   PieceNotation,
   createPieceNotation,
   createColorNotation,
-} from "../types.js";
+} from "../line/types.js";
 import { parseFEN } from "./fen-utils.js";
+import { parseMove } from "./move-parsing.js";
+import { applyMoveToFEN } from "./fen-manipulation.js";
 
 /**
  * Chess Notation Utility Functions
@@ -299,3 +301,148 @@ export const rawMoveToSAN = (rawMove: string, fen: string): string => {
     return `${pieceLetter}${to}`;
   }
 };
+
+/**
+ * Convert SAN move to long notation (from-to square format)
+ * @param sanMove - The SAN move (e.g., "Nf3", "dxe6")
+ * @param fen - The current FEN position
+ * @returns The long notation move (e.g., "g1f3", "d5e6") or null if parsing fails
+ */
+export function sanToLongNotation(sanMove: string, fen: string): string | null {
+  try {
+    const parsedMove = parseMove(sanMove, fen);
+    if (parsedMove) {
+      return `${parsedMove.from}${parsedMove.to}`;
+    }
+    return null;
+  } catch (error) {
+    console.warn(
+      `Failed to convert SAN to long notation: "${sanMove}" in "${fen}"`,
+      error,
+    );
+    return null;
+  }
+}
+
+/**
+ * Convert a line of SAN moves to long notation
+ * @param sanLine - Line of SAN moves (e.g., "1. Nf3 Nf6 2. d4 d5")
+ * @param startingFEN - Starting FEN position
+ * @returns Line with long notation moves
+ */
+export function convertLineToLongNotation(
+  sanLine: string,
+  startingFEN: string,
+): string {
+  // Remove move numbers and comments
+  const cleanLine = sanLine
+    .replace(/\d+\./g, "")
+    .replace(/\s*\/\/.*$/, "")
+    .trim();
+  const moves = cleanLine.split(/\s+/).filter((move) => move.length > 0);
+  return convertSANLineToLongNotation(moves, startingFEN);
+}
+
+/**
+ * Convert a line of SAN moves to long notation with piece names and move numbers
+ * @param sanMoves - Array of SAN moves (e.g., ["Nf3", "Nf6", "d4"])
+ * @param startingFEN - Starting FEN position
+ * @returns String with long notation moves (e.g., "1. Ng1f3 g8f6 2. d2d4 d7d5")
+ */
+export function convertSANLineToLongNotation(
+  sanMoves: string[],
+  startingFEN: string,
+): string {
+  let currentFEN = startingFEN;
+  const longMoves: string[] = [];
+  let moveNumber = 1;
+  let whiteMove = "";
+
+  for (let i = 0; i < sanMoves.length; i++) {
+    const move = sanMoves[i];
+    try {
+      // Handle castling moves specially
+      if (move === "O-O" || move === "O-O-O") {
+        const longMove = move; // Keep castling notation as-is
+
+        // Determine if this is white's move (even index) or black's move (odd index)
+        if (i % 2 === 0) {
+          // White's move
+          whiteMove = longMove;
+          if (i === sanMoves.length - 1) {
+            // Last move and it's white's turn - add the move number and white move
+            longMoves.push(`${moveNumber}. ${whiteMove}`);
+          }
+        } else {
+          // Black's move - add the move number and both moves
+          longMoves.push(`${moveNumber}. ${whiteMove} ${longMove}`);
+          moveNumber++;
+          whiteMove = "";
+        }
+
+        // Apply castling move to FEN
+        const parsedMove = parseMove(move, currentFEN);
+        if (parsedMove) {
+          currentFEN = applyMoveToFEN(currentFEN, parsedMove);
+        }
+        continue;
+      }
+
+      const parsedMove = parseMove(move, currentFEN);
+      if (parsedMove) {
+        // Get piece name (always capital)
+        const pieceName = getPieceCapitalized(parsedMove.piece);
+        const longMove = `${pieceName}${parsedMove.from}${parsedMove.to}`;
+
+        // Determine if this is white's move (even index) or black's move (odd index)
+        if (i % 2 === 0) {
+          // White's move
+          whiteMove = longMove;
+          if (i === sanMoves.length - 1) {
+            // Last move and it's white's turn - add the move number and white move
+            longMoves.push(`${moveNumber}. ${whiteMove}`);
+          }
+        } else {
+          // Black's move - add the move number and both moves
+          longMoves.push(`${moveNumber}. ${whiteMove} ${longMove}`);
+          moveNumber++;
+          whiteMove = "";
+        }
+
+        currentFEN = applyMoveToFEN(currentFEN, parsedMove);
+      } else {
+        console.warn(`Failed to parse move: ${move}`);
+        // Skip this move if we can't parse it
+      }
+    } catch (error) {
+      console.warn(`Error parsing move ${move}:`, error);
+      // Skip this move if there's an error
+    }
+  }
+
+  return longMoves.join(" ");
+}
+
+/**
+ * Get piece name from piece character (always capital)
+ * @param piece - Piece character from FEN (P, N, B, R, Q, K, p, n, b, r, q, k)
+ * @returns Piece name (P, N, B, R, Q, K)
+ */
+export function getPieceCapitalized(piece: string): string {
+  const pieceMap: { [key: string]: string } = {
+    P: "P",
+    p: "P", // Pawn
+    N: "N",
+    n: "N", // Knight
+    B: "B",
+    b: "B", // Bishop
+    R: "R",
+    r: "R", // Rook
+    Q: "Q",
+    q: "Q", // Queen
+    K: "K",
+    k: "K", // King
+  };
+
+  return pieceMap[piece] || "P"; // Default to pawn if unknown
+}

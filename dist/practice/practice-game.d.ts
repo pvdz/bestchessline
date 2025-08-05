@@ -14,4 +14,8 @@ export declare function makeComputerMove(
   gameState: GameState,
   dom: DOMElements,
 ): void;
+export declare function selectComputerMove(
+  availableMoves: string[],
+  gameState: GameState,
+): string;
 export declare function showHintForCurrentPosition(gameState: GameState): void;

@@ -1,4 +1,4 @@
-import { ChessPosition, Square, PlayerColor } from "../types.js";
+import { ChessPosition, Square, PlayerColor } from "./types.js";
 
 /**
  * FEN Utility Functions
@@ -123,4 +123,13 @@ export function isValidSquare(square: string): square is Square {
   const file = square[0];
   const rank = square[1];
   return file >= "a" && file <= "h" && rank >= "1" && rank <= "8";
+}
+
+/**
+ * Get piece at a specific square from FEN string
+ */
+export function getPieceAtSquareFromFEN(square: string, fen: string): string {
+  const position = parseFEN(fen);
+  const [rank, file] = squareToCoords(square);
+  return position.board[rank][file];
 }

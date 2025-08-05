@@ -4,12 +4,12 @@ import type {
   ColorNotation,
   WhitePieceNotation,
   BlackPieceNotation,
-} from "../types.js";
+} from "../line/types.js";
 import {
   createPieceNotation,
   createPieceTypeNotation,
   createColorNotation,
-} from "../types.js";
+} from "../line/types.js";
 
 /**
  * Type Validation Utilities
@@ -17,105 +17,95 @@ import {
  * Provides runtime validation for opaque types to catch TypeScript coverage gaps.
  */
 
-/**
- * Validate piece notation with detailed error reporting
- */
-export const validatePieceNotation = (
-  piece: unknown,
-): piece is PieceNotation => {
-  if (typeof piece !== "string") {
-    console.error(`Invalid piece notation type: ${typeof piece}`, piece);
-    return false;
-  }
+export function validatePiece(piece: string): boolean {
+  return (
+    typeof piece === "string" &&
+    piece.length === 1 &&
+    "PNBRQK".includes(piece.toUpperCase())
+  );
+}
 
-  if (piece.length !== 1) {
-    console.error(`Invalid piece notation length: ${piece.length}`, piece);
-    return false;
-  }
+export function validatePieceType(type: string): boolean {
+  return (
+    typeof type === "string" &&
+    ["P", "N", "B", "R", "Q", "K"].includes(type.toUpperCase())
+  );
+}
 
-  if (!/^[PNBRQKpnbrqk]$/.test(piece)) {
-    console.error(`Invalid piece notation character: ${piece}`);
-    return false;
-  }
+export function validateColor(color: string): boolean {
+  return typeof color === "string" && ["W", "B"].includes(color.toUpperCase());
+}
 
-  return true;
-};
+export function validatePieceWithColor(piece: string): boolean {
+  return (
+    typeof piece === "string" &&
+    piece.length === 1 &&
+    "PNBRQKpnbrqk".includes(piece)
+  );
+}
 
-/**
- * Validate piece type notation with detailed error reporting
- */
-export const validatePieceTypeNotation = (
+export function validatePieceTypeWithColor(type: string): boolean {
+  return (
+    typeof type === "string" &&
+    ["P", "N", "B", "R", "Q", "K", "p", "n", "b", "r", "q", "k"].includes(type)
+  );
+}
+
+export function validateValue(value: number): boolean {
+  return typeof value === "number" && !isNaN(value) && isFinite(value);
+}
+
+export function validateStringValue(value: string): boolean {
+  return typeof value === "string" && value.length > 0;
+}
+
+export function validateBooleanValue(value: boolean): boolean {
+  return typeof value === "boolean";
+}
+
+export function validatePieceTypeForNotation(piece: string): boolean {
+  return (
+    typeof piece === "string" && ["P", "N", "B", "R", "Q", "K"].includes(piece)
+  );
+}
+
+export function validatePieceTypeForFEN(piece: string): boolean {
+  return (
+    typeof piece === "string" &&
+    piece.length === 1 &&
+    "PNBRQKpnbrqk".includes(piece)
+  );
+}
+
+export function validateType(type: string): boolean {
+  return (
+    typeof type === "string" &&
+    ["P", "N", "B", "R", "Q", "K"].includes(type.toUpperCase())
+  );
+}
+
+export function validateColorForFEN(color: string): boolean {
+  return typeof color === "string" && ["w", "b"].includes(color.toLowerCase());
+}
+
+// Add the missing validation functions that were being called
+export function validatePieceNotation(piece: unknown): piece is PieceNotation {
+  return (
+    typeof piece === "string" &&
+    piece.length === 1 &&
+    /^[PNBRQKpnbrqk]$/.test(piece)
+  );
+}
+
+export function validatePieceTypeNotation(
   type: unknown,
-): type is PieceTypeNotation => {
-  if (typeof type !== "string") {
-    console.error(`Invalid piece type notation type: ${typeof type}`, type);
-    return false;
-  }
+): type is PieceTypeNotation {
+  return typeof type === "string" && /^[PNBRQK]$/.test(type);
+}
 
-  if (!/^[PNBRQK]$/.test(type)) {
-    console.error(`Invalid piece type notation: ${type}`);
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * Validate color notation with detailed error reporting
- */
-export const validateColorNotation = (
-  color: unknown,
-): color is ColorNotation => {
-  if (typeof color !== "string") {
-    console.error(`Invalid color notation type: ${typeof color}`, color);
-    return false;
-  }
-
-  if (color !== "w" && color !== "b") {
-    console.error(`Invalid color notation: ${color}`);
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * Validate white piece notation with detailed error reporting
- */
-export const validateWhitePieceNotation = (
-  piece: unknown,
-): piece is WhitePieceNotation => {
-  if (typeof piece !== "string") {
-    console.error(`Invalid white piece notation type: ${typeof piece}`, piece);
-    return false;
-  }
-
-  if (!/^[PNBRQK]$/.test(piece)) {
-    console.error(`Invalid white piece notation: ${piece}`);
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * Validate black piece notation with detailed error reporting
- */
-export const validateBlackPieceNotation = (
-  piece: unknown,
-): piece is BlackPieceNotation => {
-  if (typeof piece !== "string") {
-    console.error(`Invalid black piece notation type: ${typeof piece}`, piece);
-    return false;
-  }
-
-  if (!/^[pnbrqk]$/.test(piece)) {
-    console.error(`Invalid black piece notation: ${piece}`);
-    return false;
-  }
-
-  return true;
-};
+export function validateColorNotation(color: unknown): color is ColorNotation {
+  return typeof color === "string" && (color === "w" || color === "b");
+}
 
 /**
  * Safe piece notation creation with validation

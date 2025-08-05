@@ -1,5 +1,5 @@
 import { getButtonElement } from "./dom-helpers.js";
-import { getAppState } from "../main.js";
+import { getAppState } from "../line/main.js";
 /**
  * Button Utility Functions
  *

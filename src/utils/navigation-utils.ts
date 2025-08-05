@@ -3,13 +3,13 @@ import {
   updateFENInput,
   updateControlsFromPosition,
   resetPositionEvaluation,
-} from "./position-controls.js";
-import { highlightLastMove } from "./board-utils.js";
+} from "../line/board/position-controls.js";
+import { highlightLastMove } from "../line/board/board-utils.js";
 import { updateStatus } from "./status-utils.js";
 import { updateNavigationButtons } from "./button-utils.js";
-import * as Board from "../chess-board.js";
-import { getAppState, clearBranch, updateAppState } from "../main.js";
-import { updateMoveList } from "./game-navigation.js";
+import * as Board from "./chess-board.js";
+import { getAppState, clearBranch, updateAppState } from "../line/main.js";
+import { updateMoveList } from "../line/board/game-navigation.js";
 
 /**
  * Navigation Utility Functions

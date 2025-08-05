@@ -3,6 +3,9 @@ import {
   squareToCoords,
   coordsToSquare,
 } from "../utils/fen-utils.js";
+import type { GameState, DOMElements } from "./practice-types";
+import { makeMove } from "./practice-game.js";
+import { getPieceAtSquareFromFEN } from "../utils/fen-utils.js";
 
 // Unicode chess pieces
 export const CHESS_PIECES: Record<string, string> = {
@@ -66,7 +69,10 @@ let currentHandlers: {
 } | null = null;
 
 // Add custom drag and drop event listeners to the board
-export function addDragAndDropListeners(gameState: any, dom: any): void {
+export function addDragAndDropListeners(
+  gameState: GameState,
+  dom: DOMElements,
+): void {
   const boardGrid = document.querySelector(
     ".practice-board-grid",
   ) as HTMLElement;
@@ -109,7 +115,6 @@ export function addDragAndDropListeners(gameState: any, dom: any): void {
         event.clientX,
         event.clientY,
         gameState,
-        dom,
       );
     }
   };
@@ -126,7 +131,6 @@ export function addDragAndDropListeners(gameState: any, dom: any): void {
         touch.clientX,
         touch.clientY,
         gameState,
-        dom,
       );
     }
   };
@@ -135,14 +139,13 @@ export function addDragAndDropListeners(gameState: any, dom: any): void {
     target: HTMLElement,
     clientX: number,
     clientY: number,
-    gameState: any,
-    dom: any,
+    gameState: GameState,
   ): void => {
     const squareEl = target.closest(".practice-square") as HTMLElement;
     const square = squareEl?.dataset.square;
     if (!square) return;
 
-    const piece = getPieceAtSquare(square, gameState.currentFEN);
+    const piece = getPieceAtSquareFromFEN(square, gameState.currentFEN);
     if (!piece) return;
 
     const isWhitePiece = piece === piece.toUpperCase();
@@ -274,8 +277,8 @@ export function addDragAndDropListeners(gameState: any, dom: any): void {
   const endDrag = (
     clientX: number,
     clientY: number,
-    gameState: any,
-    dom: any,
+    gameState: GameState,
+    dom: DOMElements,
   ): void => {
     if (!dragState.isDragging || !dragState.originalSquare) return;
 
@@ -297,19 +300,15 @@ export function addDragAndDropListeners(gameState: any, dom: any): void {
 
     // Process the move
     if (targetSquare && targetSquare !== dragState.originalSquare) {
-      console.log(
-        "Custom drag drop from",
-        dragState.originalSquare,
-        "to",
-        targetSquare,
-      );
-
       // Check if the move is valid
-      const fromPiece = getPieceAtSquare(
+      const fromPiece = getPieceAtSquareFromFEN(
         dragState.originalSquare,
         gameState.currentFEN,
       );
-      const toPiece = getPieceAtSquare(targetSquare, gameState.currentFEN);
+      const toPiece = getPieceAtSquareFromFEN(
+        targetSquare,
+        gameState.currentFEN,
+      );
 
       if (fromPiece) {
         const isWhiteFromPiece = fromPiece === fromPiece.toUpperCase();
@@ -343,12 +342,8 @@ export function addDragAndDropListeners(gameState: any, dom: any): void {
               }
             }
 
-            // Then call the move handler for game logic validation
-            const moveHandler = (window as any).handleSquareClick;
-            if (moveHandler) {
-              moveHandler(dragState.originalSquare, gameState, dom);
-              moveHandler(targetSquare, gameState, dom);
-            }
+            // Call the move handler for game logic validation
+            makeMove(dragState.originalSquare, targetSquare, gameState, dom);
           }
         }
       }
@@ -366,7 +361,6 @@ export function addDragAndDropListeners(gameState: any, dom: any): void {
   };
 
   setupEventListeners(boardGrid);
-  console.log("Custom drag and drop listeners added");
 }
 
 // Remove drag and drop event listeners
@@ -390,7 +384,10 @@ export function removeDragAndDropListeners(): void {
 }
 
 // Re-add drag and drop listeners after board render
-export function reAddDragAndDropListeners(gameState: any, dom: any): void {
+export function reAddDragAndDropListeners(
+  gameState: GameState,
+  dom: DOMElements,
+): void {
   // With event delegation, we only need to add listeners once to the board container
   // The listeners will automatically work with any new pieces rendered
   addDragAndDropListeners(gameState, dom);
@@ -419,13 +416,6 @@ export function renderBoard(fen: string): void {
   }
 }
 
-// Get piece at square
-export function getPieceAtSquare(square: string, fen: string): string {
-  const position = parseFEN(fen);
-  const [rank, file] = squareToCoords(square);
-  return position.board[rank][file];
-}
-
 // Clear board selection
 export function clearBoardSelection(): void {
   // Clear selected square
@@ -449,7 +439,7 @@ export function selectSquare(square: string, fen: string): void {
   const squareEl = document.querySelector(
     `[data-square="${square}"]`,
   ) as HTMLElement;
-  const piece = getPieceAtSquare(square, fen);
+  const piece = getPieceAtSquareFromFEN(square, fen);
 
   if (!piece) return;
 

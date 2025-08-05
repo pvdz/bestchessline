@@ -1,4 +1,4 @@
-import { ChessPosition, Square } from "../types.js";
+import { ChessPosition, Square } from "./types.js";
 /**
  * FEN Utility Functions
  *
@@ -25,3 +25,10 @@ export declare function coordsToSquare(rank: number, file: number): Square;
  * Check if a string is a valid chess square
  */
 export declare function isValidSquare(square: string): square is Square;
+/**
+ * Get piece at a specific square from FEN string
+ */
+export declare function getPieceAtSquareFromFEN(
+  square: string,
+  fen: string,
+): string;

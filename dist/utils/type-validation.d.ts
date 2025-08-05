@@ -2,44 +2,33 @@ import type {
   PieceNotation,
   PieceTypeNotation,
   ColorNotation,
-  WhitePieceNotation,
-  BlackPieceNotation,
-} from "../types.js";
+} from "../line/types.js";
 /**
  * Type Validation Utilities
  *
  * Provides runtime validation for opaque types to catch TypeScript coverage gaps.
  */
-/**
- * Validate piece notation with detailed error reporting
- */
-export declare const validatePieceNotation: (
+export declare function validatePiece(piece: string): boolean;
+export declare function validatePieceType(type: string): boolean;
+export declare function validateColor(color: string): boolean;
+export declare function validatePieceWithColor(piece: string): boolean;
+export declare function validatePieceTypeWithColor(type: string): boolean;
+export declare function validateValue(value: number): boolean;
+export declare function validateStringValue(value: string): boolean;
+export declare function validateBooleanValue(value: boolean): boolean;
+export declare function validatePieceTypeForNotation(piece: string): boolean;
+export declare function validatePieceTypeForFEN(piece: string): boolean;
+export declare function validateType(type: string): boolean;
+export declare function validateColorForFEN(color: string): boolean;
+export declare function validatePieceNotation(
   piece: unknown,
-) => piece is PieceNotation;
-/**
- * Validate piece type notation with detailed error reporting
- */
-export declare const validatePieceTypeNotation: (
+): piece is PieceNotation;
+export declare function validatePieceTypeNotation(
   type: unknown,
-) => type is PieceTypeNotation;
-/**
- * Validate color notation with detailed error reporting
- */
-export declare const validateColorNotation: (
+): type is PieceTypeNotation;
+export declare function validateColorNotation(
   color: unknown,
-) => color is ColorNotation;
-/**
- * Validate white piece notation with detailed error reporting
- */
-export declare const validateWhitePieceNotation: (
-  piece: unknown,
-) => piece is WhitePieceNotation;
-/**
- * Validate black piece notation with detailed error reporting
- */
-export declare const validateBlackPieceNotation: (
-  piece: unknown,
-) => piece is BlackPieceNotation;
+): color is ColorNotation;
 /**
  * Safe piece notation creation with validation
  */

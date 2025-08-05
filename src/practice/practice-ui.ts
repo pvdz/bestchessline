@@ -8,7 +8,7 @@ export function updateStatistics(dom: DOMElements, gameState: GameState): void {
   dom.correctMoves.textContent = stats.correctMoves.toString();
   dom.totalMoves.textContent = stats.totalMoves.toString();
   dom.accuracy.textContent = `${Math.round(stats.accuracy)}%`;
-  dom.currentLine.textContent = (gameState.currentLineIndex + 1).toString();
+  dom.currentLine.textContent = gameState.openingLines.length.toString();
 }
 
 // Update status display

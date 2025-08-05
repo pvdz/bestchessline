@@ -1,4 +1,4 @@
-import { ChessMove } from "../types.js";
+import { ChessMove } from "./types.js";
 /**
  * Move Parsing Utility Functions
  *
@@ -6,7 +6,8 @@ import { ChessMove } from "../types.js";
  * and converting between different move formats.
  */
 /**
- * Parse individual move from algebraic notation
+ * Parse individual move string
+ * Input can be SAN, PCN, or long notation
  */
 export declare function parseMove(
   moveText: string,

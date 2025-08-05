@@ -1,5 +1,16 @@
 import { parseMove } from "./move-parsing.js";
 
+interface TestCase {
+  name: string;
+  move: string;
+  fen: string;
+  expected: {
+    from: string;
+    to: string;
+    piece: string;
+  };
+}
+
 // Test the specific failing case
 const testCases = [
   {
@@ -54,7 +65,7 @@ const testCases = [
   },
 ];
 
-function runTest(testCase: any) {
+function runTest(testCase: TestCase) {
   console.log(`\n=== Testing: ${testCase.name} ===`);
   console.log(`Move: ${testCase.move}`);
   console.log(`FEN: ${testCase.fen}`);

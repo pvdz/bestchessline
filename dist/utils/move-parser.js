@@ -1,10 +1,10 @@
-import { PLAYER_COLORS } from "../types.js";
+import { PLAYER_COLORS } from "./types.js";
 import { parseFEN, squareToCoords, coordsToSquare } from "./fen-utils.js";
 import {
   getPieceTypeFromNotation,
   getColorFromNotation,
   createPieceNotation,
-} from "../types.js";
+} from "../line/types.js";
 import { logError } from "./logging.js";
 /**
  * Move Parser and Validation Functions

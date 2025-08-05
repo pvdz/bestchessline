@@ -4,18 +4,20 @@ import {
   addDragAndDropListeners,
   reAddDragAndDropListeners,
 } from "./practice-board.js";
-import { parseOpeningLines, buildPositionMap } from "./practice-parser.js";
 import {
-  updateStatistics,
+  parseOpeningLines,
+  convertOpeningLinesToPCN,
+  buildPositionMap,
+} from "./practice-parser.js";
+import {
   updateStatus,
+  clearMoveHistory,
   showSuccessToast,
   showErrorToast,
   showInfoToast,
 } from "./practice-ui.js";
-import {
-  handleSquareClick,
-  showHintForCurrentPosition,
-} from "./practice-game.js";
+import { triggerConfetti } from "../utils/confetti-utils.js";
+import { showHintForCurrentPosition } from "./practice-game.js";
 // Helper function to get element by ID or throw
 function getElementByIdOrThrow(id) {
   const element = document.getElementById(id);
@@ -27,14 +29,13 @@ function getElementByIdOrThrow(id) {
 // Game state
 let gameState = {
   currentFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-  currentLineIndex: 0,
-  currentMoveIndex: 0,
   isPracticeActive: false,
   isHumanTurn: true,
   selectedSquare: null,
   validMoves: [],
   openingLines: [],
   positionMap: new Map(),
+  computerMoveStrategy: "serial", // Default to serial strategy
   statistics: {
     correctMoves: 0,
     totalMoves: 0,
@@ -68,8 +69,6 @@ function initializeDOMElements() {
 }
 // Add drag and drop handlers to the board
 function addDragAndDropHandlersToBoard() {
-  // Make handleSquareClick globally accessible for drag and drop
-  window.handleSquareClick = handleSquareClick;
   addDragAndDropListeners(gameState, dom);
 }
 // Initialize the board
@@ -79,59 +78,59 @@ function initializeBoardWithEventListeners() {
   renderBoard(gameState.currentFEN);
   addDragAndDropHandlersToBoard();
 }
-// Start practice
-function startPractice() {
-  try {
-    // Parse opening lines
-    const linesText = dom.openingLines.value.trim();
-    if (!linesText) {
-      showErrorToast("Please enter opening lines to practice");
-      return;
-    }
-    const lines = parseOpeningLines(linesText);
-    if (lines.length === 0) {
-      showErrorToast("No valid opening lines found");
-      return;
-    }
-    // Build position map from opening lines
-    const positionMap = buildPositionMap(lines, dom.startingFEN.value);
-    // Update game state
-    gameState.openingLines = lines;
-    gameState.positionMap = positionMap;
-    gameState.currentLineIndex = 0;
-    gameState.currentMoveIndex = 0;
-    gameState.isPracticeActive = true;
-    gameState.isHumanTurn = true;
-    gameState.currentFEN = dom.startingFEN.value;
-    // Dump the position map to console
-    console.log("Position Map:", positionMap);
-    // Hide overlay and activate board
-    dom.startOverlay.classList.add("hidden");
-    dom.board.classList.add("active");
-    // Render board and start
-    renderBoard(gameState.currentFEN);
-    reAddDragAndDropListeners(gameState, dom);
-    updateStatus(dom, gameState);
-    updateStatistics(dom, gameState);
-    showSuccessToast(`Started practice with ${lines.length} opening lines`);
-  } catch (error) {
-    console.error("Error starting practice:", error);
-    showErrorToast("Failed to start practice");
+// Start practice session
+export function startPractice(gameState, dom) {
+  // Parse opening lines from textarea
+  const linesText = dom.openingLines.value;
+  const lines = parseOpeningLines(linesText);
+  if (lines.length === 0) {
+    showErrorToast("No valid opening lines found!");
+    return;
   }
+  // Convert opening lines to long notation
+  const longNotationLines = convertOpeningLinesToPCN(
+    lines,
+    gameState.currentFEN,
+  );
+  // Build position map with long notation moves
+  const positionMap = buildPositionMap(longNotationLines, gameState.currentFEN);
+  gameState.positionMap = positionMap;
+  // Initialize game state for position-based approach
+  gameState.openingLines = longNotationLines;
+  gameState.isPracticeActive = true;
+  gameState.isHumanTurn = true;
+  gameState.selectedSquare = null;
+  gameState.validMoves = [];
+  gameState.statistics = {
+    correctMoves: 0,
+    totalMoves: 0,
+    accuracy: 0,
+    lineAttempts: {},
+  };
+  // Set computer move strategy
+  const strategySelect = dom.moveSelection;
+  gameState.computerMoveStrategy = strategySelect.value;
+  // Hide overlay and activate board
+  dom.startOverlay.classList.add("hidden");
+  dom.board.classList.add("active");
+  // Update UI
+  updateStatus(dom, gameState);
+  clearMoveHistory(dom.moveHistory);
+  renderBoard(gameState.currentFEN);
+  reAddDragAndDropListeners(gameState, dom);
+  showSuccessToast("Practice session started!");
 }
 // Reset practice
 function resetPractice() {
-  // Reset game state
   gameState = {
     currentFEN: dom.startingFEN.value,
-    currentLineIndex: 0,
-    currentMoveIndex: 0,
     isPracticeActive: false,
     isHumanTurn: true,
     selectedSquare: null,
     validMoves: [],
     openingLines: [],
     positionMap: new Map(),
+    computerMoveStrategy: dom.moveSelection.value,
     statistics: {
       correctMoves: 0,
       totalMoves: 0,
@@ -154,10 +153,8 @@ function nextLine() {
     showErrorToast("No opening lines loaded");
     return;
   }
-  gameState.currentLineIndex =
-    (gameState.currentLineIndex + 1) % gameState.openingLines.length;
-  gameState.currentMoveIndex = 0;
   gameState.isPracticeActive = true;
+  gameState.computerMoveStrategy = dom.moveSelection.value;
   const startingFEN = dom.startingFEN.value.trim();
   gameState.currentFEN = startingFEN;
   // Hide overlay and activate board if not already active
@@ -166,17 +163,60 @@ function nextLine() {
   renderBoard(gameState.currentFEN);
   reAddDragAndDropListeners(gameState, dom);
   updateStatus(dom, gameState);
-  showInfoToast(`Switched to line ${gameState.currentLineIndex + 1}`);
+  showInfoToast("Switched to new position");
+}
+// Fisher copy functionality
+async function copyLinesAsSAN() {
+  try {
+    const linesText = dom.openingLines.value;
+    if (!linesText.trim()) {
+      showErrorToast("No lines to copy");
+      return;
+    }
+    // Copy the original SAN lines
+    await navigator.clipboard.writeText(linesText);
+    showSuccessToast("Lines copied as SAN");
+  } catch (error) {
+    console.error("Error copying lines:", error);
+    showErrorToast("Failed to copy lines");
+  }
+}
+async function copyLinesAsLongNotation() {
+  try {
+    const linesText = dom.openingLines.value;
+    if (!linesText.trim()) {
+      showErrorToast("No lines to copy");
+      return;
+    }
+    // Parse and convert to long notation
+    const lines = parseOpeningLines(linesText);
+    if (lines.length === 0) {
+      showErrorToast("No valid lines to convert");
+      return;
+    }
+    const longNotationLines = convertOpeningLinesToPCN(
+      lines,
+      gameState.currentFEN,
+    );
+    const longNotationText = longNotationLines
+      .map((line) => line.moves.join(" "))
+      .join("\n");
+    await navigator.clipboard.writeText(longNotationText);
+    showSuccessToast("Lines copied as long notation");
+  } catch (error) {
+    console.error("Error copying lines as long notation:", error);
+    showErrorToast("Failed to copy lines as long notation");
+  }
 }
 // Initialize event listeners
 function initializeEventListeners() {
   // Overlay start button
   dom.startOverlayBtn.addEventListener("click", () => {
-    startPractice();
+    startPractice(gameState, dom);
   });
   // Regular start button (hidden initially)
   dom.startBtn.addEventListener("click", () => {
-    startPractice();
+    startPractice(gameState, dom);
   });
   // Reset button
   dom.resetBtn.addEventListener("click", () => {
@@ -190,6 +230,17 @@ function initializeEventListeners() {
   dom.nextBtn.addEventListener("click", () => {
     nextLine();
   });
+  // Move selection dropdown
+  dom.moveSelection.addEventListener("change", () => {
+    gameState.computerMoveStrategy = dom.moveSelection.value;
+  });
+  // Confetti test button
+  const confettiBtn = document.getElementById("practice-confetti-btn");
+  if (confettiBtn) {
+    confettiBtn.addEventListener("click", () => {
+      triggerConfetti(100);
+    });
+  }
 }
 // Initialize the application
 export function initializePractice() {

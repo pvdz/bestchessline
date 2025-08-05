@@ -1,4 +1,11 @@
-import { OpeningLine } from "./practice-types.js";
-export declare function parseOpeningLines(text: string): OpeningLine[];
-export declare function getMoveNotation(move: any): string;
-export declare function parseMoveFromSAN(san: string, fen: string): any;
+interface MoveNotation {
+  from: string;
+  to: string;
+  piece: string;
+}
+export declare function getMoveNotation(move: MoveNotation): string;
+export declare function parseMoveFromSAN(
+  san: string,
+  fen: string,
+): MoveNotation | null;
+export {};

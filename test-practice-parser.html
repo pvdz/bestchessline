@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Practice Parser Test</title>
+  </head>
+  <body>
+    <h1>Practice Parser Debug Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+      import {
+        parseOpeningLines,
+        convertOpeningLinesToPCN,
+        buildPositionMap,
+      } from "./src/practice/practice-parser.js";
+
+      const testLine = `1. Nf3  Nf6 2. d4  e6 3. c4  Bb4 4. Bd2  Be7 5. Nc3  d5 6. Bf4`;
+      const startingFEN =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+      const output = document.getElementById("output");
+
+      try {
+        console.log("=== STEP 1: Parse Opening Lines ===");
+        const lines = parseOpeningLines(testLine);
+        console.log("Parsed lines:", lines);
+
+        console.log("=== STEP 2: Convert to PCN ===");
+        const pcnLines = convertOpeningLinesToPCN(lines, startingFEN);
+        console.log("PCN lines:", pcnLines);
+
+        console.log("=== STEP 3: Build Position Map ===");
+        const positionMap = buildPositionMap(pcnLines, startingFEN);
+        console.log("Position map:", positionMap);
+
+        output.innerHTML = `
+                <h2>Results:</h2>
+                <h3>Step 1 - Parsed Lines:</h3>
+                <pre>${JSON.stringify(lines, null, 2)}</pre>
+                
+                <h3>Step 2 - PCN Lines:</h3>
+                <pre>${JSON.stringify(pcnLines, null, 2)}</pre>
+                
+                <h3>Step 3 - Position Map:</h3>
+                <pre>${JSON.stringify(Array.from(positionMap.entries()), null, 2)}</pre>
+            `;
+      } catch (error) {
+        console.error("Test failed:", error);
+        output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+      }
+    </script>
+  </body>
+</html>

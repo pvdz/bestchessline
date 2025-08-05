@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PCN Format Test</title>
+  </head>
+  <body>
+    <h1>PCN Format Debug Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+      import {
+        parseOpeningLines,
+        convertOpeningLinesToPCN,
+        buildPositionMap,
+      } from "./src/practice/practice-parser.js";
+      import { convertSANLineToPCN } from "./src/utils/pcn-utils.js";
+
+      const testLine = `1. Ng1f3  Ng8f6 2. Pd2d4  Pe7e6 3. Pc2c4  Bf8b4 4. Bc1d2`;
+      const startingFEN =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+      const output = document.getElementById("output");
+
+      try {
+        console.log("=== TESTING PCN FORMAT ===");
+
+        // Test 1: Direct PCN conversion
+        console.log("Test 1: Direct PCN conversion");
+        const pcnMoves = [
+          "Ng1f3",
+          "Ng8f6",
+          "Pd2d4",
+          "Pe7e6",
+          "Pc2c4",
+          "Bf8b4",
+          "Bc1d2",
+        ];
+        console.log("PCN moves:", pcnMoves);
+
+        const result = convertSANLineToPCN(pcnMoves, startingFEN);
+        console.log("PCN conversion result:", result);
+
+        // Test 2: Parse and convert
+        console.log("\nTest 2: Parse and convert");
+        const lines = parseOpeningLines(testLine);
+        console.log("Parsed lines:", lines);
+
+        const pcnLines = convertOpeningLinesToPCN(lines, startingFEN);
+        console.log("PCN lines:", pcnLines);
+
+        output.innerHTML = `
+                <h2>Results:</h2>
+                <h3>Test 1 - Direct PCN Conversion:</h3>
+                <pre>Input: ${JSON.stringify(pcnMoves, null, 2)}</pre>
+                <pre>Result: ${result}</pre>
+                
+                <h3>Test 2 - Parse and Convert:</h3>
+                <pre>Parsed: ${JSON.stringify(lines, null, 2)}</pre>
+                <pre>PCN: ${JSON.stringify(pcnLines, null, 2)}</pre>
+            `;
+      } catch (error) {
+        console.error("Test failed:", error);
+        output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+      }
+    </script>
+  </body>
+</html>

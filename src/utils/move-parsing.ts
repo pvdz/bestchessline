@@ -1,10 +1,10 @@
-import { ChessMove, PLAYER_COLORS, createPieceNotation } from "../types.js";
+import { ChessMove, PLAYER_COLORS, createPieceNotation } from "./types.js";
 import { parseFEN } from "./fen-utils.js";
 import {
   findFromSquare,
   findFromSquareWithDisambiguation,
 } from "./move-parser.js";
-import { validateMove, PIECES } from "../move-validator.js";
+import { validateMove, PIECES } from "./move-validator.js";
 import { log } from "./logging.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
 
@@ -16,7 +16,8 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
  */
 
 /**
- * Parse individual move from algebraic notation
+ * Parse individual move string
+ * Input can be SAN, PCN, or long notation
  */
 export function parseMove(
   moveText: string,
@@ -142,6 +143,11 @@ export function parseMove(
       return { from: fromSquare, to: toSquare, piece };
     }
   }
+
+  console.log(
+    `[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
+  );
+
   return null;
 }
 

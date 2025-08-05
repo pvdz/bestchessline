@@ -7,7 +7,3 @@
  * Update threads input for fallback mode
  */
 export declare function updateThreadsInputForFallbackMode(): void;
-/**
- * Update tree digger threads input for fallback mode
- */
-export declare function updateTreeDiggerThreadsForFallbackMode(): void;

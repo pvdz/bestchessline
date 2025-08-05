@@ -1,4 +1,4 @@
-import { ChessPosition, ChessMove, PLAYER_COLORS } from "../types.js";
+import { ChessPosition, ChessMove, PLAYER_COLORS } from "./types.js";
 import {
   parseFEN,
   toFEN,

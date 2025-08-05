@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Practice Debug Test</title>
+  </head>
+  <body>
+    <h1>Practice Debug Test</h1>
+    <div id="debug-output"></div>
+
+    <script type="module">
+      import {
+        parseOpeningLines,
+        convertOpeningLinesToPCN,
+        buildPositionMap,
+      } from "./src/practice/practice-parser.js";
+
+      const testLines = `
+1. Ng1f3
+1. Ng1f3  Ng8f6 2. Pd2d4
+1. Ng1f3  Pe7e6 2. Pe2e4
+`;
+
+      const startingFEN =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+      console.log("Testing practice parser...");
+
+      // Parse opening lines
+      const lines = parseOpeningLines(testLines);
+      console.log("Parsed opening lines:", lines);
+
+      // Convert to PCN
+      const pcnLines = convertOpeningLinesToPCN(lines, startingFEN);
+      console.log("PCN lines:", pcnLines);
+
+      // Build position map
+      const positionMap = buildPositionMap(pcnLines, startingFEN);
+      console.log("Position map:", positionMap);
+
+      // Display results
+      const output = document.getElementById("debug-output");
+      output.innerHTML = `
+            <h2>Parsed Lines:</h2>
+            <pre>${JSON.stringify(lines, null, 2)}</pre>
+            
+            <h2>PCN Lines:</h2>
+            <pre>${JSON.stringify(pcnLines, null, 2)}</pre>
+            
+            <h2>Position Map:</h2>
+            <pre>${JSON.stringify(Array.from(positionMap.entries()), null, 2)}</pre>
+        `;
+    </script>
+  </body>
+</html>

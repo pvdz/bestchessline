@@ -1,4 +1,4 @@
-import { ChessMove } from "../types.js";
+import { ChessMove } from "./types.js";
 /**
  * FEN Manipulation Functions
  *
