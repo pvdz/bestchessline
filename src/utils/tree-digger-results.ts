@@ -49,7 +49,6 @@ export const resetTreeDiggerPaginationState = (): void => {
  * Update tree digger results display
  */
 export function updateTreeDiggerResults(): void {
-  console.warn("right?");
   const resultsElement = getElementByIdOrThrow("tree-digger-results");
   if (!resultsElement) return;
 

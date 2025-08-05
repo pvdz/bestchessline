@@ -47,7 +47,6 @@ export const continueFishAnalysis = async () => {
     // Update button states - disable start, enable stop
     updateFishButtonStates(true);
     // Continue the analysis from where it left off by running the main loop
-    let limit = 0;
     console.log(
       "Continuing main analysis loop with WIP count:",
       currentFishState.wip.length,
@@ -63,7 +62,6 @@ export const continueFishAnalysis = async () => {
         updateFishButtonStates(false);
         return;
       }
-      if (++limit > 100) throw new Error("Limit reached");
       const currentLine = currentFishState.wip.shift();
       console.log("Continue loop, next line:", currentLine.sans.join(" "));
       console.log(
@@ -147,97 +145,137 @@ export const importFishStateFromClipboard = async () => {
       showToast("No text found in clipboard", "#FF9800", 3000);
       return;
     }
-    // Parse JSON
-    const importedState = JSON.parse(clipboardText);
-    // Validate state format
-    if (!importedState.type || importedState.type !== "fish-state") {
-      showToast("Invalid fish state format in clipboard", "#FF9800", 3000);
-      return;
-    }
-    if (!importedState.config || !importedState.wip || !importedState.done) {
-      showToast("Incomplete fish state in clipboard", "#FF9800", 3000);
-      return;
-    }
-    // Reconstruct full FishLine objects from streamlined format
-    const reconstructFishLine = (streamlinedLine, isFromDoneArray) => {
-      // Reconstruct position by applying moves to root FEN
-      let currentFEN = importedState.config.rootFEN;
-      console.log(
-        `Reconstructing position for line: ${streamlinedLine.sans.join(" ")}`,
-      );
-      console.log(`Starting from root FEN: ${currentFEN}`);
-      // Apply each move in the line to reconstruct the position
-      for (const san of streamlinedLine.sans) {
-        const move = parseMove(san, currentFEN);
-        if (move) {
-          currentFEN = applyMoveToFEN(currentFEN, move);
-          console.log(`Applied move ${san}, new FEN: ${currentFEN}`);
-        } else {
-          console.warn(`Failed to parse move ${san} in position ${currentFEN}`);
-          // Fallback to empty string if move parsing fails
-          currentFEN = "";
-          break;
-        }
+    // Try to parse as JSON first (for backward compatibility)
+    let importedState;
+    try {
+      importedState = JSON.parse(clipboardText);
+      // Validate JSON state format
+      if (!importedState.type || importedState.type !== "fish-state") {
+        throw new Error("Invalid JSON fish state format");
       }
-      console.log(`Final reconstructed position: ${currentFEN}`);
-      return {
-        sans: streamlinedLine.sans,
-        score: streamlinedLine.score,
-        delta: streamlinedLine.delta,
-        position: currentFEN, // Reconstructed position
-        isDone: isFromDoneArray, // Done lines are marked as done
-        isFull: isFromDoneArray, // Done lines are also marked as full
+      if (!importedState.config || !importedState.wip || !importedState.done) {
+        throw new Error("Incomplete JSON fish state");
+      }
+      // Handle JSON format (existing functionality)
+      console.log("Importing JSON fish state format");
+      // Reconstruct full FishLine objects from streamlined format
+      const reconstructFishLine = (streamlinedLine, isFromDoneArray) => {
+        // Reconstruct position by applying moves to root FEN
+        let currentFEN = importedState.config.rootFEN;
+        console.log(
+          `Reconstructing position for line: ${streamlinedLine.sans.join(" ")}`,
+        );
+        console.log(`Starting from root FEN: ${currentFEN}`);
+        // Apply each move in the line to reconstruct the position
+        for (const san of streamlinedLine.sans) {
+          const move = parseMove(san, currentFEN);
+          if (move) {
+            currentFEN = applyMoveToFEN(currentFEN, move);
+            console.log(`Applied move ${san}, new FEN: ${currentFEN}`);
+          } else {
+            console.warn(
+              `Failed to parse move ${san} in position ${currentFEN}`,
+            );
+            // Fallback to empty string if move parsing fails
+            currentFEN = "";
+            break;
+          }
+        }
+        console.log(`Final reconstructed position: ${currentFEN}`);
+        return {
+          sans: streamlinedLine.sans,
+          score: streamlinedLine.score,
+          delta: streamlinedLine.delta,
+          position: currentFEN, // Reconstructed position
+          isDone: isFromDoneArray, // Done lines are marked as done
+          isFull: isFromDoneArray, // Done lines are also marked as full
+        };
       };
-    };
-    const reconstructedWip = importedState.wip.map((line) =>
-      reconstructFishLine(line, false),
-    );
-    const reconstructedDone = importedState.done.map((line) =>
-      reconstructFishLine(line, true),
-    );
-    // Load state into global state
-    currentFishState = {
-      isFishing: false, // Imported state should not be fishing by default
-      config: importedState.config,
-      wip: reconstructedWip,
-      done: reconstructedDone,
-    };
-    console.log("Imported fish state:", currentFishState);
-    console.log("Reconstructed WIP lines:", reconstructedWip);
-    console.log("Reconstructed Done lines:", reconstructedDone);
-    console.log(
-      "WIP lines isDone values:",
-      reconstructedWip.map((line) => ({
-        sans: line.sans.join(" "),
-        isDone: line.isDone,
-        isFull: line.isFull,
-      })),
-    );
-    console.log(
-      "Done lines isDone values:",
-      reconstructedDone.map((line) => ({
-        sans: line.sans.join(" "),
-        isDone: line.isDone,
-        isFull: line.isFull,
-      })),
-    );
-    // Update UI with imported state
-    updateFishConfigDisplay(currentFishState.config);
-    updateFishProgress(currentFishState);
-    updateFishResultsRealTime(currentFishState);
-    // Show success notification
-    const wipCount = currentFishState.wip.length;
-    const doneCount = currentFishState.done.length;
-    const totalLines = wipCount + doneCount;
-    showToast(
-      `Imported ${totalLines} lines (${wipCount} WIP, ${doneCount} done)`,
-      "#4CAF50",
-      3000,
-    );
-    console.log("Fish state imported from clipboard successfully");
+      const reconstructedWip = importedState.wip.map((line) =>
+        reconstructFishLine(line, false),
+      );
+      const reconstructedDone = importedState.done.map((line) =>
+        reconstructFishLine(line, true),
+      );
+      // Load state into global state
+      currentFishState = {
+        isFishing: false, // Imported state should not be fishing by default
+        config: importedState.config,
+        wip: reconstructedWip,
+        done: reconstructedDone,
+      };
+      console.log("Imported JSON fish state:", currentFishState);
+      showToast("Imported JSON fish state successfully", "#4CAF50", 3000);
+    } catch (jsonError) {
+      // If JSON parsing fails, try to parse as plain text lines
+      console.log("JSON parsing failed, trying plain text format:", jsonError);
+      // Parse plain text lines
+      const lines = clipboardText
+        .trim()
+        .split("\n")
+        .filter((line) => line.trim());
+      if (lines.length === 0) {
+        showToast("No valid lines found in clipboard", "#FF9800", 3000);
+        return;
+      }
+      console.log("Importing plain text fish state format");
+      // Convert plain text lines back to FishLine format
+      const convertPlainTextToFishLine = (lineText) => {
+        // Parse the line to extract moves
+        const moves = [];
+        const moveRegex =
+          /(\d+\.\s*)?([NBRQKP]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQ])?[+#]?)/g;
+        let match;
+        while ((match = moveRegex.exec(lineText)) !== null) {
+          if (match[2]) {
+            // The actual move
+            moves.push(match[2]);
+          }
+        }
+        console.log(`Parsed moves from line "${lineText}":`, moves);
+        return {
+          sans: moves,
+          score: 0, // Default score for imported lines
+          delta: 0, // Default delta for imported lines
+          position: "", // Will be reconstructed if needed
+          isDone: true, // Imported lines are considered done
+          isFull: true, // Imported lines are considered full
+        };
+      };
+      const importedLines = lines.map(convertPlainTextToFishLine);
+      // Create a minimal config for imported lines
+      const defaultConfig = {
+        rootFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        rootScore: 0,
+        maxDepth: 10,
+        defaultResponderCount: 1,
+        initiatorPredefinedMoves: [],
+        responderCountOverrides: [],
+        initiatorColor: "w",
+      };
+      // Load state into global state
+      currentFishState = {
+        isFishing: false,
+        config: defaultConfig,
+        wip: [],
+        done: importedLines,
+      };
+      console.log("Imported plain text fish state:", currentFishState);
+      showToast(
+        `Imported ${importedLines.length} lines from plain text`,
+        "#4CAF50",
+        3000,
+      );
+    }
+    // Update the display
+    if (currentFishState) {
+      updateFishResultsRealTime(currentFishState);
+      updateFishProgress(currentFishState);
+    }
+    console.log("Fish state import completed successfully");
   } catch (error) {
     console.error("Error importing fish state:", error);
-    showToast("Failed to import state - invalid format", "#f44336", 4000);
+    showToast("Failed to import fish state", "#f44336", 4000);
   }
 };
 /**
@@ -370,7 +408,6 @@ export async function fish(config) {
     }
     updateFishResultsRealTime(state);
     // Main analysis loop
-    let limit = 0;
     console.log(
       "Starting main analysis loop with WIP count:",
       state.wip.length,
@@ -384,7 +421,6 @@ export async function fish(config) {
         updateFishButtonStates(false);
         return state.done;
       }
-      if (++limit > 100) throw new Error("Limit reached");
       const currentLine = state.wip.shift();
       console.log("Main loop, next line:", currentLine.sans.join(" "));
       console.log("WIP count at start of iteration:", state.wip.length);
@@ -883,7 +919,52 @@ function updateFishRootScore(score) {
   }
 }
 /**
- * Format moves with move numbers (copied from line-fisher implementation)
+ * Convert Unicode chess pieces to English notation
+ */
+function convertUnicodeToEnglish(move) {
+  // Map Unicode pieces to English letters
+  const unicodeToEnglish = {
+    "♔": "K",
+    "♕": "Q",
+    "♖": "R",
+    "♗": "B",
+    "♘": "N",
+    "♙": "P",
+    "♚": "K",
+    "♛": "Q",
+    "♜": "R",
+    "♝": "B",
+    "♞": "N",
+    "♟": "P",
+  };
+  let result = move;
+  for (const [unicode, english] of Object.entries(unicodeToEnglish)) {
+    result = result.replace(new RegExp(unicode, "g"), english);
+  }
+  return result;
+}
+/**
+ * Format moves with numbers in English notation
+ */
+function formatMovesWithNumbersEnglish(sans) {
+  let result = "";
+  for (let i = 0; i < sans.length; i++) {
+    if (i % 2 === 0) {
+      // White's move - add move number
+      const moveNumber = Math.floor(i / 2) + 1;
+      result += `${moveNumber}. ${convertUnicodeToEnglish(sans[i])}`;
+    } else {
+      // Black's move - just add the move
+      result += ` ${convertUnicodeToEnglish(sans[i])}`;
+    }
+    if (i < sans.length - 1) {
+      result += " ";
+    }
+  }
+  return result;
+}
+/**
+ * Format moves with move numbers (original function for Unicode display)
  */
 function formatMovesWithNumbers(sans) {
   let result = "";
@@ -915,7 +996,7 @@ function convertFishLineToDisplayFormat(line) {
   return {
     sans: line.sans,
     scores: [line.score], // Wrap in array for display compatibility
-    notation: formatMovesWithNumbers(line.sans),
+    notation: formatMovesWithNumbersEnglish(line.sans),
     isDone: line.isDone,
     isComplete: line.isFull,
     isTransposition: false, // Fish doesn't track transpositions
@@ -1082,7 +1163,7 @@ export const exportFishStateToClipboard = async () => {
         doneCount: currentFishState.done.length,
         totalLines: allLines.length,
         formattedLines: allLines.map((line) =>
-          formatMovesWithNumbers(line.sans),
+          formatMovesWithNumbersEnglish(line.sans),
         ),
       },
     };
@@ -1106,7 +1187,7 @@ export const exportFishStateToClipboard = async () => {
 };
 /**
  * Copy fish state to clipboard (for copy button)
- * Copy current analysis state to clipboard in JSON format for import.
+ * Copy current analysis state to clipboard in plain text format.
  * Serialize current state, copy to clipboard, and show success notification
  */
 export const copyFishStateToClipboard = async () => {
@@ -1122,37 +1203,12 @@ export const copyFishStateToClipboard = async () => {
       showToast("No lines to copy", "#FF9800", 3000);
       return;
     }
-    // Create streamlined line objects without unnecessary properties
-    const streamlinedWip = currentFishState.wip.map((line) => ({
-      sans: line.sans,
-      score: line.score,
-      delta: line.delta,
-    }));
-    const streamlinedDone = currentFishState.done.map((line) => ({
-      sans: line.sans,
-      score: line.score,
-      delta: line.delta,
-    }));
-    // Create exportable state object
-    const exportState = {
-      version: "1.0",
-      timestamp: new Date().toISOString(),
-      type: "fish-state",
-      config: currentFishState.config,
-      wip: streamlinedWip,
-      done: streamlinedDone,
-      summary: {
-        wipCount: currentFishState.wip.length,
-        doneCount: currentFishState.done.length,
-        totalLines: allLines.length,
-        formattedLines: allLines.map((line) =>
-          formatMovesWithNumbers(line.sans),
-        ),
-      },
-    };
-    // Convert to JSON and copy to clipboard
-    const jsonState = JSON.stringify(exportState, null, 2);
-    await navigator.clipboard.writeText(jsonState);
+    // Create plain text format - one line per opening line
+    const plainTextLines = allLines
+      .map((line) => formatMovesWithNumbersEnglish(line.sans))
+      .join("\n");
+    // Copy plain text to clipboard
+    await navigator.clipboard.writeText(plainTextLines);
     // Show success notification
     const wipCount = currentFishState.wip.length;
     const doneCount = currentFishState.done.length;

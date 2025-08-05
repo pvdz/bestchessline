@@ -90,24 +90,6 @@ export function parseMove(
     }
   }
 
-  // Handle pawn captures (both white and black)
-  if (moveText.match(/^[a-h]x[a-h][1-8]$/)) {
-    const toSquare = moveText.substring(2);
-
-    // Try both colors to handle ambiguous cases
-    let fromSquare = findFromSquare(PIECES.WHITE_PAWN, toSquare, currentFEN);
-    let piece = PIECES.WHITE_PAWN;
-
-    if (!fromSquare) {
-      fromSquare = findFromSquare(PIECES.BLACK_PAWN, toSquare, currentFEN);
-      piece = PIECES.BLACK_PAWN;
-    }
-
-    if (fromSquare) {
-      return { from: fromSquare, to: toSquare, piece };
-    }
-  }
-
   // Handle piece moves
   const pieceMatch = moveText.match(
     /^([KQRBN])([a-h]?[1-8]?)?x?([a-h][1-8])([+#])?$/,
@@ -116,9 +98,10 @@ export function parseMove(
     const pieceType = pieceMatch[1];
     const disambiguation = pieceMatch[2] || "";
     const toSquare = pieceMatch[3];
-    const pieceNotation = createPieceNotation(
-      isWhiteTurn ? pieceType : pieceType.toLowerCase(),
-    );
+    // Use the correct case based on whose turn it is
+    const pieceNotation = isWhiteTurn
+      ? createPieceNotation(pieceType)
+      : createPieceNotation(pieceType.toLowerCase());
     const fromSquare = findFromSquareWithDisambiguation(
       pieceNotation,
       toSquare,
@@ -131,12 +114,34 @@ export function parseMove(
     }
   }
 
-  console.log(
-    "[parseMove] Failed to parse move:",
-    moveText,
-    "from FEN:",
-    currentFEN,
-  );
+  // Handle pawn captures (both white and black)
+  if (moveText.match(/^[a-h]x[a-h][1-8]$/)) {
+    const fromFile = moveText[0]; // The disambiguation file (e.g., 'd' in 'dxe6')
+    const toSquare = moveText.substring(2);
+
+    // Try both colors to handle ambiguous cases
+    let fromSquare = findFromSquareWithDisambiguation(
+      PIECES.WHITE_PAWN,
+      toSquare,
+      fromFile,
+      currentFEN,
+    );
+    let piece = PIECES.WHITE_PAWN;
+
+    if (!fromSquare) {
+      fromSquare = findFromSquareWithDisambiguation(
+        PIECES.BLACK_PAWN,
+        toSquare,
+        fromFile,
+        currentFEN,
+      );
+      piece = PIECES.BLACK_PAWN;
+    }
+
+    if (fromSquare) {
+      return { from: fromSquare, to: toSquare, piece };
+    }
+  }
   return null;
 }
 

@@ -491,8 +491,13 @@ export function canPawnMoveTo(fromSquare, toSquare, board) {
   const isCapture = fromFile !== toFile;
   const destPiece = board[toRank][toFile];
   if (isCapture) {
-    // Must be diagonal move and destination must be occupied
+    // Must be diagonal move and destination must be occupied by opponent
     if (Math.abs(fromFile - toFile) !== 1 || !destPiece) {
+      return false;
+    }
+    // Check that destination piece is opponent's piece
+    const destIsWhite = destPiece === destPiece.toUpperCase();
+    if (destIsWhite === isWhite) {
       return false;
     }
   } else {
@@ -504,15 +509,31 @@ export function canPawnMoveTo(fromSquare, toSquare, board) {
   // Check move distance
   const rankDiff = toRank - fromRank;
   if (isWhite) {
-    if (rankDiff > 0) return false; // White pawns move up (decreasing rank)
-    if (rankDiff < -2) return false; // Can't move more than 2 squares
-    if (rankDiff === -2 && fromRank !== 6) return false; // Double move only from starting position
-    if (isCapture && rankDiff !== -1) return false; // Captures must be exactly 1 square
+    if (rankDiff > 0) {
+      return false; // White pawns move up (decreasing rank)
+    }
+    if (rankDiff < -2) {
+      return false; // Can't move more than 2 squares
+    }
+    if (rankDiff === -2 && fromRank !== 6) {
+      return false; // Double move only from starting position
+    }
+    if (isCapture && rankDiff !== -1) {
+      return false; // Captures must be exactly 1 square
+    }
   } else {
-    if (rankDiff < 0) return false; // Black pawns move down (increasing rank)
-    if (rankDiff > 2) return false; // Can't move more than 2 squares
-    if (rankDiff === 2 && fromRank !== 1) return false; // Double move only from starting position
-    if (isCapture && rankDiff !== 1) return false; // Captures must be exactly 1 square
+    if (rankDiff < 0) {
+      return false; // Black pawns move down (increasing rank)
+    }
+    if (rankDiff > 2) {
+      return false; // Can't move more than 2 squares
+    }
+    if (rankDiff === 2 && fromRank !== 1) {
+      return false; // Double move only from starting position
+    }
+    if (isCapture && rankDiff !== 1) {
+      return false; // Captures must be exactly 1 square
+    }
   }
   return true;
 }

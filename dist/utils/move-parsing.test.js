@@ -41,6 +41,16 @@ const testCases = [
       piece: "N", // White knight
     },
   },
+  {
+    name: "Black pawn capture dxc4",
+    fen: "rnbqkb1r/pppppppp/5n2/3P4/2P5/5N2/PP2PPPP/RNBQKB1R b KQkq c3 0 1",
+    move: "dxc4",
+    expected: {
+      from: "d5",
+      to: "c4",
+      piece: "p", // Black pawn
+    },
+  },
 ];
 function runTest(testCase) {
   console.log(`\n=== Testing: ${testCase.name} ===`);

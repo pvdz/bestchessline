@@ -1,0 +1,19 @@
+import { DOMElements, GameState } from "./practice-types.js";
+export declare function updateStatistics(
+  dom: DOMElements,
+  gameState: GameState,
+): void;
+export declare function updateStatus(
+  dom: DOMElements,
+  gameState: GameState,
+): void;
+export declare function addMoveToHistory(
+  movesHistoryEl: HTMLElement,
+  move: string,
+  isCorrect: boolean,
+): void;
+export declare function clearMoveHistory(movesHistoryEl: HTMLElement): void;
+export declare function showSuccessToast(message: string): void;
+export declare function showErrorToast(message: string): void;
+export declare function showInfoToast(message: string): void;
+export declare function showWarningToast(message: string): void;

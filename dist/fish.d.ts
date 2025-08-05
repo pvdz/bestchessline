@@ -60,7 +60,7 @@ export declare function fish(config: FishConfig): Promise<FishLine[]>;
 export declare const exportFishStateToClipboard: () => Promise<void>;
 /**
  * Copy fish state to clipboard (for copy button)
- * Copy current analysis state to clipboard in JSON format for import.
+ * Copy current analysis state to clipboard in plain text format.
  * Serialize current state, copy to clipboard, and show success notification
  */
 export declare const copyFishStateToClipboard: () => Promise<void>;

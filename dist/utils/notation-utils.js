@@ -198,14 +198,34 @@ export const rawMoveToSAN = (rawMove, fen) => {
   const rankToIndex = (rank) => 8 - parseInt(rank);
   const fromFile = fileToIndex(from[0]);
   const fromRank = rankToIndex(from[1]);
-  if (fromRank < 0 || fromRank >= 8 || fromFile < 0 || fromFile >= 8) {
+  const toFile = fileToIndex(to[0]);
+  const toRank = rankToIndex(to[1]);
+  if (
+    fromRank < 0 ||
+    fromRank >= 8 ||
+    fromFile < 0 ||
+    fromFile >= 8 ||
+    toRank < 0 ||
+    toRank >= 8 ||
+    toFile < 0 ||
+    toFile >= 8
+  ) {
     return rawMove; // Invalid square, return as-is
   }
   const piece = board[fromRank][fromFile];
   if (!piece) return rawMove; // No piece at square, return as-is
-  // If it's a pawn move, only return the destination square if the piece is a pawn
-  if ((piece === "P" || piece === "p") && from[0] === to[0]) {
-    return to;
+  // Check if destination is occupied (capture)
+  const destPiece = board[toRank][toFile];
+  const isCapture = destPiece && destPiece !== "";
+  // If it's a pawn move, handle pawn-specific logic
+  if (piece === "P" || piece === "p") {
+    if (from[0] === to[0]) {
+      // Same file (e.g., e2e4 -> e4)
+      return to;
+    } else {
+      // Different file (capture)
+      return `${from[0]}x${to}`;
+    }
   }
   // Convert piece to SAN notation
   const pieceMap = {
@@ -223,7 +243,10 @@ export const rawMoveToSAN = (rawMove, fen) => {
     k: "K", // Black kings still get K
   };
   const pieceLetter = pieceMap[piece] || "";
-  const toSquare = to;
-  return pieceLetter + toSquare;
+  if (isCapture) {
+    return `${pieceLetter}x${to}`;
+  } else {
+    return `${pieceLetter}${to}`;
+  }
 };
 //# sourceMappingURL=notation-utils.js.map
