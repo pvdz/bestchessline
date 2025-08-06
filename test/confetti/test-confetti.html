@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confetti Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+      .test-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 30px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+      }
+      #log {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        height: 300px;
+        overflow-y: scroll;
+        font-family: monospace;
+        white-space: pre-wrap;
+        border-radius: 8px;
+        margin-top: 20px;
+      }
+      button {
+        margin: 8px;
+        padding: 12px 20px;
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: transform 0.2s;
+      }
+      button:hover {
+        transform: translateY(-2px);
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .test-section {
+        margin-bottom: 20px;
+      }
+      .test-section h3 {
+        margin-bottom: 10px;
+        color: #ffd700;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>🎉 Confetti System Test</h1>
+
+      <div class="test-section">
+        <h3>Basic Confetti Tests</h3>
+        <button onclick="testRegularConfetti()">
+          Regular Confetti (50 particles)
+        </button>
+        <button onclick="testLargeConfetti()">
+          Large Confetti (100 particles)
+        </button>
+        <button onclick="testMassiveConfetti()">
+          Massive Confetti (200 particles)
+        </button>
+      </div>
+
+      <div class="test-section">
+        <h3>Special Effects</h3>
+        <button onclick="testRainbowBurst()">🌈 Rainbow Burst</button>
+        <button onclick="testMultipleBursts()">Multiple Bursts</button>
+      </div>
+
+      <div class="test-section">
+        <h3>Debugging</h3>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="testErrorHandling()">Test Error Handling</button>
+      </div>
+
+      <div id="log"></div>
+    </div>
+
+    <script>
+      function log(message) {
+        const logDiv = getElementByIdOrThrow("log");
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.textContent += `[${timestamp}] ${message}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      function clearLog() {
+        getElementByIdOrThrow("log").textContent = "";
+      }
+
+      function getElementByIdOrThrow(id) {
+        const element = document.getElementById(id);
+        if (!element) {
+          throw new Error(`Element with id '${id}' not found`);
+        }
+        return element;
+      }
+
+      // Test functions
+      function testRegularConfetti() {
+        log("=== Testing Regular Confetti ===");
+        try {
+          if (typeof window.triggerConfetti === "function") {
+            window.triggerConfetti(50);
+            log("✓ Regular confetti triggered successfully");
+          } else {
+            log("ERROR: triggerConfetti function not available");
+          }
+        } catch (error) {
+          log("ERROR: Failed to trigger regular confetti: " + error);
+        }
+      }
+
+      function testLargeConfetti() {
+        log("=== Testing Large Confetti ===");
+        try {
+          if (typeof window.triggerConfetti === "function") {
+            window.triggerConfetti(100);
+            log("✓ Large confetti triggered successfully");
+          } else {
+            log("ERROR: triggerConfetti function not available");
+          }
+        } catch (error) {
+          log("ERROR: Failed to trigger large confetti: " + error);
+        }
+      }
+
+      function testMassiveConfetti() {
+        log("=== Testing Massive Confetti ===");
+        try {
+          if (typeof window.triggerConfetti === "function") {
+            window.triggerConfetti(200);
+            log("✓ Massive confetti triggered successfully");
+          } else {
+            log("ERROR: triggerConfetti function not available");
+          }
+        } catch (error) {
+          log("ERROR: Failed to trigger massive confetti: " + error);
+        }
+      }
+
+      function testRainbowBurst() {
+        log("=== Testing Rainbow Burst ===");
+        try {
+          if (typeof window.triggerRainbowBurst === "function") {
+            window.triggerRainbowBurst();
+            log("✓ Rainbow burst triggered successfully");
+          } else {
+            log("ERROR: triggerRainbowBurst function not available");
+          }
+        } catch (error) {
+          log("ERROR: Failed to trigger rainbow burst: " + error);
+        }
+      }
+
+      function testMultipleBursts() {
+        log("=== Testing Multiple Bursts ===");
+        try {
+          if (typeof window.triggerConfetti === "function") {
+            // Trigger multiple bursts with delays
+            window.triggerConfetti(30);
+            setTimeout(() => window.triggerConfetti(30), 500);
+            setTimeout(() => window.triggerConfetti(30), 1000);
+            log("✓ Multiple bursts triggered successfully");
+          } else {
+            log("ERROR: triggerConfetti function not available");
+          }
+        } catch (error) {
+          log("ERROR: Failed to trigger multiple bursts: " + error);
+        }
+      }
+
+      function testErrorHandling() {
+        log("=== Testing Error Handling ===");
+        try {
+          // Test with invalid parameters
+          if (typeof window.triggerConfetti === "function") {
+            window.triggerConfetti(-1);
+            log("✓ Error handling test completed");
+          } else {
+            log("ERROR: triggerConfetti function not available");
+          }
+        } catch (error) {
+          log("ERROR: Error handling test failed: " + error);
+        }
+      }
+
+      // Check availability on page load
+      window.addEventListener("load", function () {
+        log("Page loaded");
+        log("Waiting for confetti module to load...");
+      });
+
+      // Listen for module ready event
+      window.addEventListener("confettiModuleReady", function () {
+        log(
+          "triggerConfetti available: " +
+            (typeof window.triggerConfetti !== "undefined"),
+        );
+        log(
+          "triggerRainbowBurst available: " +
+            (typeof window.triggerRainbowBurst !== "undefined"),
+        );
+
+        // Auto-trigger a small test after module loads
+        if (typeof window.triggerConfetti === "function") {
+          log("=== Auto-testing confetti ===");
+          window.triggerConfetti(20);
+          log("✓ Auto-test confetti triggered");
+        } else {
+          log("ERROR: triggerConfetti not available for auto-test");
+        }
+      });
+    </script>
+
+    <!-- Load the confetti module -->
+    <script type="module">
+      import {
+        triggerConfetti,
+        triggerRainbowBurst,
+      } from "../../dist/utils/confetti-utils.js";
+
+      // Expose functions to window for testing
+      window.triggerConfetti = triggerConfetti;
+      window.triggerRainbowBurst = triggerRainbowBurst;
+
+      console.log("Confetti module loaded successfully");
+
+      // Notify that module is ready
+      window.dispatchEvent(new CustomEvent("confettiModuleReady"));
+    </script>
+  </body>
+</html>
