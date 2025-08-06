@@ -71,6 +71,8 @@ The `fish()` function has been fully implemented with the following features:
 - ✅ **Types Refactoring**: Moved shared types to `src/utils/types.ts`
 - ✅ **Piece Notation Fix**: Fixed `isPieceNotation` regex to allow lowercase letters
 - ✅ **Stockfish Path Fix**: Fixed worker URLs to use correct relative paths
+- ✅ **Castling Detection Fix**: Improved castling detection to work with any king move >1 square
+- ✅ **Enhanced Confetti System**: Completely reworked confetti with rainbow effects and focused corner pop
 
 ### Current Status:
 
@@ -84,10 +86,12 @@ The `fish()` function has been fully implemented with the following features:
 - ✅ **Import paths clean**: All imports correctly resolved
 - ✅ **Stockfish integration working**: Both multi-threaded and single-threaded modes
 - ✅ **Piece notation validation fixed**: Supports both uppercase and lowercase letters
+- ✅ **Castling detection working**: Any king move >1 square triggers castling automatically
+- ✅ **Confetti celebration system**: Enhanced rainbow confetti with focused corner pop effect
 
 ## Application Overview
 
-A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, enhanced move validation with effect detection, and Fish analysis for deep position analysis. Built with simple vanilla TypeScript and HTML/CSS.
+A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, enhanced move validation with effect detection, Fish analysis for deep position analysis, and practice mode with castling detection and celebration effects. Built with simple vanilla TypeScript and HTML/CSS.
 
 ## Core Architecture
 
@@ -172,6 +176,7 @@ interface FishLine {
 - **Core Utilities**: FEN manipulation, notation conversion, move parsing
 - **UI Utilities**: DOM helpers, button management, formatting
 - **Analysis Utilities**: Stockfish integration, analysis management
+- **Celebration Utilities**: Enhanced confetti system with rainbow effects
 - **Shared Types**: All core chess types and interfaces
 
 ## Key Features & Implementation
@@ -248,6 +253,28 @@ interface FishLine {
 - **Format preservation**: PCN moves, scores, deltas, completion status
 - **Import reconstruction**: Full state restoration from exported data
 - **Toast notifications**: Success/error feedback to user
+
+### 5. Practice Mode System
+
+#### Castling Detection
+
+**Enhanced castling logic:**
+
+- **Distance-based detection**: Any king move >1 square triggers castling
+- **Direction detection**: Right movement = kingside (O-O), left = queenside (O-O-O)
+- **No validation**: Castling always works regardless of position map
+- **Automatic rook movement**: Both king and rook move simultaneously
+
+#### Celebration System
+
+**Enhanced confetti effects:**
+
+- **Focused corner pop**: All confetti launches from bottom-right corner
+- **Rainbow color palette**: 12 vibrant colors with varied particle shapes
+- **Realistic physics**: Gravity, air resistance, rotation, and scaling
+- **High velocity**: 700-1500+ initial speed for dramatic effect
+- **Trail effects**: Particles leave colorful trails as they move
+- **Performance optimized**: Efficient particle management and cleanup
 
 ## Development Patterns
 
