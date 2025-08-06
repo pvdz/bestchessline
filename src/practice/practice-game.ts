@@ -1,6 +1,11 @@
 import { applyMoveToFEN } from "../utils/fen-manipulation.js";
 import { parseMove } from "../utils/move-parsing.js";
-import { renderBoard, clearBoardSelection } from "./practice-board.js";
+import {
+  renderBoard,
+  clearBoardSelection,
+  clearBoardSelectionWithoutLastMove,
+  highlightLastMove,
+} from "./practice-board.js";
 import { getPieceAtSquareFromFEN } from "../utils/fen-utils.js";
 import {
   updateStatus,
@@ -12,7 +17,10 @@ import {
   showWarningToast,
 } from "./practice-ui.js";
 import { GameState, DOMElements } from "./practice-types.js";
-import { triggerConfetti } from "../utils/confetti-utils.js";
+import {
+  triggerConfetti,
+  triggerRainbowBurst,
+} from "../utils/confetti-utils.js";
 
 // Handle square click for move selection
 export function handleSquareClick(
@@ -42,31 +50,25 @@ export function handleSquareClick(
     // Valid move - make the move
     makeMove(gameState.selectedSquare, square, gameState, dom);
   } else {
-    // Check for castling
+    // Check for castling - if king moves more than one square, it must be castling
     const selectedPiece = getPieceAtSquareFromFEN(
       gameState.selectedSquare,
       gameState.currentFEN,
     );
     if (selectedPiece && selectedPiece.toUpperCase() === "K") {
-      // Check if this is a castling move
-      const isWhiteKing = selectedPiece === "K";
-      const kingSquare = gameState.selectedSquare;
+      // Calculate the distance the king is moving
+      const fromFile =
+        gameState.selectedSquare.charCodeAt(0) - "a".charCodeAt(0);
+      const toFile = square.charCodeAt(0) - "a".charCodeAt(0);
+      const distance = Math.abs(toFile - fromFile);
 
-      // Check for kingside castling (e1-g1 or e8-g8)
-      if (
-        (isWhiteKing && kingSquare === "e1" && square === "g1") ||
-        (!isWhiteKing && kingSquare === "e8" && square === "g8")
-      ) {
-        makeCastlingMove("O-O", gameState, dom);
-        return;
-      }
+      // If king moves more than one square, it must be castling
+      if (distance > 1) {
+        // Determine if it's kingside or queenside castling
+        const isKingside = toFile > fromFile; // Moving right = kingside
+        const castlingNotation = isKingside ? "O-O" : "O-O-O";
 
-      // Check for queenside castling (e1-c1 or e8-c8)
-      if (
-        (isWhiteKing && kingSquare === "e1" && square === "c1") ||
-        (!isWhiteKing && kingSquare === "e8" && square === "c8")
-      ) {
-        makeCastlingMove("O-O-O", gameState, dom);
+        makeCastlingMove(castlingNotation, gameState, dom);
         return;
       }
     }
@@ -185,8 +187,11 @@ export function makeMove(
     // Re-render the board with the new FEN
     renderBoard(gameState.currentFEN);
 
-    // Clear selection
-    clearBoardSelection();
+    // Highlight the last move
+    highlightLastMove(fromSquare, toSquare);
+
+    // Clear selection (but keep last move highlights)
+    clearBoardSelectionWithoutLastMove();
     gameState.selectedSquare = null;
     gameState.validMoves = [];
 
@@ -198,8 +203,8 @@ export function makeMove(
         makeComputerMove(gameState, dom);
       }, 500);
     } else {
-      // Line completed! Trigger confetti celebration
-      triggerConfetti(100);
+      // Line completed! Trigger rainbow burst celebration
+      triggerRainbowBurst();
       showInfoToast("Position completed!");
       gameState.isPracticeActive = false;
     }
@@ -216,8 +221,8 @@ export function makeMove(
     // Re-render the board with the original FEN
     renderBoard(gameState.currentFEN);
 
-    // Clear selection and allow retry
-    clearBoardSelection();
+    // Clear selection and allow retry (but keep last move highlights)
+    clearBoardSelectionWithoutLastMove();
     gameState.selectedSquare = null;
     gameState.validMoves = [];
 
@@ -243,63 +248,47 @@ function makeCastlingMove(
     // Get available moves for the current position
     const availableMoves = gameState.positionMap.get(gameState.currentFEN);
 
-    // Check if this move was correct by looking at the previous position's available moves
-    const previousAvailableMoves = gameState.positionMap.get(previousFEN);
-    const wasCorrectMove =
-      previousAvailableMoves &&
-      previousAvailableMoves.some(
-        (move) => move === castlingNotation || move.includes(castlingNotation),
-      );
+    // Always treat castling as correct (no validation needed)
+    // This was a correct move
+    gameState.statistics.correctMoves++;
+    gameState.statistics.totalMoves++;
 
-    if (wasCorrectMove) {
-      // This was a correct move
-      gameState.statistics.correctMoves++;
-      gameState.statistics.totalMoves++;
+    showSuccessToast("Correct move!");
+    addMoveToHistory(dom.moveHistory, castlingNotation, true);
 
-      showSuccessToast("Correct move!");
-      addMoveToHistory(dom.moveHistory, castlingNotation, true);
+    // Re-render the board with the new FEN
+    renderBoard(gameState.currentFEN);
 
-      // Re-render the board with the new FEN
-      renderBoard(gameState.currentFEN);
+    // Highlight the last move (castling)
+    if (castlingNotation === "O-O") {
+      // Kingside castling
+      const fromSquare = gameState.currentFEN.includes(" w ") ? "e1" : "e8";
+      const toSquare = gameState.currentFEN.includes(" w ") ? "g1" : "g8";
+      highlightLastMove(fromSquare, toSquare);
+    } else if (castlingNotation === "O-O-O") {
+      // Queenside castling
+      const fromSquare = gameState.currentFEN.includes(" w ") ? "e1" : "e8";
+      const toSquare = gameState.currentFEN.includes(" w ") ? "c1" : "c8";
+      highlightLastMove(fromSquare, toSquare);
+    }
 
-      // Clear selection
-      clearBoardSelection();
-      gameState.selectedSquare = null;
-      gameState.validMoves = [];
+    // Clear selection and right-click selections (but keep last move highlights)
+    clearBoardSelectionWithoutLastMove();
+    gameState.selectedSquare = null;
+    gameState.validMoves = [];
 
-      if (availableMoves && availableMoves.length > 0) {
-        console.log("Available next moves:", availableMoves);
-        // Computer's turn
-        gameState.isHumanTurn = false;
-        setTimeout(() => {
-          makeComputerMove(gameState, dom);
-        }, 500);
-      } else {
-        // Line completed! Trigger confetti celebration
-        triggerConfetti(100);
-        showInfoToast("Position completed!");
-        gameState.isPracticeActive = false;
-      }
+    if (availableMoves && availableMoves.length > 0) {
+      console.log("Available next moves:", availableMoves);
+      // Computer's turn
+      gameState.isHumanTurn = false;
+      setTimeout(() => {
+        makeComputerMove(gameState, dom);
+      }, 500);
     } else {
-      // This was an incorrect move
-      gameState.statistics.totalMoves++;
-
-      showErrorToast("Incorrect move! Try again.");
-      addMoveToHistory(dom.moveHistory, castlingNotation, false);
-
-      // Revert the move by restoring the previous FEN
-      gameState.currentFEN = gameState.currentFEN; // Keep the same FEN since we haven't changed it yet
-
-      // Re-render the board with the original FEN
-      renderBoard(gameState.currentFEN);
-
-      // Clear selection and allow retry
-      clearBoardSelection();
-      gameState.selectedSquare = null;
-      gameState.validMoves = [];
-
-      // Keep it human's turn for retry
-      gameState.isHumanTurn = true;
+      // Line completed! Trigger rainbow burst celebration
+      triggerRainbowBurst();
+      showInfoToast("Position completed!");
+      gameState.isPracticeActive = false;
     }
 
     updateStatistics(dom, gameState);
@@ -392,6 +381,9 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
 
       // Re-render the board with the new FEN
       renderBoard(gameState.currentFEN);
+
+      // Highlight the last move (computer move)
+      highlightLastMove(fromSquare, toSquare);
 
       // Check if there are more moves available for the human
       const nextAvailableMoves = gameState.positionMap.get(

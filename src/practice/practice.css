@@ -230,6 +230,65 @@ body {
   color: white;
 }
 
+.practice-square.right-click-selected {
+  background-color: #9b59b6 !important;
+  color: white;
+  box-shadow: inset 0 0 0 3px #8e44ad;
+  position: relative;
+  animation: rightClickPulse 0.3s ease-out;
+}
+
+.practice-square.right-click-selected::after {
+  content: "★";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 12px;
+  color: #f1c40f;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.practice-square.last-move {
+  background-color: #e67e22 !important;
+  color: white;
+  box-shadow: inset 0 0 0 3px #d35400;
+  position: relative;
+}
+
+.practice-square.last-move::after {
+  content: "●";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 10px;
+  color: #f39c12;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Right-click selections should override last move indicators */
+.practice-square.right-click-selected.last-move {
+  background-color: #9b59b6 !important;
+  color: white;
+  box-shadow: inset 0 0 0 3px #8e44ad;
+}
+
+.practice-square.right-click-selected.last-move::after {
+  content: "★";
+  color: #f1c40f;
+}
+
+@keyframes rightClickPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .practice-square.valid-move {
   background-color: #2ecc71 !important;
   color: white;

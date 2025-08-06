@@ -3,6 +3,7 @@ import {
   renderBoard,
   addDragAndDropListeners,
   reAddDragAndDropListeners,
+  clearRightClickSelections,
 } from "./practice-board.js";
 import {
   parseOpeningLines,
@@ -17,7 +18,10 @@ import {
   showErrorToast,
   showInfoToast,
 } from "./practice-ui.js";
-import { triggerConfetti } from "../utils/confetti-utils.js";
+import {
+  triggerConfetti,
+  triggerRainbowBurst,
+} from "../utils/confetti-utils.js";
 import {
   handleSquareClick,
   makeMove,
@@ -305,7 +309,20 @@ function initializeEventListeners(): void {
   ) as HTMLButtonElement;
   if (confettiBtn) {
     confettiBtn.addEventListener("click", () => {
-      triggerConfetti(100);
+      console.log("Rainbow burst button clicked!");
+      triggerRainbowBurst();
+    });
+  } else {
+    console.error("Confetti button not found!");
+  }
+
+  // Clear selections button
+  const clearSelectionsBtn = document.getElementById(
+    "practice-clear-selections-btn",
+  ) as HTMLButtonElement;
+  if (clearSelectionsBtn) {
+    clearSelectionsBtn.addEventListener("click", () => {
+      clearRightClickSelections();
     });
   }
 }

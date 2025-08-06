@@ -2,33 +2,33 @@
  * Line Fisher analysis configuration
  */
 export interface LineFisherConfig {
-  initiatorMoves: string[];
-  responderMoveCounts: number[];
-  maxDepth: number;
-  threads: number;
-  defaultResponderCount: number;
-  rootFEN: string;
-  baselineScore?: number;
-  baselineMoves?: {
-    move: string;
-    score: number;
-  }[];
+    initiatorMoves: string[];
+    responderMoveCounts: number[];
+    maxDepth: number;
+    threads: number;
+    defaultResponderCount: number;
+    rootFEN: string;
+    baselineScore?: number;
+    baselineMoves?: {
+        move: string;
+        score: number;
+    }[];
 }
 /**
  * Line Fisher result for a single line
  */
 export interface LineFisherResult {
-  lineIndex: number;
-  pcns: string[];
-  scores: number[];
-  deltas: number[];
-  sanLine: string;
-  nodeId: string;
-  isComplete: boolean;
-  isDone: boolean;
-  isTransposition?: boolean;
-  responderMoveList?: string[];
-  updateCount: number;
+    lineIndex: number;
+    pcns: string[];
+    scores: number[];
+    deltas: number[];
+    sanLine: string;
+    nodeId: string;
+    isComplete: boolean;
+    isDone: boolean;
+    isTransposition?: boolean;
+    responderMoveList?: string[];
+    updateCount: number;
 }
 /**
  * Continue fish analysis from current state
@@ -45,15 +45,15 @@ export declare const importFishStateFromClipboard: () => Promise<void>;
  * Represents a line being analyzed
  */
 interface FishLine {
-  lineIndex: number;
-  nodeId: string;
-  sanGame: string;
-  pcns: string[];
-  score: number;
-  delta: number;
-  position: string;
-  isDone: boolean;
-  isFull: boolean;
+    lineIndex: number;
+    nodeId: string;
+    sanGame: string;
+    pcns: string[];
+    score: number;
+    delta: number;
+    position: string;
+    isDone: boolean;
+    isFull: boolean;
 }
 /**
  * Stop Fish analysis

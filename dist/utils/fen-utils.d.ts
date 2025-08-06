@@ -28,7 +28,4 @@ export declare function isValidSquare(square: string): square is Square;
 /**
  * Get piece at a specific square from FEN string
  */
-export declare function getPieceAtSquareFromFEN(
-  square: string,
-  fen: string,
-): string;
+export declare function getPieceAtSquareFromFEN(square: string, fen: string): string;

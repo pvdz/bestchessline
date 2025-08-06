@@ -98,6 +98,11 @@ export function addDragAndDropListeners(
       passive: false,
     });
 
+    // Disable context menu on right-click
+    element.addEventListener("contextmenu", (event: Event) => {
+      event.preventDefault();
+    });
+
     // Global document listeners for drag operations
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -107,6 +112,21 @@ export function addDragAndDropListeners(
 
   const handleMouseDown = (event: MouseEvent): void => {
     const target = event.target as HTMLElement;
+
+    // Handle right-click for square selection
+    if (event.button === 2) {
+      // Right mouse button
+      event.preventDefault();
+      const squareEl = target.closest(".practice-square") as HTMLElement;
+      if (squareEl) {
+        const square = squareEl.dataset.square;
+        if (square) {
+          toggleSquareSelection(square);
+        }
+      }
+      return;
+    }
+
     // Check if the target is a piece or a child of a piece
     const pieceElement = target.closest(".practice-piece");
     if (pieceElement) {
@@ -430,6 +450,12 @@ export function clearBoardSelection(): void {
   document.querySelectorAll(".practice-square.valid-move").forEach((el) => {
     el.classList.remove("valid-move");
   });
+
+  // Clear right-click selections
+  clearRightClickSelections();
+
+  // Don't clear last move highlights - they should persist
+  // clearLastMoveHighlight();
 }
 
 // Select a square on the board
@@ -457,6 +483,80 @@ export function selectSquare(square: string, fen: string): void {
   //     const moveEl = document.querySelector(`[data-square="${moveSquare}"]`) as HTMLElement;
   //     moveEl.classList.add('valid-move');
   // });
+}
+
+// Toggle square selection with right-click
+export function toggleSquareSelection(square: string): void {
+  const squareEl = document.querySelector(
+    `[data-square="${square}"]`,
+  ) as HTMLElement;
+
+  if (squareEl) {
+    if (squareEl.classList.contains("right-click-selected")) {
+      squareEl.classList.remove("right-click-selected");
+    } else {
+      squareEl.classList.add("right-click-selected");
+    }
+  }
+}
+
+// Clear all right-click selections
+export function clearRightClickSelections(): void {
+  document
+    .querySelectorAll(".practice-square.right-click-selected")
+    .forEach((el) => {
+      el.classList.remove("right-click-selected");
+    });
+}
+
+// Highlight the last move (from and to squares)
+export function highlightLastMove(fromSquare: string, toSquare: string): void {
+  // Clear any existing last move highlights
+  document.querySelectorAll(".practice-square.last-move").forEach((el) => {
+    el.classList.remove("last-move");
+  });
+
+  // Highlight the from square
+  const fromEl = document.querySelector(
+    `[data-square="${fromSquare}"]`,
+  ) as HTMLElement;
+  if (fromEl) {
+    fromEl.classList.add("last-move");
+  }
+
+  // Highlight the to square
+  const toEl = document.querySelector(
+    `[data-square="${toSquare}"]`,
+  ) as HTMLElement;
+  if (toEl) {
+    toEl.classList.add("last-move");
+  }
+}
+
+// Clear last move highlights
+export function clearLastMoveHighlight(): void {
+  document.querySelectorAll(".practice-square.last-move").forEach((el) => {
+    el.classList.remove("last-move");
+  });
+}
+
+// Clear board selection without clearing last move highlights
+export function clearBoardSelectionWithoutLastMove(): void {
+  // Clear selected square
+  const selectedEl = document.querySelector(
+    ".practice-square.selected",
+  ) as HTMLElement;
+  if (selectedEl) {
+    selectedEl.classList.remove("selected");
+  }
+
+  // Clear valid move highlights
+  document.querySelectorAll(".practice-square.valid-move").forEach((el) => {
+    el.classList.remove("valid-move");
+  });
+
+  // Clear right-click selections
+  clearRightClickSelections();
 }
 
 // Find valid moves for a piece (simplified)

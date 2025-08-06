@@ -11,18 +11,20 @@
  * @returns Formatted score string
  */
 export function formatScoreWithMateIn(score, mateIn) {
-  if (mateIn > 0) {
-    // Mate in X moves
-    return score > 0 ? `+M${mateIn}` : `-M${mateIn}`;
-  } else if (Math.abs(score) >= 10000) {
-    // Mate but mateIn is 0 (shouldn't happen, but fallback. or maybe that's just the current board state? #)
-    return score > 0 ? `+#` : `-#`;
-  } else {
-    // Regular score in pawns
-    const scoreInPawns = score / 100;
-    return score > 0
-      ? `+${scoreInPawns.toFixed(1)}`
-      : `${scoreInPawns.toFixed(1)}`;
-  }
+    if (mateIn > 0) {
+        // Mate in X moves
+        return score > 0 ? `+M${mateIn}` : `-M${mateIn}`;
+    }
+    else if (Math.abs(score) >= 10000) {
+        // Mate but mateIn is 0 (shouldn't happen, but fallback. or maybe that's just the current board state? #)
+        return score > 0 ? `+#` : `-#`;
+    }
+    else {
+        // Regular score in pawns
+        const scoreInPawns = score / 100;
+        return score > 0
+            ? `+${scoreInPawns.toFixed(1)}`
+            : `${scoreInPawns.toFixed(1)}`;
+    }
 }
 //# sourceMappingURL=formatting-utils.js.map
