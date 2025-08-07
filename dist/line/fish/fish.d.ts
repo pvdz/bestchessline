@@ -38,3 +38,4 @@ export declare const initializeLineFisher: () => Promise<void>;
  * Reset Fish analysis
  */
 export declare const resetFishAnalysis: () => void;
+export declare function updateLiveLinesPreview(): void;

@@ -6,14 +6,20 @@ import { getPieceAtSquareFromFEN } from "../../utils/fen-utils.js";
 import { log } from "../../utils/logging.js";
 import { compareAnalysisMoves } from "../best/analysis-utils.js";
 import { getCurrentFishState } from "./fish-state.js";
+import { getInputElementOrThrow } from "../../utils/dom-helpers.js";
 export async function initFishing() {
   const rootFEN = getCurrentFishState().config.rootFEN;
+  const threads = Number(getInputElementOrThrow("fish-threads").value);
+  console.log("Fishing with", threads, "threads");
+  getCurrentFishState().config.threads = threads;
   // Get root score and update config
   let rootAnalysis;
   try {
+    console.log("SF: root analysis:", getCurrentFishState().config.threads);
     rootAnalysis = await analyzePosition(rootFEN, {
       threads: getCurrentFishState().config.threads,
-      multiPV: 1,
+      // Use MultiPV=5 so we can reuse top list for predefined move scoring
+      multiPV: 5,
       depth: 20,
     });
   } catch (error) {
@@ -26,14 +32,12 @@ export async function initFishing() {
   const bestMove = rootAnalysis.moves.sort((a, b) =>
     compareAnalysisMoves(a, b, direction),
   )[0];
-  // Store baseline score for delta calculations
+  // Store baseline score for delta calculations and cache top root moves
   getCurrentFishState().config.baselineScore = bestMove.score;
-  getCurrentFishState().config.baselineMoves = [
-    {
-      move: bestMove.move.from + bestMove.move.to,
-      score: bestMove.score,
-    },
-  ];
+  getCurrentFishState().config.baselineMoves = rootAnalysis.moves
+    .sort((a, b) => compareAnalysisMoves(a, b, direction))
+    .slice(0, 5)
+    .map((m) => ({ move: m.move.from + m.move.to, score: m.score }));
 }
 export async function initInitialMove() {
   // Create initial move
@@ -48,33 +52,36 @@ async function createInitialMove() {
   // Check if there's a predefined move for depth 0
   const predefinedMove = config.initiatorMoves[0];
   if (predefinedMove) {
-    // Use predefined move
-    const move = parseMove(predefinedMove, config.rootFEN);
-    if (!move) {
+    // Use predefined move for the first initiator move
+    const parsedMove = parseMove(predefinedMove, config.rootFEN);
+    if (!parsedMove) {
       throw new Error("Failed to parse predefined move");
     }
-    // Get score for the predefined move
-    const newFEN = applyMoveToFEN(config.rootFEN, move);
-    const analysis = await analyzePosition(newFEN, {
-      threads: config.threads,
-      multiPV: 1,
-      depth: 20,
-    });
-    const score = analysis.moves[0]?.score || 0;
-    // Convert SAN predefined move to PCN format
-    const parsedMove = parseMove(predefinedMove, config.rootFEN);
-    let pcnMove = predefinedMove; // Fallback
-    if (parsedMove) {
-      const piece = getPieceAtSquareFromFEN(parsedMove.from, config.rootFEN);
-      const pieceName = getPieceCapitalized(piece);
-      pcnMove = `${pieceName}${parsedMove.from}${parsedMove.to}`;
+    const long = parsedMove.from + parsedMove.to;
+    // If predefined move is in the cached root top-5, reuse its score; otherwise compute its score at the next position
+    const top = config.baselineMoves?.find((m) => m.move === long);
+    const newFEN = applyMoveToFEN(config.rootFEN, parsedMove);
+    let score = 0;
+    if (top) {
+      score = top.score;
+    } else {
+      console.log("SF: initial move:");
+      const analysis = await analyzePosition(newFEN, {
+        threads: config.threads,
+        multiPV: 1,
+        depth: 20,
+      });
+      score = analysis.moves[0]?.score || 0;
     }
+    const piece = getPieceAtSquareFromFEN(parsedMove.from, config.rootFEN);
+    const pieceName = getPieceCapitalized(piece);
+    const pcnMove = `${pieceName}${parsedMove.from}${parsedMove.to}`;
     return {
       lineIndex: 0,
       nodeId: "",
       sanGame: "", // Will be computed on demand
       pcns: [pcnMove],
-      score: score,
+      score,
       best5: [],
       position: newFEN,
       isDone: false,
@@ -321,9 +328,10 @@ async function findBestInitiatorMove(line) {
     }
     const bestMove = parseMove(best.move.from + best.move.to, line.position);
     if (!bestMove) {
-      console.warn(
-        "Unexpected invariant: Stockfish gave a different move than the predefined move",
-      );
+      console.warn("Unexpected invariant: Stockfish gave no best move?");
+      console.log(analysis.moves);
+      console.log(best);
+      console.log(bestMove);
       return;
     }
     line.pcns.push(bestMove.piece + bestMove.from + bestMove.to);

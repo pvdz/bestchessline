@@ -174,7 +174,6 @@ export interface LineFisherConfig {
 export interface LineFisherResult {
   lineIndex: number;
   pcns: string[];
-  scores: number[];
   deltas: number[];
   sanLine: string;
   isComplete: boolean;
@@ -200,7 +199,6 @@ export interface FishState {
 }
 export interface LineFisherDisplayFormat {
   pcns: string[];
-  scores: number[];
   deltas: number[];
   sanGame: string;
   isComplete: boolean;

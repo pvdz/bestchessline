@@ -51,7 +51,7 @@ import {
   stopFishAnalysis,
   resetFishAnalysis,
 } from "./fish/fish.js";
-import { getLineFisherConfigFromUI } from "./fish/line-fisher-ui-utils.js";
+import { getLineFisherConfigFromUI } from "./fish/fish-ui-utils.js";
 import { hideMoveArrow } from "./board/arrow-utils.js";
 import { continueFishing } from "./fish/fish.js";
 import { getCurrentFishState } from "./fish/fish-state.js";
@@ -221,11 +221,11 @@ const initializeEventListeners = () => {
   startBtn.addEventListener("click", () => startAnalysis());
   stopBtn.addEventListener("click", () => stopAnalysis());
   // Line Fisher analysis controls
-  const stopLineFisherBtn = getElementByIdOrThrow("stop-line-fisher");
-  const resetLineFisherBtn = getElementByIdOrThrow("reset-line-fisher");
-  const continueLineFisherBtn = getElementByIdOrThrow("continue-line-fisher");
+  const stopLineFisherBtn = getElementByIdOrThrow("fish-stop");
+  const resetLineFisherBtn = getElementByIdOrThrow("fish-reset");
+  const continueLineFisherBtn = getElementByIdOrThrow("fish-continue");
   // Fish2 button - new simplified fish function
-  const startFish2Btn = getElementByIdOrThrow("start-fish2");
+  const startFish2Btn = getElementByIdOrThrow("fish-start");
   startFish2Btn.addEventListener("click", async () => {
     console.log("Start Fish2 button clicked!");
     await runFishAnalysis();
@@ -243,15 +243,9 @@ const initializeEventListeners = () => {
     continueFishing();
   });
   // Line Fisher state management controls
-  const exportLineFisherStateBtn = getElementByIdOrThrow(
-    "export-line-fisher-state",
-  );
-  const copyLineFisherStateBtn = getElementByIdOrThrow(
-    "copy-line-fisher-state",
-  );
-  const importLineFisherStateBtn = getElementByIdOrThrow(
-    "import-line-fisher-state",
-  );
+  const exportLineFisherStateBtn = getElementByIdOrThrow("fish-export");
+  const copyLineFisherStateBtn = getElementByIdOrThrow("fish-copy");
+  const importLineFisherStateBtn = getElementByIdOrThrow("fish-import");
   exportLineFisherStateBtn.addEventListener("click", async () => {
     await exportFishStateToClipboard();
   });
@@ -263,10 +257,8 @@ const initializeEventListeners = () => {
     await importFishStateFromClipboard();
   });
   // Line Fisher thread control
-  const lineFisherThreadsInput = getElementByIdOrThrow("line-fisher-threads");
-  const lineFisherThreadsValue = getElementByIdOrThrow(
-    "line-fisher-threads-value",
-  );
+  const lineFisherThreadsInput = getElementByIdOrThrow("fish-threads");
+  const lineFisherThreadsValue = getElementByIdOrThrow("fish-threads-value");
   // Initialize with default value
   lineFisherThreadsValue.textContent = lineFisherThreadsInput.value;
   lineFisherThreadsInput.addEventListener("input", () => {
@@ -274,8 +266,8 @@ const initializeEventListeners = () => {
     lineFisherThreadsValue.textContent = threads;
   });
   // Line Fisher depth control
-  const lineFisherDepthInput = getElementByIdOrThrow("line-fisher-depth");
-  const lineFisherDepthValue = getElementByIdOrThrow("line-fisher-depth-value");
+  const lineFisherDepthInput = getElementByIdOrThrow("fish-depth");
+  const lineFisherDepthValue = getElementByIdOrThrow("fish-depth-value");
   // Initialize with default value
   lineFisherDepthValue.textContent = lineFisherDepthInput.value;
   lineFisherDepthInput.addEventListener("input", () => {
@@ -284,10 +276,10 @@ const initializeEventListeners = () => {
   });
   // Line Fisher default responder count control
   const lineFisherDefaultResponderInput = getElementByIdOrThrow(
-    "line-fisher-default-responder-count",
+    "fish-default-responder-count",
   );
   const lineFisherDefaultResponderValue = getElementByIdOrThrow(
-    "line-fisher-default-responder-count-value",
+    "fish-default-responder-count-value",
   );
   // Initialize with default value
   lineFisherDefaultResponderValue.textContent =
@@ -297,11 +289,9 @@ const initializeEventListeners = () => {
     lineFisherDefaultResponderValue.textContent = count;
   });
   // Line Fisher target depth control
-  const lineFisherTargetDepthInput = getElementByIdOrThrow(
-    "line-fisher-target-depth",
-  );
+  const lineFisherTargetDepthInput = getElementByIdOrThrow("fish-target-depth");
   const lineFisherTargetDepthValue = getElementByIdOrThrow(
-    "line-fisher-target-depth-value",
+    "fish-target-depth-value",
   );
   // Initialize with default value
   lineFisherTargetDepthValue.textContent = lineFisherTargetDepthInput.value;
@@ -309,6 +299,17 @@ const initializeEventListeners = () => {
     const depth = lineFisherTargetDepthInput.value;
     lineFisherTargetDepthValue.textContent = depth;
   });
+  // Live lines preview toggle
+  const fishLinesToggle = document.getElementById("fish-lines-toggle");
+  const fishLinesPanel = document.getElementById("fish-lines-panel");
+  if (fishLinesToggle && fishLinesPanel) {
+    fishLinesToggle.addEventListener("change", () => {
+      if (fishLinesToggle.checked) {
+        fishLinesPanel.style.display = "block";
+      }
+      // When disabled, leave panel visible but stop updates (handled in updateLiveLinesPreview)
+    });
+  }
   // Stockfish loading event listeners
   window.addEventListener("stockfish-loading", (event) => {
     const customEvent = event;

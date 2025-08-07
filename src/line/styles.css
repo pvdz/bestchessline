@@ -1732,8 +1732,8 @@ input.error:focus {
   box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
 }
 
-/* Line Fisher Styles */
-.line-fisher-section {
+/* Fish UI Styles */
+#fish-section {
   background: white;
   padding: 20px;
   border-radius: 8px;
@@ -1743,20 +1743,20 @@ input.error:focus {
   width: 100%;
 }
 
-.line-fisher-controls {
+#fish-controls {
   display: flex;
   flex-direction: column;
   gap: 15px;
   margin-bottom: 15px;
 }
 
-.line-fisher-buttons {
+#fish-buttons {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.line-fisher-buttons button {
+#fish-buttons button {
   padding: 10px 16px;
   border: none;
   border-radius: 4px;
@@ -1767,86 +1767,82 @@ input.error:focus {
   color: white;
 }
 
-.line-fisher-buttons button:hover:not(:disabled) {
+#fish-buttons button:hover:not(:disabled) {
   background: #0056b3;
 }
 
-.line-fisher-buttons button:disabled {
+#fish-buttons button:disabled {
   background: #6c757d;
   cursor: not-allowed;
 }
 
-#stop-line-fisher {
+#fish-stop {
   background: #dc3545;
 }
 
-#stop-line-fisher:hover:not(:disabled) {
+#fish-stop:hover:not(:disabled) {
   background: #c82333;
 }
 
-#stop-line-fisher:disabled {
+#fish-stop:disabled {
   background: #6c757d;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-#reset-line-fisher {
+#fish-reset {
   background: #6c757d;
 }
 
-#reset-line-fisher:hover:not(:disabled) {
+#fish-reset:hover:not(:disabled) {
   background: #5a6268;
 }
 
-#copy-line-fisher-state {
+#fish-copy {
   background: #17a2b8;
 }
 
-#copy-line-fisher-state:hover:not(:disabled) {
+#fish-copy:hover:not(:disabled) {
   background: #138496;
 }
 
-#export-line-fisher-state {
+#fish-export {
   background: #ffc107;
   color: #212529;
 }
 
-#export-line-fisher-state:hover:not(:disabled) {
+#fish-export:hover:not(:disabled) {
   background: #e0a800;
 }
 
-#import-line-fisher-state {
+#fish-import {
   background: #fd7e14;
 }
 
-#import-line-fisher-state:hover:not(:disabled) {
+#fish-import:hover:not(:disabled) {
   background: #e8690b;
 }
 
-#continue-line-fisher {
+#fish-continue {
   background: #20c997;
 }
 
-#continue-line-fisher:hover:not(:disabled) {
+#fish-continue:hover:not(:disabled) {
   background: #1ea085;
 }
 
-#start-fish2 {
+#fish-start {
   background: #0056b3;
 }
 
-#start-fish2:hover:not(:disabled) {
+#fish-start:hover:not(:disabled) {
   background: #004085;
 }
 
-.line-fisher-initiator-moves {
+#fish-initiator-controls {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
-}
-
-.line-fisher-depth-control {
-  margin-bottom: 15px;
 }
 
 .initiator-moves-controls,
@@ -1885,7 +1881,7 @@ input.error:focus {
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-.line-fisher-status {
+#fish-status {
   background: #f8f9fa;
   padding: 15px;
   border-radius: 6px;
@@ -1893,7 +1889,7 @@ input.error:focus {
   border: 1px solid #e9ecef;
 }
 
-.line-fisher-state-info {
+#fish-state-info {
   background: #f8f9fa;
   padding: 15px;
   border-radius: 6px;
@@ -1901,36 +1897,54 @@ input.error:focus {
   border: 1px solid #e9ecef;
 }
 
-.line-fisher-panel {
+.fish-panel {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 15px;
 }
 
-.line-fisher-results {
+#fish-results {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
-.line-fisher-config-section {
-  display: flex !important;
-  gap: 6px !important;
-  background: white !important;
-  padding: 8px !important;
-  border-radius: 6px !important;
-  border: 1px solid #e9ecef !important;
-  margin-bottom: 15px !important;
-  font-size: 12px !important;
+/* Live Lines preview */
+#fish-lines-panel {
+  margin-top: 10px;
 }
 
-.line-fisher-config-row {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  gap: 15px !important;
+#fish-lines-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
+
+.fish-lines-column h4 {
+  margin: 0 0 6px 0;
+}
+
+#fish-lines-wip,
+#fish-lines-done {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 8px;
+  min-height: 40px;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  line-height: 1.3;
+}
+
+.fish-preview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Removed unused .line-fisher-config-section and .line-fisher-config-row */
 
 .fish-config-item {
   display: flex;
@@ -1944,29 +1958,9 @@ input.error:focus {
   font-weight: 600;
 }
 
-.line-fisher-result {
-  background: white;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #e9ecef;
-  margin-bottom: 10px;
-}
+/* Removed unused .line-fisher-result rules */
 
-.line-fisher-result h4 {
-  margin: 0 0 8px 0;
-  color: #495057;
-  font-size: 14px;
-}
-
-.line-fisher-status {
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-
-.line-fisher-status strong {
-  color: #495057;
-  font-weight: 500;
-}
+/* Removed duplicate/unused .line-fisher-status rules */
 
 #fish-config-root {
   background: white;
@@ -1976,12 +1970,7 @@ input.error:focus {
   margin-bottom: 15px;
 }
 
-.line-fisher-config h3 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #495057;
-}
+/* Removed unused .line-fisher-config h3 */
 
 #fish-config-board-root {
   display: flex;
@@ -1991,11 +1980,7 @@ input.error:focus {
   justify-content: flex-start;
 }
 
-.line-fisher-config-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+/* Removed unused .line-fisher-config-grid */
 
 #fish-board-display {
   display: table;
@@ -2011,7 +1996,7 @@ input.error:focus {
   order: 1;
 }
 
-.line-fisher-board-square {
+.fish-board-square {
   display: table-cell;
   width: 25px;
   height: 25px;
@@ -2026,13 +2011,13 @@ input.error:focus {
 }
 
 /* Create checkered pattern for chess board */
-tr:nth-child(odd) .line-fisher-board-square:nth-child(odd),
-tr:nth-child(even) .line-fisher-board-square:nth-child(even) {
+tr:nth-child(odd) .fish-board-square:nth-child(odd),
+tr:nth-child(even) .fish-board-square:nth-child(even) {
   background-color: #f0d9b5;
 }
 
-tr:nth-child(odd) .line-fisher-board-square:nth-child(even),
-tr:nth-child(even) .line-fisher-board-square:nth-child(odd) {
+tr:nth-child(odd) .fish-board-square:nth-child(even),
+tr:nth-child(even) .fish-board-square:nth-child(odd) {
   background-color: #b58863;
 }
 
@@ -2044,15 +2029,9 @@ tr:nth-child(even) .line-fisher-board-square:nth-child(odd) {
   order: 2;
 }
 
-.line-fisher-state-info {
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 15px;
-  margin-bottom: 15px;
-}
+/* Removed duplicate .line-fisher-state-info (replaced by #fish-state-info) */
 
-.line-fisher-progress-section {
+.fish-progress-section {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2089,7 +2068,7 @@ tr:nth-child(even) .line-fisher-board-square:nth-child(odd) {
   font-weight: 600;
 }
 
-.line-fisher-result-compact {
+.fish-result-compact {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2098,24 +2077,24 @@ tr:nth-child(even) .line-fisher-board-square:nth-child(odd) {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.line-fisher-result-compact:hover {
+.fish-result-compact:hover {
   background-color: #f8f9fa;
 }
 
-.line-number {
+.fish-line-number {
   color: #666;
   font-weight: 500;
   min-width: 20px;
 }
 
-.line-score {
+.fish-line-score {
   color: #007bff;
   font-weight: 600;
   min-width: 35px;
   text-align: right;
 }
 
-.line-delta {
+.fish-line-delta {
   color: #666;
   font-size: 10px;
   min-width: 25px;
@@ -2123,21 +2102,21 @@ tr:nth-child(even) .line-fisher-board-square:nth-child(odd) {
   margin-right: 8px;
 }
 
-.line-delta.positive {
+.fish-line-delta.positive {
   color: #1e7e34;
 }
 
-.line-delta.negative {
+.fish-line-delta.negative {
   color: #dc3545;
 }
 
-.line-notation {
+.fish-line-notation {
   flex: 1;
   font-family: monospace;
   color: #333;
 }
 
-.line-fisher-more {
+.fish-more {
   padding: 8px;
   text-align: center;
   color: #666;

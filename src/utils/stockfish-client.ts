@@ -673,6 +673,8 @@ const parseRawMove = (moveStr: string): ChessMove | null => {
 // ANALYSIS FUNCTIONS
 // ============================================================================
 
+let concurrencyCheck = false;
+
 /**
  * Analyze position with Stockfish
  */
@@ -681,6 +683,23 @@ export const analyzePosition = async (
   options: StockfishOptions = {},
   onUpdate?: (result: AnalysisResult) => void,
 ): Promise<AnalysisResult> => {
+  if (concurrencyCheck) {
+    throw new Error(
+      "Stockfish analyzePosition() called while already analyzing",
+    );
+  }
+  concurrencyCheck = true;
+  return analyzePositionMono(fen, options, onUpdate).finally(
+    () => (concurrencyCheck = false),
+  );
+};
+
+const analyzePositionMono = async (
+  fen: string,
+  options: StockfishOptions = {},
+  onUpdate?: (result: AnalysisResult) => void,
+): Promise<AnalysisResult> => {
+  console.log("Starting stockfish analyze()", options);
   const promise = new Promise<AnalysisResult>((resolve, reject) => {
     // Validate input parameters
     if (!fen || typeof fen !== "string") {
@@ -690,7 +709,7 @@ export const analyzePosition = async (
     }
 
     if (!stockfishState.isReady) {
-      log("Stockfish not ready, queuing analysis...");
+      console.log("Stockfish not ready, queuing analysis...");
       updateStockfishState({
         pendingAnalysis: () =>
           analyzePosition(fen, options, onUpdate).then(resolve).catch(reject),
@@ -731,6 +750,8 @@ export const analyzePosition = async (
     // Set up completion callback
     const finalCallback = (result: AnalysisResult): void => {
       if (result.completed) {
+        console.log("Stockfish analysis completed", result);
+
         resolve(result);
         // Remove this callback
         updateStockfishState({

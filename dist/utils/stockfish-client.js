@@ -560,10 +560,23 @@ const parseRawMove = (moveStr) => {
 // ============================================================================
 // ANALYSIS FUNCTIONS
 // ============================================================================
+let concurrencyCheck = false;
 /**
  * Analyze position with Stockfish
  */
 export const analyzePosition = async (fen, options = {}, onUpdate) => {
+  if (concurrencyCheck) {
+    throw new Error(
+      "Stockfish analyzePosition() called while already analyzing",
+    );
+  }
+  concurrencyCheck = true;
+  return analyzePositionMono(fen, options, onUpdate).finally(
+    () => (concurrencyCheck = false),
+  );
+};
+const analyzePositionMono = async (fen, options = {}, onUpdate) => {
+  console.log("Starting stockfish analyze()", options);
   const promise = new Promise((resolve, reject) => {
     // Validate input parameters
     if (!fen || typeof fen !== "string") {
@@ -572,7 +585,7 @@ export const analyzePosition = async (fen, options = {}, onUpdate) => {
       return;
     }
     if (!stockfishState.isReady) {
-      log("Stockfish not ready, queuing analysis...");
+      console.log("Stockfish not ready, queuing analysis...");
       updateStockfishState({
         pendingAnalysis: () =>
           analyzePosition(fen, options, onUpdate).then(resolve).catch(reject),
@@ -607,6 +620,7 @@ export const analyzePosition = async (fen, options = {}, onUpdate) => {
     // Set up completion callback
     const finalCallback = (result) => {
       if (result.completed) {
+        console.log("Stockfish analysis completed", result);
         resolve(result);
         // Remove this callback
         updateStockfishState({

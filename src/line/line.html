@@ -20,48 +20,50 @@
 
       <div class="main-content">
         <!-- Fish -->
-        <div class="line-fisher-section">
+        <div id="fish-section">
           <h2>Line Fisher</h2>
-          <div class="line-fisher-controls">
-            <div class="line-fisher-buttons">
-              <button id="start-fish2">Fish2</button>
-              <button id="stop-line-fisher" disabled>Stop</button>
-              <button id="reset-line-fisher">Reset</button>
-              <button id="copy-line-fisher-state">Copy</button>
-              <button id="export-line-fisher-state">Export</button>
-              <button id="import-line-fisher-state">Import</button>
-              <button id="continue-line-fisher">Continue</button>
+          <div id="fish-controls">
+            <div id="fish-buttons">
+              <button id="fish-start">Fish2</button>
+              <button id="fish-stop" disabled>Stop</button>
+              <button id="fish-reset">Reset</button>
+              <button id="fish-copy">Copy</button>
+              <button id="fish-export">Export</button>
+              <button id="fish-import">Import</button>
+              <button id="fish-continue">Continue</button>
               <div class="thread-controls">
-                <label for="line-fisher-threads">Threads:</label>
+                <label for="fish-threads">Threads:</label>
                 <input
                   type="range"
-                  id="line-fisher-threads"
+                  id="fish-threads"
                   min="1"
                   max="16"
                   value="10"
                 />
-                <span id="line-fisher-threads-value">10</span>
+                <span id="fish-threads-value">10</span>
+              </div>
+              <div class="fish-preview-toggle">
+                <label for="fish-lines-toggle">
+                  <input type="checkbox" id="fish-lines-toggle" checked />
+                  <span>Display last line updates</span>
+                </label>
               </div>
             </div>
-            <div class="line-fisher-initiator-moves">
+            <div id="fish-initiator-controls">
               <div class="initiator-moves-controls">
-                <label for="line-fisher-initiator-moves"
-                  >Initiator Moves:</label
-                >
+                <label for="fish-initiator-moves">Initiator Moves:</label>
                 <input
                   type="text"
-                  id="line-fisher-initiator-moves"
+                  id="fish-initiator-moves"
                   placeholder="e.g., Nf3 g3"
                   value="Nf3 g3"
                 />
               </div>
               <div class="responder-counts-controls">
-                <label for="line-fisher-responder-counts"
-                  >Responder Counts:</label
-                >
+                <label for="fish-responder-counts">Responder Counts:</label>
                 <input
                   type="text"
-                  id="line-fisher-responder-counts"
+                  id="fish-responder-counts"
                   placeholder="2 3 2"
                   value="2 3"
                   title="Space-separated responder move counts for each level"
@@ -69,50 +71,50 @@
               </div>
 
               <div class="responder-moves-controls">
-                <label for="line-fisher-default-responder-count"
+                <label for="fish-default-responder-count"
                   >Default Responder Count:</label
                 >
                 <input
                   type="range"
-                  id="line-fisher-default-responder-count"
+                  id="fish-default-responder-count"
                   min="1"
                   max="15"
                   value="3"
-                  class="line-fisher-slider"
+                  class="fish-slider"
                   title="Default responder count for levels not specified"
                 />
-                <span id="line-fisher-default-responder-count-value">3</span>
+                <span id="fish-default-responder-count-value">3</span>
               </div>
               <div class="depth-controls">
-                <label for="line-fisher-depth">Move Depth:</label>
+                <label for="fish-depth">Move Depth:</label>
                 <input
                   type="range"
-                  id="line-fisher-depth"
+                  id="fish-depth"
                   min="1"
                   max="10"
                   value="1"
-                  class="line-fisher-slider"
+                  class="fish-slider"
                 />
-                <span id="line-fisher-depth-value">1</span>
+                <span id="fish-depth-value">1</span>
               </div>
               <div class="target-depth-controls">
-                <label for="line-fisher-target-depth">Target Depth:</label>
+                <label for="fish-target-depth">Target Depth:</label>
                 <input
                   type="range"
-                  id="line-fisher-target-depth"
+                  id="fish-target-depth"
                   min="1"
                   max="20"
                   value="10"
-                  class="line-fisher-slider"
+                  class="fish-slider"
                   title="Depth at which to trigger confetti when human makes the proper move"
                 />
-                <span id="line-fisher-target-depth-value">10</span>
+                <span id="fish-target-depth-value">10</span>
               </div>
             </div>
           </div>
-          <div id="line-fisher-status">Ready</div>
+          <div id="fish-status">Ready</div>
 
-          <div id="fish-config-root" class="line-fisher-panel">
+          <div id="fish-config-root" class="fish-panel">
             <h3>Configuration</h3>
             <div id="fish-config-board-root">
               <div id="fish-board-display"></div>
@@ -161,9 +163,9 @@
             </div>
           </div>
 
-          <div id="line-fisher-state-info" class="line-fisher-panel">
+          <div id="fish-state-info" class="fish-panel">
             <h3>Analysis Status</h3>
-            <div class="line-fisher-progress-section">
+            <div class="fish-progress-section">
               <div id="fish-status-progress-bar">
                 <div id="fish-status-progress-fill"></div>
               </div>
@@ -187,7 +189,20 @@
               </div>
             </div>
           </div>
-          <div id="fish-results" class="line-fisher-panel"></div>
+          <div id="fish-lines-panel" class="fish-panel" style="display: none">
+            <h3>Live Lines</h3>
+            <div id="fish-lines-content">
+              <div class="fish-lines-column">
+                <h4>WIP</h4>
+                <div id="fish-lines-wip"></div>
+              </div>
+              <div class="fish-lines-column">
+                <h4>Done</h4>
+                <div id="fish-lines-done"></div>
+              </div>
+            </div>
+          </div>
+          <div id="fish-results" class="fish-panel"></div>
         </div>
 
         <!-- Chess Board -->

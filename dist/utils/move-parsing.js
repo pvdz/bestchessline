@@ -79,6 +79,33 @@ export function parseMove(moveText, currentFEN) {
       return { from: fromSquare, to: toSquare, piece };
     }
   }
+  // Handle plain long coordinate notation (e.g., a2a3, g1f3)
+  const longCoord = moveText.match(/^([a-h][1-8])([a-h][1-8])([qrbnQRBN])?$/);
+  if (longCoord) {
+    const fromSquare = longCoord[1];
+    const toSquare = longCoord[2];
+    const promotion = longCoord[3];
+    const pos = parseFEN(currentFEN);
+    const [fromRank, fromFile] = squareToCoords(fromSquare);
+    if (fromRank >= 0 && fromRank < 8 && fromFile >= 0 && fromFile < 8) {
+      const boardPiece = pos.board[fromRank][fromFile];
+      if (boardPiece) {
+        const move = {
+          from: fromSquare,
+          to: toSquare,
+          piece: boardPiece,
+        };
+        if (promotion) {
+          // normalize promotion letter to correct case based on moving color
+          const isWhite = boardPiece === boardPiece.toUpperCase();
+          move.promotion = isWhite
+            ? promotion.toUpperCase()
+            : promotion.toLowerCase();
+        }
+        return move;
+      }
+    }
+  }
   // Handle long algebraic notation moves (e.g., Pa7a6, Nf3g5, Qd8a5)
   const longAlgebraicMatch = moveText.match(
     /^([KQRBNPkqrbnp])([a-h][1-8])([a-h][1-8])([+#])?$/,

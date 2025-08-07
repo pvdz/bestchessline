@@ -183,7 +183,6 @@ export interface LineFisherConfig {
 export interface LineFisherResult {
   lineIndex: number;
   pcns: string[]; // PCN notation moves in this line (e.g., ["Ng1f3", "g8f6", "d2d4"])
-  scores: number[];
   deltas: number[];
   sanLine: string; // Computed SAN game string (computed on demand)
   isComplete: boolean;
@@ -214,7 +213,6 @@ export interface FishState {
 // Line-specific UI types
 export interface LineFisherDisplayFormat {
   pcns: string[];
-  scores: number[];
   deltas: number[];
   sanGame: string;
   isComplete: boolean;

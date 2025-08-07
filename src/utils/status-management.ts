@@ -11,7 +11,7 @@ import { getElementByIdOrThrow } from "./dom-helpers.js";
  * Show Line Fisher-specific status messages with Stockfish event tracking
  */
 export const updateLineFisherStatus = (message: string): void => {
-  const statusElement = getElementByIdOrThrow("line-fisher-status");
+  const statusElement = getElementByIdOrThrow("fish-status");
 
   statusElement.textContent = message;
 };

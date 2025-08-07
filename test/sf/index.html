@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stockfish Client Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        margin: 10px 5px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #1976d2;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+      }
+      .result {
+        background: #f5f5f5;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .error {
+        background: #ffebee;
+        border-left: 4px solid #f44336;
+        color: #d32f2f;
+      }
+      .loading {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+      }
+      .success {
+        background: #e8f5e8;
+        border-left: 4px solid #4caf50;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Stockfish Client Test</h1>
+
+      <div id="status" class="status">Initializing Stockfish engine...</div>
+
+      <div class="buttons">
+        <button id="best-moves-btn" disabled>
+          Find 5 Best Moves (Initial Position)
+        </button>
+        <button id="score-a2a3-btn" disabled>Score for a2a3 Move</button>
+        <button id="stop-btn" disabled>Stop Analysis</button>
+      </div>
+
+      <div id="result" class="result">Console output will appear here...</div>
+    </div>
+
+    <script type="module">
+      import {
+        initializeStockfish,
+        analyzePosition,
+        stopAnalysis,
+        isAnalyzingPosition,
+      } from "../../src/utils/stockfish-client.js";
+
+      const statusEl = document.getElementById("status");
+      const resultEl = document.getElementById("result");
+      const bestMovesBtn = document.getElementById("best-moves-btn");
+      const scoreA2A3Btn = document.getElementById("score-a2a3-btn");
+      const stopBtn = document.getElementById("stop-btn");
+
+      // Initial FEN for starting position
+      const INITIAL_FEN =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+      // Override console.log to display in HTML
+      const originalLog = console.log;
+      console.log = function (...args) {
+        originalLog.apply(console, args);
+        const message = args
+          .map((arg) =>
+            typeof arg === "object"
+              ? JSON.stringify(arg, null, 2)
+              : String(arg),
+          )
+          .join(" ");
+        resultEl.textContent +=
+          new Date().toLocaleTimeString() + ": " + message + "\n";
+        resultEl.scrollTop = resultEl.scrollHeight;
+      };
+
+      function updateStatus(message, type = "info") {
+        statusEl.textContent = message;
+        statusEl.className = `status ${type}`;
+      }
+
+      function updateButtonStates() {
+        const analyzing = isAnalyzingPosition();
+        bestMovesBtn.disabled = analyzing;
+        scoreA2A3Btn.disabled = analyzing;
+        stopBtn.disabled = !analyzing;
+      }
+
+      // Listen for Stockfish events
+      window.addEventListener("stockfish-loading", (event) => {
+        updateStatus(event.detail.message, "loading");
+      });
+
+      window.addEventListener("stockfish-ready", () => {
+        updateStatus("Stockfish is ready!", "success");
+        bestMovesBtn.disabled = false;
+        scoreA2A3Btn.disabled = false;
+        console.log("Stockfish engine is ready for analysis");
+      });
+
+      window.addEventListener("stockfish-crash", () => {
+        updateStatus("Stockfish crashed! Please refresh the page.", "error");
+        bestMovesBtn.disabled = true;
+        scoreA2A3Btn.disabled = true;
+        stopBtn.disabled = true;
+      });
+
+      // Find 5 best moves for initial position
+      bestMovesBtn.addEventListener("click", async () => {
+        try {
+          updateStatus("Analyzing position for 5 best moves...", "loading");
+          updateButtonStates();
+
+          console.log("=== FINDING 5 BEST MOVES FOR INITIAL POSITION ===");
+          console.log("Position FEN:", INITIAL_FEN);
+
+          const result = await analyzePosition(
+            INITIAL_FEN,
+            {
+              depth: 15,
+              multiPV: 5, // Get 5 principal variations
+            },
+            (updateResult) => {
+              // Real-time updates
+              console.log(
+                `Analysis update: ${updateResult.moves.length} moves found, depth ${updateResult.depth}`,
+              );
+              updateResult.moves.forEach((move, index) => {
+                console.log(
+                  `  ${index + 1}. ${move.move.from}${move.move.to} (${move.move.piece}) - Score: ${move.score} cp, Depth: ${move.depth}`,
+                );
+              });
+            },
+          );
+
+          console.log("=== FINAL RESULT ===");
+          console.log("Analysis completed!");
+          console.log(`Found ${result.moves.length} moves:`);
+          result.moves.forEach((move, index) => {
+            const scoreStr =
+              move.score >= 0 ? `+${move.score}` : `${move.score}`;
+            console.log(
+              `${index + 1}. ${move.move.from}${move.move.to} (${move.move.piece}) - ${scoreStr} cp (depth ${move.depth})`,
+            );
+            if (move.pv && move.pv.length > 1) {
+              const pvStr = move.pv
+                .slice(0, 5)
+                .map((m) => m.from + m.to)
+                .join(" ");
+              console.log(
+                `   Principal variation: ${pvStr}${move.pv.length > 5 ? "..." : ""}`,
+              );
+            }
+          });
+
+          updateStatus("Analysis completed!", "success");
+          updateButtonStates();
+        } catch (error) {
+          console.error("Error finding best moves:", error);
+          updateStatus("Error during analysis", "error");
+          updateButtonStates();
+        }
+      });
+
+      // Find score for a2a3 move
+      scoreA2A3Btn.addEventListener("click", async () => {
+        try {
+          updateStatus("Analyzing score for a2a3...", "loading");
+          updateButtonStates();
+
+          console.log("=== ANALYZING SCORE FOR a2a3 MOVE ===");
+          console.log("Position FEN:", INITIAL_FEN);
+          console.log("Move to analyze: a2a3");
+
+          const result = await analyzePosition(
+            INITIAL_FEN,
+            {
+              depth: 15,
+              searchMoves: ["a2a3"], // Only analyze this specific move
+            },
+            (updateResult) => {
+              // Real-time updates
+              if (updateResult.moves.length > 0) {
+                const move = updateResult.moves[0];
+                console.log(
+                  `Analysis update for a2a3: Score ${move.score} cp at depth ${move.depth}`,
+                );
+              }
+            },
+          );
+
+          console.log("=== FINAL RESULT FOR a2a3 ===");
+          if (result.moves.length > 0) {
+            const move = result.moves[0];
+            const scoreStr =
+              move.score >= 0 ? `+${move.score}` : `${move.score}`;
+            console.log(
+              `Move: ${move.move.from}${move.move.to} (${move.move.piece})`,
+            );
+            console.log(`Score: ${scoreStr} centipawns`);
+            console.log(`Depth: ${move.depth}`);
+            console.log(`Nodes: ${move.nodes || "N/A"}`);
+            console.log(`Analysis time: ${move.time || "N/A"}ms`);
+
+            if (move.pv && move.pv.length > 1) {
+              const pvStr = move.pv
+                .slice(0, 10)
+                .map((m) => m.from + m.to)
+                .join(" ");
+              console.log(
+                `Principal variation: ${pvStr}${move.pv.length > 10 ? "..." : ""}`,
+              );
+            }
+          } else {
+            console.log("No analysis result found for a2a3");
+          }
+
+          updateStatus("Analysis completed!", "success");
+          updateButtonStates();
+        } catch (error) {
+          console.error("Error analyzing a2a3:", error);
+          updateStatus("Error during analysis", "error");
+          updateButtonStates();
+        }
+      });
+
+      // Stop analysis
+      stopBtn.addEventListener("click", () => {
+        console.log("Stopping analysis...");
+        stopAnalysis();
+        updateStatus("Analysis stopped", "info");
+        updateButtonStates();
+      });
+
+      // Initialize Stockfish
+      console.log("Initializing Stockfish engine...");
+      initializeStockfish();
+    </script>
+  </body>
+</html>

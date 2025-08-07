@@ -56,7 +56,7 @@ import {
   stopFishAnalysis,
   resetFishAnalysis,
 } from "./fish/fish.js";
-import { getLineFisherConfigFromUI } from "./fish/line-fisher-ui-utils.js";
+import { getLineFisherConfigFromUI } from "./fish/fish-ui-utils.js";
 import { hideMoveArrow } from "./board/arrow-utils.js";
 import { continueFishing } from "./fish/fish.js";
 import { getCurrentFishState } from "./fish/fish-state.js";
@@ -296,12 +296,12 @@ const initializeEventListeners = (): void => {
   stopBtn.addEventListener("click", () => stopAnalysis());
 
   // Line Fisher analysis controls
-  const stopLineFisherBtn = getElementByIdOrThrow("stop-line-fisher");
-  const resetLineFisherBtn = getElementByIdOrThrow("reset-line-fisher");
-  const continueLineFisherBtn = getElementByIdOrThrow("continue-line-fisher");
+  const stopLineFisherBtn = getElementByIdOrThrow("fish-stop");
+  const resetLineFisherBtn = getElementByIdOrThrow("fish-reset");
+  const continueLineFisherBtn = getElementByIdOrThrow("fish-continue");
 
   // Fish2 button - new simplified fish function
-  const startFish2Btn = getElementByIdOrThrow("start-fish2");
+  const startFish2Btn = getElementByIdOrThrow("fish-start");
   startFish2Btn.addEventListener("click", async () => {
     console.log("Start Fish2 button clicked!");
     await runFishAnalysis();
@@ -324,13 +324,13 @@ const initializeEventListeners = (): void => {
 
   // Line Fisher state management controls
   const exportLineFisherStateBtn = getElementByIdOrThrow(
-    "export-line-fisher-state",
+    "fish-export",
   ) as HTMLButtonElement;
   const copyLineFisherStateBtn = getElementByIdOrThrow(
-    "copy-line-fisher-state",
+    "fish-copy",
   ) as HTMLButtonElement;
   const importLineFisherStateBtn = getElementByIdOrThrow(
-    "import-line-fisher-state",
+    "fish-import",
   ) as HTMLButtonElement;
 
   exportLineFisherStateBtn.addEventListener("click", async () => {
@@ -348,11 +348,9 @@ const initializeEventListeners = (): void => {
 
   // Line Fisher thread control
   const lineFisherThreadsInput = getElementByIdOrThrow(
-    "line-fisher-threads",
+    "fish-threads",
   ) as HTMLInputElement;
-  const lineFisherThreadsValue = getElementByIdOrThrow(
-    "line-fisher-threads-value",
-  );
+  const lineFisherThreadsValue = getElementByIdOrThrow("fish-threads-value");
 
   // Initialize with default value
   lineFisherThreadsValue.textContent = lineFisherThreadsInput.value;
@@ -364,9 +362,9 @@ const initializeEventListeners = (): void => {
 
   // Line Fisher depth control
   const lineFisherDepthInput = getElementByIdOrThrow(
-    "line-fisher-depth",
+    "fish-depth",
   ) as HTMLInputElement;
-  const lineFisherDepthValue = getElementByIdOrThrow("line-fisher-depth-value");
+  const lineFisherDepthValue = getElementByIdOrThrow("fish-depth-value");
 
   // Initialize with default value
   lineFisherDepthValue.textContent = lineFisherDepthInput.value;
@@ -378,10 +376,10 @@ const initializeEventListeners = (): void => {
 
   // Line Fisher default responder count control
   const lineFisherDefaultResponderInput = getElementByIdOrThrow(
-    "line-fisher-default-responder-count",
+    "fish-default-responder-count",
   ) as HTMLInputElement;
   const lineFisherDefaultResponderValue = getElementByIdOrThrow(
-    "line-fisher-default-responder-count-value",
+    "fish-default-responder-count-value",
   );
 
   // Initialize with default value
@@ -395,10 +393,10 @@ const initializeEventListeners = (): void => {
 
   // Line Fisher target depth control
   const lineFisherTargetDepthInput = getElementByIdOrThrow(
-    "line-fisher-target-depth",
+    "fish-target-depth",
   ) as HTMLInputElement;
   const lineFisherTargetDepthValue = getElementByIdOrThrow(
-    "line-fisher-target-depth-value",
+    "fish-target-depth-value",
   );
 
   // Initialize with default value
@@ -408,6 +406,20 @@ const initializeEventListeners = (): void => {
     const depth = lineFisherTargetDepthInput.value;
     lineFisherTargetDepthValue.textContent = depth;
   });
+
+  // Live lines preview toggle
+  const fishLinesToggle = document.getElementById(
+    "fish-lines-toggle",
+  ) as HTMLInputElement | null;
+  const fishLinesPanel = document.getElementById("fish-lines-panel");
+  if (fishLinesToggle && fishLinesPanel) {
+    fishLinesToggle.addEventListener("change", () => {
+      if (fishLinesToggle.checked) {
+        fishLinesPanel.style.display = "block";
+      }
+      // When disabled, leave panel visible but stop updates (handled in updateLiveLinesPreview)
+    });
+  }
 
   // Stockfish loading event listeners
   window.addEventListener("stockfish-loading", ((event: Event) => {

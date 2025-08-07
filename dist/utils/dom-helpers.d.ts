@@ -9,6 +9,10 @@
  */
 export declare function getInputElement(id: string): HTMLInputElement | null;
 /**
+ * Get an HTML input element by ID or throw an error if not found or wrong type
+ */
+export declare const getInputElementOrThrow: (id: string) => HTMLInputElement;
+/**
  * Safely get an HTML textarea element by ID
  */
 export declare function getTextAreaElement(

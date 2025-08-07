@@ -7,7 +7,7 @@ import {
 import {
   calculateTotalNodes,
   calculateTotalLines,
-} from "./line-fisher-calculations.js";
+} from "./fish-calculations.js";
 import { getCurrentFishState } from "./fish-state.js";
 import {
   coordsToSquare,
@@ -20,7 +20,7 @@ import {
  */
 export function updateFishConfigDisplay(config: LineFisherConfig): void {
   try {
-    // Calculate total nodes and lines using existing line-fisher functions
+    // Calculate total nodes and lines using existing fish functions
     const totalNodes = calculateTotalNodes(config);
     const totalLines = calculateTotalLines(config);
 
@@ -53,12 +53,12 @@ export function updateFishConfigDisplay(config: LineFisherConfig): void {
     const nodeFormulaElement = getElementByIdOrThrow(
       "fish-config-node-formula",
     );
-    nodeFormulaElement.textContent = nodeFormula;
+    nodeFormulaElement.innerHTML = nodeFormula;
 
     const lineFormulaElement = getElementByIdOrThrow(
       "fish-config-line-formula",
     );
-    lineFormulaElement.textContent = lineFormula;
+    lineFormulaElement.innerHTML = lineFormula;
 
     renderLineFisherBoard(config.rootFEN);
   } catch (error) {
@@ -89,7 +89,7 @@ const renderLineFisherBoard = (fen: string): void => {
 
     for (let file = 0; file < 8; file++) {
       const tableCell = document.createElement("td");
-      tableCell.className = "line-fisher-board-square";
+      tableCell.className = "fish-board-square";
 
       // Get piece from FEN using existing utility function
       const square = coordsToSquare(rank, file);
@@ -112,7 +112,7 @@ const renderLineFisherBoard = (fen: string): void => {
  */
 export function updateFishStatus(message: string): void {
   try {
-    const statusElement = getElementByIdOrThrow("line-fisher-status");
+    const statusElement = getElementByIdOrThrow("fish-status");
     statusElement.textContent = message;
   } catch (error) {
     console.error("Failed to update fish status:", error);
@@ -133,16 +133,13 @@ export function updateFishProgress(state: FishState): void {
     const doneDisplay = getElementByIdOrThrow("fish-status-dones");
     doneDisplay.textContent = doneCount.toString();
 
-    // Calculate total expected lines for display
-    const totalNodes = calculateTotalNodes(state.config);
-    const totalExpectedLines = Math.floor((totalNodes - 1) / 2) + 1;
+    // Calculate totals (line-based progress)
+    const totalLines = calculateTotalLines(state.config);
     const progressPercent =
-      totalExpectedLines > 0
-        ? (state.done.length / totalExpectedLines) * 100
-        : 0;
+      totalLines > 0 ? (state.done.length / totalLines) * 100 : 0;
 
     const linesDisplay = getElementByIdOrThrow("fish-status-lines");
-    linesDisplay.textContent = `${state.done.length} / ${totalExpectedLines} (${progressPercent.toFixed(2)}%)`;
+    linesDisplay.textContent = `${state.done.length} / ${totalLines} (${progressPercent.toFixed(2)}%)`;
 
     const positionDisplay = getElementByIdOrThrow("fish-status-position");
     const currentLine = state.wip[0];
@@ -155,11 +152,17 @@ export function updateFishProgress(state: FishState): void {
       positionDisplay.textContent = "Complete";
     }
 
-    // Update progress bar
+    // Update progress bar (line-based progress)
+    const progressBar = getElementByIdOrThrow("fish-status-progress-bar");
     const progressFill = getElementByIdOrThrow("fish-status-progress-fill");
     // Cap progress at 100%
     const cappedProgress = Math.min(progressPercent, 100);
     progressFill.style.width = `${cappedProgress}%`;
+    // Expose max/current via ARIA for clarity
+    progressBar.setAttribute("role", "progressbar");
+    progressBar.setAttribute("aria-valuemin", "0");
+    progressBar.setAttribute("aria-valuemax", String(totalLines));
+    progressBar.setAttribute("aria-valuenow", String(state.done.length));
 
     // Update leaf node count display
     updateLeafNodeCount(state);
@@ -233,19 +236,19 @@ export const updateLineElement = (
   // Update individual child elements instead of setting innerHTML
   const lineNumberElement = querySelectorOrThrow(
     lineElement,
-    ".line-number",
+    ".fish-line-number",
   ) as HTMLElement;
   const lineScoreElement = querySelectorOrThrow(
     lineElement,
-    ".line-score",
+    ".fish-line-score",
   ) as HTMLElement;
   const lineDeltaElement = querySelectorOrThrow(
     lineElement,
-    ".line-delta",
+    ".fish-line-delta",
   ) as HTMLElement;
   const lineNotationElement = querySelectorOrThrow(
     lineElement,
-    ".line-notation",
+    ".fish-line-notation",
   ) as HTMLElement;
   const lineCompleteElement = querySelectorOrThrow(
     lineElement,
@@ -344,26 +347,16 @@ export const updateLineFisherButtonStates = (
   isFishing: boolean,
 ): void => {
   // Update button states based on analysis status
-  const stopBtn = getElementByIdOrThrow(
-    "stop-line-fisher",
-  ) as HTMLButtonElement;
-  const resetBtn = getElementByIdOrThrow(
-    "reset-line-fisher",
-  ) as HTMLButtonElement;
+  const stopBtn = getElementByIdOrThrow("fish-stop") as HTMLButtonElement;
+  const resetBtn = getElementByIdOrThrow("fish-reset") as HTMLButtonElement;
   const continueBtn = getElementByIdOrThrow(
-    "continue-line-fisher",
+    "fish-continue",
   ) as HTMLButtonElement;
-  const copyBtn = getElementByIdOrThrow(
-    "copy-line-fisher-state",
-  ) as HTMLButtonElement;
-  const exportBtn = getElementByIdOrThrow(
-    "export-line-fisher-state",
-  ) as HTMLButtonElement;
-  const importBtn = getElementByIdOrThrow(
-    "import-line-fisher-state",
-  ) as HTMLButtonElement;
+  const copyBtn = getElementByIdOrThrow("fish-copy") as HTMLButtonElement;
+  const exportBtn = getElementByIdOrThrow("fish-export") as HTMLButtonElement;
+  const importBtn = getElementByIdOrThrow("fish-import") as HTMLButtonElement;
   const startFish2Btn = getElementByIdOrThrow(
-    "start-fish2",
+    "fish-start",
   ) as HTMLButtonElement;
 
   const hasResults = getCurrentFishState().done.length > 0;

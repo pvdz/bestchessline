@@ -32,6 +32,37 @@ export function applyMoveToFEN(fen, move) {
       newBoard[rookFromRank][rookFromFile] = "";
     }
   }
+  // Auto-detect castling when king moves two squares, even if not explicitly marked
+  else if (move.piece.toUpperCase() === PIECE_TYPES.KING) {
+    const fromFileIndex = move.from.charCodeAt(0) - "a".charCodeAt(0);
+    const toFileIndex = move.to.charCodeAt(0) - "a".charCodeAt(0);
+    const fileDistance = Math.abs(toFileIndex - fromFileIndex);
+    if (fileDistance === 2) {
+      const isWhite = move.piece === move.piece.toUpperCase();
+      const isKingside = toFileIndex > fromFileIndex;
+      const rookFrom = isWhite
+        ? isKingside
+          ? "h1"
+          : "a1"
+        : isKingside
+          ? "h8"
+          : "a8";
+      const rookTo = isWhite
+        ? isKingside
+          ? "f1"
+          : "d1"
+        : isKingside
+          ? "f8"
+          : "d8";
+      const [rookFromRank, rookFromFile] = squareToCoords(rookFrom);
+      const [rookToRank, rookToFile] = squareToCoords(rookTo);
+      // Only move rook if it exists at the expected square
+      if (newBoard[rookFromRank][rookFromFile]) {
+        newBoard[rookToRank][rookToFile] = newBoard[rookFromRank][rookFromFile];
+        newBoard[rookFromRank][rookFromFile] = "";
+      }
+    }
+  }
   // Update castling rights
   let newCastling = position.castling;
   // Remove castling rights when king moves

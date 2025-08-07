@@ -14,6 +14,24 @@ export function getInputElement(id: string): HTMLInputElement | null {
 }
 
 /**
+ * Get an HTML input element by ID or throw an error if not found or wrong type
+ */
+export const getInputElementOrThrow = (id: string): HTMLInputElement => {
+  const element = getElementByIdOrThrow(id);
+  if (!(element instanceof HTMLInputElement)) {
+    const errorMessage = `Required input element '${id}' not found or not an <input>. This is a bug.`;
+    console.error(errorMessage);
+    // Best-effort status update for visibility
+    const statusElement = document.getElementById("fish-status");
+    if (statusElement) {
+      statusElement.textContent = errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+  return element;
+};
+
+/**
  * Safely get an HTML textarea element by ID
  */
 export function getTextAreaElement(id: string): HTMLTextAreaElement | null {
@@ -106,7 +124,7 @@ export const getElementByIdOrThrow = (id: string): HTMLElement => {
     console.error(errorMessage);
 
     // Show error in UI
-    const statusElement = getElementByIdOrThrow("line-fisher-status");
+    const statusElement = getElementByIdOrThrow("fish-status");
     if (statusElement) {
       statusElement.textContent = errorMessage;
     }

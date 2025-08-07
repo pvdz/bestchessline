@@ -76,6 +76,9 @@ export const stopFishAnalysis = (): void => {
  */
 export async function fish(config: LineFisherConfig): Promise<void> {
   // - create a state object, empty wip/done list.
+  // Ensure current fish config reflects the UI config so initFishing uses it
+  const state = getCurrentFishState();
+  state.config = config;
   // - show config in UI (root board, limits, the whole thing)
   // - get root score, update config
   // - update root score in UI
@@ -112,11 +115,12 @@ export async function fish(config: LineFisherConfig): Promise<void> {
   updateFishButtonStates(true);
 
   try {
-    updateFishConfigDisplay(config);
+    updateFishConfigDisplay(state.config);
     updateFishStatus("Starting root analysis...");
     updateFishProgress(getCurrentFishState());
+    updateLiveLinesPreview();
 
-    initFishing();
+    await initFishing();
 
     // Update root score in UI
     updateFishRootScore(getCurrentFishState().config.baselineScore);
@@ -131,6 +135,7 @@ export async function fish(config: LineFisherConfig): Promise<void> {
     await keepFishing((msg) => {
       updateFishStatus(msg);
       updateFishProgress(getCurrentFishState());
+      updateLiveLinesPreview();
       // updateLineFisherExploredLines(        getCurrentFishState().done,        getCurrentFishState().config.rootFEN,      );
     });
 
@@ -222,6 +227,7 @@ export async function continueFishing() {
   await keepFishing((msg) => {
     updateFishStatus(msg);
     updateFishProgress(getCurrentFishState());
+    updateLiveLinesPreview();
     // updateLineFisherExploredLines(      getCurrentFishState().done,      getCurrentFishState().config.rootFEN,    );
   });
 
@@ -247,11 +253,24 @@ export const copyFishStateToClipboard = async (): Promise<void> => {
       return;
     }
 
-    // Lines are already in PCN format, just format them with move numbers
-    const pcnLines = allLines.map((line) => {
-      const formattedLine = formatPCNLineWithMoveNumbers(line.pcns);
+    // Lines are already in PCN format, convert to long notation with move numbers
+    const outputLines = allLines.map((line) => {
+      // Convert each PCN to long coordinate notation (e.g., Ng1f3 -> g1f3, keep O-O/O-O-O)
+      const longMoves = line.pcns.map((pcn) => {
+        if (pcn === "O-O" || pcn === "O-O-O") return pcn;
+        if (/^[NBRQKP][a-h][1-8][a-h][1-8]$/.test(pcn)) {
+          return pcn.substring(1, 5);
+        }
+        // Already long or unexpected, keep as-is
+        return pcn;
+      });
 
-      // Create comprehensive metadata
+      // Re-use formatter to add move numbers, but with long moves
+      const formattedLine = formatPCNLineWithMoveNumbers(
+        longMoves as unknown as string[],
+      );
+
+      // Include top-5 best moves (responders) and their scores if available
       const metadata: LineMetadata = {
         lineId: `line_${line.lineIndex}`,
         isMate: line.isMate,
@@ -260,12 +279,14 @@ export const copyFishStateToClipboard = async (): Promise<void> => {
         transpositionTarget: line.transpositionTarget,
       };
 
-      // Add metadata as JSON after //
-      return `${formattedLine} // ${JSON.stringify(metadata)}`;
+      return `${formattedLine} // ${JSON.stringify({
+        ...metadata,
+        best5: line.best5?.slice(0, 5) ?? [],
+      })}`;
     });
 
     // Create plain text format - one line per opening line in PCN notation
-    const plainTextLines = pcnLines.join("\n");
+    const plainTextLines = outputLines.join("\n");
 
     // Copy plain text to clipboard
     await navigator.clipboard.writeText(plainTextLines);
@@ -274,7 +295,7 @@ export const copyFishStateToClipboard = async (): Promise<void> => {
     const wipCount = currentFishState.wip.length;
     const doneCount = currentFishState.done.length;
     showToast(
-      `Copied ${allLines.length} lines to clipboard (PCN notation) (${wipCount} WIP, ${doneCount} done)`,
+      `Copied ${allLines.length} lines to clipboard (long notation) (${wipCount} WIP, ${doneCount} done)`,
       "#4CAF50",
       3000,
     );
@@ -290,7 +311,7 @@ export const copyFishStateToClipboard = async (): Promise<void> => {
  * Create a new line element and add it to the DOM
  */
 const createLineElement = (line: FishLine): HTMLElement => {
-  const resultsElement = getElementByIdOrThrow("line-fisher-results");
+  const resultsElement = getElementByIdOrThrow("fish-results");
 
   if (resultsElement.childElementCount === 1) {
     // Add a random proof string as the first child if this is the first line
@@ -307,7 +328,7 @@ const createLineElement = (line: FishLine): HTMLElement => {
 
   const lineElement = document.createElement("div");
   lineElement.id = line.nodeId;
-  lineElement.className = "line-fisher-result-compact";
+  lineElement.className = "fish-result-compact";
   lineElement.style.cursor = "pointer";
   lineElement.setAttribute("data-line-index", line.lineIndex.toString());
 
@@ -341,11 +362,11 @@ const createLineHTMLStructure = (line: FishLine): string => {
   // <span class="random-proof-string">${Math.random().toString(36).substring(2, 8)}</span>
   // <span class="random-proof-string">${line.nodeId.split('_').pop()}</span>
   return `
-    <span class="line-number" style="${lineNumberStyle}">${lineNumberPrefix}${line.lineIndex + 1}.</span>
-    <span class="line-score">${scoreText}</span>
-    <span class="line-notation">${line.sanGame}${endIndicator}</span>
-    <span class="line-complete">Complete: ${line.isFull}</span>
-    <span class="line-done">Done: ${line.isDone}</span>
+    <span class="fish-line-number" style="${lineNumberStyle}">${lineNumberPrefix}${line.lineIndex + 1}.</span>
+    <span class="fish-line-score">${scoreText}</span>
+    <span class="fish-line-notation">${line.sanGame}${endIndicator}</span>
+    <span class="fish-line-complete">Complete: ${line.isFull}</span>
+    <span class="fish-line-done">Done: ${line.isDone}</span>
   `;
 };
 
@@ -357,7 +378,7 @@ const updateLineFisherExploredLines = (
   results: FishLine[],
   rootFEN: string,
 ): void => {
-  const resultsElement = getElementByIdOrThrow("line-fisher-results");
+  const resultsElement = getElementByIdOrThrow("fish-results");
 
   if (results.length === 0) {
     resultsElement.innerHTML = "<p>No results to show yet...</p>";
@@ -391,7 +412,7 @@ const updateLineFisherExploredLines = (
 
   if (resultsElement.childElementCount === displayCount + 1) {
     const moreElement = document.createElement("div");
-    moreElement.className = "line-fisher-more";
+    moreElement.className = "fish-more";
     moreElement.textContent = `... hiding other lines for performance...`;
     resultsElement.appendChild(moreElement);
   }
@@ -425,8 +446,76 @@ export const resetFishAnalysis = (): void => {
   updateFishStatus("Analysis reset");
 
   // Clear results display
-  const resultsElement = getElementByIdOrThrow("line-fisher-results");
+  const resultsElement = getElementByIdOrThrow("fish-results");
   resultsElement.innerHTML = "<p>No results to show yet...</p>";
 
   showToast("Fish analysis reset", "#FF9800", 3000);
 };
+
+/**
+ * Live lines preview: render last few WIP and Done lines at an interval-gated cadence.
+ * Visible only when toggled on; when toggled off, rendering stops but panel remains visible.
+ */
+let fishLiveLinesLastRenderAt = 0;
+const FISH_LIVE_LINES_MIN_INTERVAL_MS = 500; // throttle UI updates
+
+function isLiveLinesEnabled(): boolean {
+  const checkbox = document.getElementById(
+    "fish-lines-toggle",
+  ) as HTMLInputElement | null;
+  return !!(checkbox && checkbox.checked);
+}
+
+export function updateLiveLinesPreview(): void {
+  try {
+    const now = Date.now();
+    if (now - fishLiveLinesLastRenderAt < FISH_LIVE_LINES_MIN_INTERVAL_MS)
+      return;
+    fishLiveLinesLastRenderAt = now;
+
+    const panel = document.getElementById("fish-lines-panel");
+    if (!panel) return;
+
+    // Always keep panel visible once it appeared; only gate updates by toggle
+    const enabled = isLiveLinesEnabled();
+    if (enabled && panel.style.display === "none") {
+      panel.style.display = "block";
+    }
+    if (!enabled) return; // do not update when disabled
+
+    const state = getCurrentFishState();
+
+    const wipContainer = document.getElementById("fish-lines-wip");
+    const doneContainer = document.getElementById("fish-lines-done");
+    if (!wipContainer || !doneContainer) return;
+
+    // Show last up to 10 entries from each list (Fisher-generated lines)
+    const lastWip = state.wip.slice(-10);
+    const lastDone = state.done.slice(-10);
+
+    // Update headings with showing/queue counts
+    const wipHeading = document.querySelector("#fish-lines-wip")
+      ?.previousElementSibling as HTMLElement | undefined;
+    const doneHeading = document.querySelector("#fish-lines-done")
+      ?.previousElementSibling as HTMLElement | undefined;
+    if (wipHeading) {
+      wipHeading.textContent = `WIP ${lastWip.length}/${state.wip.length}`;
+    }
+    if (doneHeading) {
+      doneHeading.textContent = `Done ${lastDone.length}/${state.done.length}`;
+    }
+
+    const toList = (lines: typeof state.wip) =>
+      lines
+        .map((l) => {
+          // Display the fisher-produced line in PCN with move numbers
+          return formatPCNLineWithMoveNumbers(l.pcns) + "\n";
+        })
+        .join("");
+
+    wipContainer.textContent = toList(lastWip) || "(none)";
+    doneContainer.textContent = toList(lastDone) || "(none)";
+  } catch (e) {
+    console.warn("Failed to update live lines preview", e);
+  }
+}
