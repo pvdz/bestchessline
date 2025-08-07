@@ -9,6 +9,7 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
   padding: 20px;
+  overflow-y: scroll;
 }
 
 .practice-container {
@@ -568,6 +569,79 @@ body {
   color: white;
 }
 
+/* New move entry format for game-style display */
+.practice-move-entry {
+  padding: 2px 0;
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.practice-move-number {
+  color: #6c757d;
+  margin-right: 8px;
+  font-weight: normal;
+}
+
+.practice-move-text {
+  margin: 0 4px;
+  font-weight: normal;
+}
+
+.practice-move-text.correct {
+  color: #2c3e50;
+}
+
+.practice-move-text.incorrect {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.practice-move-text:hover {
+  opacity: 0.8;
+}
+
+/* Attempted moves section */
+.practice-attempted-moves {
+  margin-top: 15px;
+  padding: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.practice-attempted-moves h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9em;
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.practice-attempted-list {
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.practice-attempted-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.practice-attempted-move {
+  padding: 4px 8px;
+  border-radius: 3px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  font-size: 0.85em;
+  font-weight: 500;
+  display: inline-block;
+}
+
 .practice-toast {
   position: fixed;
   bottom: 20px;
@@ -628,4 +702,164 @@ body {
   font-size: 40px;
   color: #2c3e50;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Practice Arrow Styles */
+.practice-arrow,
+.practice-arrow-preview {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1000;
+  height: 10px;
+  border-radius: 5px;
+  box-shadow:
+    0 4px 16px rgba(255, 0, 0, 0.8),
+    0 0 0 3px rgba(0, 0, 0, 1);
+  background: var(--arrow-color, rgba(255, 0, 0, 1));
+  transition: opacity 0.2s;
+}
+.practice-arrow-preview {
+  opacity: 0.9;
+  box-shadow:
+    0 3px 12px rgba(255, 0, 0, 0.6),
+    0 0 0 2px rgba(0, 0, 0, 0.8);
+  background: var(--arrow-color, rgba(255, 0, 0, 0.9));
+}
+/* This is the red part of the arrow-head, it is placed on top of the black arrow head to make it look like it has a black border */
+.practice-arrow::after,
+.practice-arrow-preview::after {
+  content: "";
+  position: absolute;
+  left: 95%; /* Overlap with the arrow-base to make it look like one piece */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 20px solid var(--arrow-color, rgba(255, 0, 0, 1));
+  border-top: 12px solid transparent;
+  border-bottom: 12px solid transparent;
+  filter: drop-shadow(0 2px 4px rgba(255, 0, 0, 0.8));
+}
+
+/* This is the black part of the arrow-head, it is placed under the red arrow head to make it look like it has a black border */
+.practice-arrow::before,
+.practice-arrow-preview::before {
+  content: "";
+  position: absolute;
+  left: 95%; /* Overlap with the arrow-base to make it look like one piece */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 24px solid rgba(0, 0, 0, 1);
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  z-index: -1;
+}
+
+.practice-arrow-preview::after {
+  border-left: 20px solid var(--arrow-color, rgba(255, 0, 0, 0.9));
+  filter: drop-shadow(0 3px 6px rgba(255, 0, 0, 0.6));
+}
+
+.practice-arrow-preview::before {
+  border-left: 22px solid rgba(0, 0, 0, 0.8);
+  border-top: 13px solid transparent;
+  border-bottom: 13px solid transparent;
+}
+
+/* Depth Control Styles */
+.practice-depth-control {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.practice-depth-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.practice-depth-label {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9em;
+}
+
+.practice-depth-value {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1.1em;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Slider Styles */
+.practice-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.practice-slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #e9ecef;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.practice-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  transition: all 0.2s ease;
+}
+
+.practice-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.practice-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  transition: all 0.2s ease;
+}
+
+.practice-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.practice-slider-value {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1.1em;
+  min-width: 30px;
+  text-align: center;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

@@ -53,13 +53,13 @@ import {
   exportFishStateToClipboard,
   copyFishStateToClipboard,
   importFishStateFromClipboard,
-  continueFishAnalysis,
   stopFishAnalysis,
   resetFishAnalysis,
 } from "./fish/fish.js";
-import { LineFisherConfig } from "./fish/fish.js";
 import { getLineFisherConfigFromUI } from "./fish/line-fisher-ui-utils.js";
 import { hideMoveArrow } from "./board/arrow-utils.js";
+import { continueFishing } from "./fish/fish.js";
+import { getCurrentFishState } from "./fish/fish-state.js";
 
 // ============================================================================
 // LOGGING CONFIGURATION
@@ -304,7 +304,7 @@ const initializeEventListeners = (): void => {
   const startFish2Btn = getElementByIdOrThrow("start-fish2");
   startFish2Btn.addEventListener("click", async () => {
     console.log("Start Fish2 button clicked!");
-    await runFish2Analysis();
+    await runFishAnalysis();
     console.log("Finished Fish2 analysis");
   });
 
@@ -319,7 +319,7 @@ const initializeEventListeners = (): void => {
 
   continueLineFisherBtn.addEventListener("click", async () => {
     console.log("Continue button clicked - trying Fish continue first");
-    await continueFishAnalysis();
+    continueFishing();
   });
 
   // Line Fisher state management controls
@@ -391,6 +391,22 @@ const initializeEventListeners = (): void => {
   lineFisherDefaultResponderInput.addEventListener("input", () => {
     const count = lineFisherDefaultResponderInput.value;
     lineFisherDefaultResponderValue.textContent = count;
+  });
+
+  // Line Fisher target depth control
+  const lineFisherTargetDepthInput = getElementByIdOrThrow(
+    "line-fisher-target-depth",
+  ) as HTMLInputElement;
+  const lineFisherTargetDepthValue = getElementByIdOrThrow(
+    "line-fisher-target-depth-value",
+  );
+
+  // Initialize with default value
+  lineFisherTargetDepthValue.textContent = lineFisherTargetDepthInput.value;
+
+  lineFisherTargetDepthInput.addEventListener("input", () => {
+    const depth = lineFisherTargetDepthInput.value;
+    lineFisherTargetDepthValue.textContent = depth;
   });
 
   // Stockfish loading event listeners
@@ -796,7 +812,7 @@ export const clearBranch = (): void => {
 /**
  * Run Fish2 analysis using the new simplified fish function
  */
-async function runFish2Analysis(): Promise<void> {
+async function runFishAnalysis(): Promise<void> {
   try {
     // Get configuration from UI
     const config = getLineFisherConfigFromUI();
@@ -805,15 +821,19 @@ async function runFish2Analysis(): Promise<void> {
     showToast("Starting Fish2 analysis...", "#007bff", 2000);
 
     // Run the fish analysis
-    const results = await fish(config);
+    await fish(config);
+    const state = getCurrentFishState();
 
-    console.log("Fish2 analysis complete. Results:", results);
+    console.log("Fish2 analysis complete.");
+    if (state.done.length < 100) {
+      console.log(state);
+    }
 
     // Display results in a simple format
-    let resultText = `Fish2 Analysis Complete!\n\nFound ${results.length} lines:\n\n`;
+    let resultText = `Fish2 Analysis Complete!\n\nFound ${state.done.length} lines:\n\n`;
 
-    if (results.length < 100) {
-      results.forEach((line, index) => {
+    if (state.done.length < 100) {
+      state.done.forEach((line, index) => {
         const moves = line.pcns.join(", ");
         const score = line.score.toFixed(2);
         resultText += `Line ${index + 1}: Moves [${moves}], Score [${score}]\n`;
@@ -821,7 +841,11 @@ async function runFish2Analysis(): Promise<void> {
     }
 
     // Show results in a toast and log
-    showToast(`Fish2 complete: ${results.length} lines found`, "#28a745", 5000);
+    showToast(
+      `Fish2 complete: ${state.done.length} lines found`,
+      "#28a745",
+      5000,
+    );
     console.log(resultText);
   } catch (error) {
     console.error("Error in Fish2 analysis:", error);

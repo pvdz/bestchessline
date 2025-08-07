@@ -52,6 +52,27 @@ export function moveToNotation(
     // Standard algebraic notation
     let notation = "";
 
+    // Handle castling first
+    if (move.special === "castling") {
+      const fromFileIndex = move.from.charCodeAt(0) - "a".charCodeAt(0);
+      const toFileIndex = move.to.charCodeAt(0) - "a".charCodeAt(0);
+      const isKingside = toFileIndex > fromFileIndex;
+      return isKingside ? "O-O" : "O-O-O";
+    }
+
+    // Detect castling moves for kings (king moves 2 squares)
+    if (piece === PIECE_TYPES.KING) {
+      const fromFileIndex = move.from.charCodeAt(0) - "a".charCodeAt(0);
+      const toFileIndex = move.to.charCodeAt(0) - "a".charCodeAt(0);
+      const fileDistance = Math.abs(toFileIndex - fromFileIndex);
+
+      if (fileDistance === 2) {
+        // This is a castling move
+        const isKingside = toFileIndex > fromFileIndex;
+        return isKingside ? "O-O" : "O-O-O";
+      }
+    }
+
     if (piece === PIECE_TYPES.PAWN) {
       // Pawn moves
       if (move.from.charAt(0) === move.to.charAt(0)) {

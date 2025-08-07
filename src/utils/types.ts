@@ -50,11 +50,9 @@ export interface AnalysisResult {
 
 export interface StockfishOptions {
   depth?: number;
-  movetime?: number;
-  nodes?: number;
   threads?: number;
-  hash?: number;
   multiPV?: number;
+  searchMoves?: string[]; // long notation to only consider
 }
 
 export interface AnalysisConfig {

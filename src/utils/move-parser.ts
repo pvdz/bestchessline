@@ -499,7 +499,8 @@ export function findFromSquareWithDisambiguation(
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const square = coordsToSquare(rank, file);
-      if (position.board[rank][file] === piece) {
+      const boardPiece = position.board[rank][file];
+      if (boardPiece === piece) {
         candidates.push(square);
       }
     }
@@ -755,7 +756,18 @@ export function canKingMoveTo(
   const fileDiff = Math.abs(fromFile - toFile);
 
   // King moves one square in any direction
-  return rankDiff <= 1 && fileDiff <= 1;
+  if (rankDiff <= 1 && fileDiff <= 1) {
+    return true;
+  }
+
+  // Handle castling moves (king moves 2 squares horizontally)
+  if (rankDiff === 0 && fileDiff === 2) {
+    // This is a castling move - always allow it
+    // The actual castling validation should be done elsewhere
+    return true;
+  }
+
+  return false;
 }
 
 /**

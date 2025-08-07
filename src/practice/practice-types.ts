@@ -9,6 +9,16 @@ export interface GameState {
   openingLines: OpeningLine[];
   positionMap: Map<string, string[]>; // Map of FEN positions to expected moves
   computerMoveStrategy: "random" | "serial" | "adaptive";
+  maxDepth: number;
+  currentDepth: number;
+  positionHistory: string[]; // Array of FEN positions for undo functionality
+  moveHistory: Array<{
+    notation: string;
+    isCorrect: boolean;
+    isWhite: boolean;
+  }>; // Move history for undo
+  pinnedPosition: string | null; // Pinned position FEN for restarting from checkpoint
+  pinnedDepth: number; // Depth at which position was pinned
   statistics: {
     correctMoves: number;
     totalMoves: number;
@@ -47,4 +57,11 @@ export interface DOMElements {
   startOverlay: HTMLElement;
   startOverlayBtn: HTMLButtonElement;
   board: HTMLElement;
+  maxDepth: HTMLInputElement;
+  currentDepth: HTMLElement;
+  goBackBtn: HTMLButtonElement;
+  goBackRandomBtn: HTMLButtonElement;
+  pinPositionBtn: HTMLButtonElement;
+  restartPinnedBtn: HTMLButtonElement;
+  loadLinesBtn: HTMLButtonElement;
 }

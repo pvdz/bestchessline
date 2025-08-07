@@ -14,6 +14,14 @@ function createMockGameState(
     openingLines: [],
     positionMap: new Map<string, string[]>(),
     computerMoveStrategy: strategy,
+    maxDepth: 10,
+    currentDepth: 0,
+    positionHistory: [
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    ],
+    moveHistory: [],
+    pinnedPosition: null,
+    pinnedDepth: 0,
     statistics: {
       correctMoves: 0,
       totalMoves: 0,

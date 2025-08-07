@@ -6,6 +6,11 @@ import {
 import type { GameState, DOMElements } from "./practice-types";
 import { makeMove } from "./practice-game.js";
 import { getPieceAtSquareFromFEN } from "../utils/fen-utils.js";
+import {
+  isArrowDrawingActive,
+  shouldHandleArrowRightClick,
+} from "./practice-arrow-utils.js";
+import { handleSquareClick } from "./practice-game.js";
 
 // Unicode chess pieces
 export const CHESS_PIECES: Record<string, string> = {
@@ -47,6 +52,7 @@ interface DragState {
   currentDropTarget: string | null;
   originalPiece: HTMLElement | null;
   originalSquare: string | null;
+  startPosition: { x: number; y: number } | null;
 }
 
 let dragState: DragState = {
@@ -56,6 +62,7 @@ let dragState: DragState = {
   currentDropTarget: null,
   originalPiece: null,
   originalSquare: null,
+  startPosition: null,
 };
 
 // Store references to event handlers for removal
@@ -117,6 +124,14 @@ export function addDragAndDropListeners(
     if (event.button === 2) {
       // Right mouse button
       event.preventDefault();
+
+      // Check if this right-click should be handled by arrow drawing
+      if (shouldHandleArrowRightClick(event)) {
+        // Let the arrow system handle this right-click
+        return;
+      }
+
+      // Otherwise, handle as square selection
       const squareEl = target.closest(".practice-square") as HTMLElement;
       if (squareEl) {
         const square = squareEl.dataset.square;
@@ -126,6 +141,9 @@ export function addDragAndDropListeners(
       }
       return;
     }
+
+    // Track start position for all left clicks
+    dragState.startPosition = { x: event.clientX, y: event.clientY };
 
     // Check if the target is a piece or a child of a piece
     const pieceElement = target.closest(".practice-piece");
@@ -191,6 +209,7 @@ export function addDragAndDropListeners(
       currentDropTarget: null,
       originalPiece: target,
       originalSquare: square,
+      startPosition: { x: clientX, y: clientY },
     };
 
     // Create drag ghost
@@ -234,6 +253,28 @@ export function addDragAndDropListeners(
   const handleMouseUp = (event: MouseEvent): void => {
     if (dragState.isDragging) {
       endDrag(event.clientX, event.clientY, gameState, dom);
+    } else if (dragState.startPosition) {
+      // Check if this was a click (not a drag) and apply square selection
+      const distance = Math.sqrt(
+        Math.pow(event.clientX - dragState.startPosition.x, 2) +
+          Math.pow(event.clientY - dragState.startPosition.y, 2),
+      );
+
+      // Only apply square selection if mouse moved less than 5 pixels
+      if (distance < 5) {
+        const target = event.target as HTMLElement;
+        const squareEl = target.closest(".practice-square") as HTMLElement;
+        if (squareEl) {
+          const square = squareEl.dataset.square;
+          if (square) {
+            // Handle square selection (left click on empty square or piece)
+            handleSquareClick(square, gameState, dom);
+          }
+        }
+      }
+
+      // Reset start position
+      dragState.startPosition = null;
     }
   };
 
@@ -377,6 +418,7 @@ export function addDragAndDropListeners(
       currentDropTarget: null,
       originalPiece: null,
       originalSquare: null,
+      startPosition: null,
     };
   };
 

@@ -508,11 +508,6 @@ const parseInfoMessage = (message: string): void => {
     }
   }
 
-  // Log the parsed info for debugging
-  log(
-    `Info: depth=${depth}, multipv=${multipv}, score=${score}, nodes=${nodes}, time=${time}, pv=${pv.join(" ")}`,
-  );
-
   // Dispatch comprehensive update event for all info messages
   window.dispatchEvent(
     new CustomEvent("stockfish-info-update", {
@@ -763,9 +758,6 @@ export const analyzePosition = async (
       // Query current thread setting
       uciCmd("setoption name Threads");
     }
-    if (options.hash) {
-      uciCmd(`setoption name Hash value ${options.hash}`);
-    }
     if (options.multiPV) {
       log(`Setting Stockfish MultiPV to ${options.multiPV}`);
       uciCmd(`setoption name MultiPV value ${options.multiPV}`);
@@ -779,8 +771,9 @@ export const analyzePosition = async (
     const goCommand = [
       "go",
       options.depth ? `depth ${options.depth}` : "",
-      options.movetime ? `movetime ${options.movetime}` : "",
-      options.nodes ? `nodes ${options.nodes}` : "",
+      // Do we want to stop when a mate is found? Will it be the best mate or might there be a shorter mate?
+      // options.depth ? `mate ${options.depth}` : "",
+      options.searchMoves ? `searchmoves ${options.searchMoves.join(" ")}` : "", // only search these moves (long notation)
     ]
       .filter(Boolean)
       .join(" ");

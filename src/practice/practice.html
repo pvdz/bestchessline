@@ -53,7 +53,7 @@
                   class="practice-button primary practice-start-btn"
                   id="practice-start-overlay-btn"
                 >
-                  Start Practice
+                  Reload
                 </button>
               </div>
             </div>
@@ -61,7 +61,7 @@
 
           <div class="practice-controls">
             <button class="practice-button primary" id="practice-start-btn">
-              Start Practice
+              Reload
             </button>
             <button class="practice-button secondary" id="practice-reset-btn">
               Reset
@@ -91,6 +91,56 @@
               "
             >
               Clear Selections
+            </button>
+            <button
+              class="practice-button"
+              id="practice-clear-arrows-btn"
+              style="
+                background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+                color: white;
+              "
+            >
+              Clear Arrows
+            </button>
+            <button
+              class="practice-button"
+              id="practice-go-back-btn"
+              style="
+                background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+                color: white;
+              "
+            >
+              Go Back
+            </button>
+            <button
+              class="practice-button"
+              id="practice-go-back-random-btn"
+              style="
+                background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+                color: white;
+              "
+            >
+              Go Back (Random)
+            </button>
+            <button
+              class="practice-button"
+              id="practice-pin-position-btn"
+              style="
+                background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+                color: white;
+              "
+            >
+              Pin Position
+            </button>
+            <button
+              class="practice-button"
+              id="practice-restart-pinned-btn"
+              style="
+                background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+                color: white;
+              "
+            >
+              Restart from Pinned
             </button>
           </div>
         </div>
@@ -135,6 +185,43 @@
           </div>
 
           <div class="practice-panel">
+            <h3 class="practice-panel-title">Depth Control</h3>
+            <div class="practice-depth-control">
+              <div class="practice-input-group">
+                <label class="practice-label" for="practice-max-depth"
+                  >Max Human Moves per Line</label
+                >
+                <div class="practice-slider-container">
+                  <input
+                    type="range"
+                    class="practice-slider"
+                    id="practice-max-depth"
+                    min="1"
+                    max="15"
+                    value="1"
+                  />
+                  <span class="practice-slider-value" id="practice-slider-value"
+                    >1</span
+                  >
+                </div>
+              </div>
+              <div class="practice-depth-info">
+                <span class="practice-depth-label">Human Moves Made:</span>
+                <span class="practice-depth-value" id="practice-current-depth"
+                  >0</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="practice-panel">
+            <h3 class="practice-panel-title">Move History</h3>
+            <div class="practice-moves" id="practice-moves">
+              <!-- Move history will be populated by JavaScript -->
+            </div>
+          </div>
+
+          <div class="practice-panel">
             <h3 class="practice-panel-title">Configuration</h3>
             <div class="practice-config">
               <div class="practice-input-group">
@@ -159,6 +246,16 @@
                   <option value="adaptive">
                     Adaptive (Focus on weak positions)
                   </option>
+                </select>
+              </div>
+
+              <div class="practice-input-group">
+                <label class="practice-label" for="practice-notation-toggle"
+                  >Notation</label
+                >
+                <select class="practice-select" id="practice-notation-toggle">
+                  <option value="english">English (KQRBNP)</option>
+                  <option value="unicode">Figures (♔♕♖♗♘♙)</option>
                 </select>
               </div>
 
@@ -256,14 +353,22 @@
 1. Ng1f3  Pd7d5 2. Pg2g3  Pc7c5 3. Pc2c3  Pe7e6 4. Bf1g2  Bf8e7 5. Pd2d4
                   </textarea
                 >
+                <button
+                  class="practice-button secondary"
+                  id="practice-load-lines-btn"
+                  style="
+                    background: linear-gradient(
+                      135deg,
+                      #3498db 0%,
+                      #2980b9 100%
+                    );
+                    color: white;
+                    margin-top: 8px;
+                  "
+                >
+                  Load from practice-lines.ts
+                </button>
               </div>
-            </div>
-          </div>
-
-          <div class="practice-panel">
-            <h3 class="practice-panel-title">Move History</h3>
-            <div class="practice-moves" id="practice-moves">
-              <!-- Move history will be populated by JavaScript -->
             </div>
           </div>
         </div>

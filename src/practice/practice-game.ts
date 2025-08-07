@@ -1,5 +1,6 @@
 import { applyMoveToFEN } from "../utils/fen-manipulation.js";
 import { parseMove } from "../utils/move-parsing.js";
+import { moveToNotation } from "../utils/notation-utils.js";
 import {
   renderBoard,
   clearBoardSelection,
@@ -11,16 +12,23 @@ import {
   updateStatus,
   updateStatistics,
   addMoveToHistory,
+  removeLastMove,
   showSuccessToast,
   showErrorToast,
   showInfoToast,
   showWarningToast,
 } from "./practice-ui.js";
 import { GameState, DOMElements } from "./practice-types.js";
+import { ChessMove } from "../utils/types.js";
 import {
   triggerConfetti,
   triggerRainbowBurst,
 } from "../utils/confetti-utils.js";
+import {
+  initializeArrowDrawing,
+  clearAllArrows,
+  cleanupArrowDrawing,
+} from "./practice-arrow-utils.js";
 
 // Handle square click for move selection
 export function handleSquareClick(
@@ -46,46 +54,94 @@ export function handleSquareClick(
   } else if (gameState.selectedSquare === square) {
     // Click same square - deselect
     clearSelection();
-  } else if (gameState.validMoves.includes(square)) {
-    // Valid move - make the move
-    makeMove(gameState.selectedSquare, square, gameState, dom);
   } else {
-    // Check for castling - if king moves more than one square, it must be castling
+    // Check for castling first - if king moves exactly 2 squares horizontally, it must be castling
     const selectedPiece = getPieceAtSquareFromFEN(
       gameState.selectedSquare,
       gameState.currentFEN,
     );
     if (selectedPiece && selectedPiece.toUpperCase() === "K") {
+      console.log("🎯 King selected:", selectedPiece);
+      console.log(
+        "🎯 Attempting to move king from",
+        gameState.selectedSquare,
+        "to",
+        square,
+      );
+
       // Calculate the distance the king is moving
       const fromFile =
         gameState.selectedSquare.charCodeAt(0) - "a".charCodeAt(0);
       const toFile = square.charCodeAt(0) - "a".charCodeAt(0);
       const distance = Math.abs(toFile - fromFile);
 
-      // If king moves more than one square, it must be castling
-      if (distance > 1) {
+      console.log("🎯 King move calculation:", { fromFile, toFile, distance });
+
+      // If king moves exactly 2 squares horizontally, it must be castling
+      if (distance === 2) {
         // Determine if it's kingside or queenside castling
         const isKingside = toFile > fromFile; // Moving right = kingside
-        const castlingNotation = isKingside ? "O-O" : "O-O-O";
 
-        makeCastlingMove(castlingNotation, gameState, dom);
+        // Create the castling move directly
+        const isWhite = gameState.currentFEN.includes(" w ");
+        const kingFrom = isWhite ? "e1" : "e8";
+        const kingTo = isWhite
+          ? isKingside
+            ? "g1"
+            : "c1"
+          : isKingside
+            ? "g8"
+            : "c8";
+        const rookFrom = isWhite
+          ? isKingside
+            ? "h1"
+            : "a1"
+          : isKingside
+            ? "h8"
+            : "a8";
+        const rookTo = isWhite
+          ? isKingside
+            ? "f1"
+            : "d1"
+          : isKingside
+            ? "f8"
+            : "d8";
+
+        const castlingMove: ChessMove = {
+          from: kingFrom,
+          to: kingTo,
+          piece: isWhite ? "K" : "k",
+          special: "castling",
+          rookFrom: rookFrom,
+          rookTo: rookTo,
+        };
+
+        console.log("🎯 Castling move created:", castlingMove);
+
+        makeCastlingMoveDirect(castlingMove, gameState, dom);
         return;
       }
     }
 
-    // Click different square - select new piece
-    const piece = getPieceAtSquareFromFEN(square, gameState.currentFEN);
-    if (piece && isPieceOfCurrentPlayer(piece, gameState.currentFEN)) {
-      gameState.selectedSquare = square;
-      gameState.validMoves = findValidMovesForPiece(
-        square,
-        piece,
-        gameState.currentFEN,
-      );
-      highlightSquare(square);
-      highlightValidMoves(gameState.validMoves);
+    // Check if this is a valid move
+    if (gameState.validMoves.includes(square)) {
+      // Valid move - make the move
+      makeMove(gameState.selectedSquare, square, gameState, dom);
     } else {
-      clearSelection();
+      // Click different square - select new piece
+      const piece = getPieceAtSquareFromFEN(square, gameState.currentFEN);
+      if (piece && isPieceOfCurrentPlayer(piece, gameState.currentFEN)) {
+        gameState.selectedSquare = square;
+        gameState.validMoves = findValidMovesForPiece(
+          square,
+          piece,
+          gameState.currentFEN,
+        );
+        highlightSquare(square);
+        highlightValidMoves(gameState.validMoves);
+      } else {
+        clearSelection();
+      }
     }
   }
 }
@@ -111,12 +167,35 @@ export function makeMove(
   const newFEN = applyMoveToFEN(gameState.currentFEN, move);
   gameState.currentFEN = newFEN;
 
+  // Track position history for undo functionality
+  gameState.positionHistory.push(newFEN);
+
   // Get available moves for the current position
   const availableMoves = gameState.positionMap.get(gameState.currentFEN);
 
   // Check if this move was correct by looking at the previous position's available moves
   const previousAvailableMoves = gameState.positionMap.get(previousFEN);
-  const moveNotation = `${fromSquare}-${toSquare}`;
+
+  // Create proper SAN notation for the move
+  const chessMove: ChessMove = {
+    from: fromSquare,
+    to: toSquare,
+    piece: fromPiece,
+  };
+
+  // Get the current notation preference
+  const notationToggle = document.getElementById(
+    "practice-notation-toggle",
+  ) as HTMLSelectElement;
+  const pieceFormat =
+    notationToggle?.value === "unicode" ? "unicode" : "english";
+
+  const moveNotation = moveToNotation(
+    chessMove,
+    "short",
+    pieceFormat,
+    previousFEN,
+  );
   const normalizedMoveNotation = `${fromSquare}${toSquare}`;
 
   // If there are no previous available moves, this is the initial position
@@ -181,6 +260,17 @@ export function makeMove(
     gameState.statistics.correctMoves++;
     gameState.statistics.totalMoves++;
 
+    // Increment human moves counter
+    gameState.currentDepth++;
+
+    // Track move in game state history
+    const isWhite = gameState.moveHistory.length % 2 === 0;
+    gameState.moveHistory.push({
+      notation: moveNotation,
+      isCorrect: true,
+      isWhite,
+    });
+
     showSuccessToast("Correct move!");
     addMoveToHistory(dom.moveHistory, moveNotation, true);
 
@@ -195,7 +285,18 @@ export function makeMove(
     gameState.selectedSquare = null;
     gameState.validMoves = [];
 
-    if (availableMoves && availableMoves.length > 0) {
+    // Clear user arrows after move
+    clearAllArrows();
+
+    // Check if we've reached the max human moves
+    if (gameState.currentDepth >= gameState.maxDepth) {
+      // Max human moves reached! Trigger confetti celebration
+      triggerRainbowBurst();
+      showSuccessToast(
+        `Max human moves (${gameState.maxDepth}) reached! Great job!`,
+      );
+      gameState.isPracticeActive = false;
+    } else if (availableMoves && availableMoves.length > 0) {
       console.log("Available next moves:", availableMoves);
       // Computer's turn
       gameState.isHumanTurn = false;
@@ -205,14 +306,25 @@ export function makeMove(
     } else {
       // Line completed! Trigger rainbow burst celebration
       triggerRainbowBurst();
-      showInfoToast("Position completed!");
-      gameState.isPracticeActive = false;
+
+      // Check if there's a pinned position to restart from
+      if (gameState.pinnedPosition) {
+        showInfoToast(
+          "Position completed! You can restart from pinned position or continue to next line.",
+        );
+        // Don't set isPracticeActive to false yet - let user choose
+      } else {
+        showInfoToast("Position completed!");
+        gameState.isPracticeActive = false;
+      }
     }
   } else {
     // This was an incorrect move
     gameState.statistics.totalMoves++;
 
     showErrorToast("Incorrect move! Try again.");
+
+    // Add the incorrect move to the attempted moves section
     addMoveToHistory(dom.moveHistory, moveNotation, false);
 
     // Revert the move by restoring the previous FEN
@@ -234,16 +346,123 @@ export function makeMove(
 }
 
 // Make castling move
+function makeCastlingMoveDirect(
+  castlingMove: ChessMove,
+  gameState: GameState,
+  dom: DOMElements,
+): void {
+  console.log("🎯 Direct castling triggered:", castlingMove);
+  console.log("🎯 Current FEN:", gameState.currentFEN);
+
+  const previousFEN = gameState.currentFEN;
+  const newFEN = applyMoveToFEN(gameState.currentFEN, castlingMove);
+  console.log("🎯 New FEN after castling:", newFEN);
+  gameState.currentFEN = newFEN;
+
+  // Track position history for undo functionality
+  gameState.positionHistory.push(newFEN);
+
+  // Get available moves for the current position
+  const availableMoves = gameState.positionMap.get(gameState.currentFEN);
+
+  // Always treat castling as correct (no validation needed)
+  // This was a correct move
+  gameState.statistics.correctMoves++;
+  gameState.statistics.totalMoves++;
+
+  // Increment human moves counter
+  gameState.currentDepth++;
+
+  // Create proper SAN notation for the castling move
+  const notationToggle = document.getElementById(
+    "practice-notation-toggle",
+  ) as HTMLSelectElement;
+  const pieceFormat =
+    notationToggle?.value === "unicode" ? "unicode" : "english";
+  const castlingNotation = moveToNotation(
+    castlingMove,
+    "short",
+    pieceFormat,
+    previousFEN,
+  );
+
+  // Track move in game state history
+  const isWhite = gameState.moveHistory.length % 2 === 0;
+  gameState.moveHistory.push({
+    notation: castlingNotation,
+    isCorrect: true,
+    isWhite,
+  });
+
+  showSuccessToast("Correct move!");
+  addMoveToHistory(dom.moveHistory, castlingNotation, true);
+
+  // Re-render the board with the new FEN
+  renderBoard(gameState.currentFEN);
+
+  // Highlight the last move (castling)
+  highlightLastMove(castlingMove.from, castlingMove.to);
+
+  // Clear selection and right-click selections (but keep last move highlights)
+  clearBoardSelectionWithoutLastMove();
+  gameState.selectedSquare = null;
+  gameState.validMoves = [];
+
+  // Clear user arrows after castling move
+  clearAllArrows();
+
+  // Check if we've reached the max depth
+  if (gameState.currentDepth >= gameState.maxDepth) {
+    // Max depth reached! Trigger confetti celebration
+    triggerRainbowBurst();
+    showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`);
+    gameState.isPracticeActive = false;
+  } else if (availableMoves && availableMoves.length > 0) {
+    console.log("Available next moves:", availableMoves);
+    // Computer's turn
+    gameState.isHumanTurn = false;
+    setTimeout(() => {
+      makeComputerMove(gameState, dom);
+    }, 500);
+  } else {
+    // Line completed! Trigger rainbow burst celebration
+    triggerRainbowBurst();
+
+    // Check if there's a pinned position to restart from
+    if (gameState.pinnedPosition) {
+      showInfoToast(
+        "Position completed! You can restart from pinned position or continue to next line.",
+      );
+      // Don't set isPracticeActive to false yet - let user choose
+    } else {
+      showInfoToast("Position completed!");
+      gameState.isPracticeActive = false;
+    }
+  }
+
+  updateStatistics(dom, gameState);
+}
+
 function makeCastlingMove(
   castlingNotation: string,
   gameState: GameState,
   dom: DOMElements,
 ): void {
+  console.log("🎯 Castling triggered:", castlingNotation);
+  console.log("🎯 Current FEN:", gameState.currentFEN);
+
   const previousFEN = gameState.currentFEN;
   const parsedMove = parseMove(castlingNotation, gameState.currentFEN);
+
+  console.log("🎯 Parsed move:", parsedMove);
+
   if (parsedMove) {
     const newFEN = applyMoveToFEN(gameState.currentFEN, parsedMove);
+    console.log("🎯 New FEN after castling:", newFEN);
     gameState.currentFEN = newFEN;
+
+    // Track position history for undo functionality
+    gameState.positionHistory.push(newFEN);
 
     // Get available moves for the current position
     const availableMoves = gameState.positionMap.get(gameState.currentFEN);
@@ -252,6 +471,17 @@ function makeCastlingMove(
     // This was a correct move
     gameState.statistics.correctMoves++;
     gameState.statistics.totalMoves++;
+
+    // Increment human moves counter
+    gameState.currentDepth++;
+
+    // Track move in game state history
+    const isWhite = gameState.moveHistory.length % 2 === 0;
+    gameState.moveHistory.push({
+      notation: castlingNotation,
+      isCorrect: true,
+      isWhite,
+    });
 
     showSuccessToast("Correct move!");
     addMoveToHistory(dom.moveHistory, castlingNotation, true);
@@ -277,7 +507,16 @@ function makeCastlingMove(
     gameState.selectedSquare = null;
     gameState.validMoves = [];
 
-    if (availableMoves && availableMoves.length > 0) {
+    // Clear user arrows after castling move
+    clearAllArrows();
+
+    // Check if we've reached the max depth
+    if (gameState.currentDepth >= gameState.maxDepth) {
+      // Max depth reached! Trigger confetti celebration
+      triggerRainbowBurst();
+      showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`);
+      gameState.isPracticeActive = false;
+    } else if (availableMoves && availableMoves.length > 0) {
       console.log("Available next moves:", availableMoves);
       // Computer's turn
       gameState.isHumanTurn = false;
@@ -287,8 +526,17 @@ function makeCastlingMove(
     } else {
       // Line completed! Trigger rainbow burst celebration
       triggerRainbowBurst();
-      showInfoToast("Position completed!");
-      gameState.isPracticeActive = false;
+
+      // Check if there's a pinned position to restart from
+      if (gameState.pinnedPosition) {
+        showInfoToast(
+          "Position completed! You can restart from pinned position or continue to next line.",
+        );
+        // Don't set isPracticeActive to false yet - let user choose
+      } else {
+        showInfoToast("Position completed!");
+        gameState.isPracticeActive = false;
+      }
     }
 
     updateStatistics(dom, gameState);
@@ -340,19 +588,48 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
         const newFEN = applyMoveToFEN(gameState.currentFEN, parsedMove);
         gameState.currentFEN = newFEN;
 
+        // Track position history for undo functionality
+        gameState.positionHistory.push(newFEN);
+
+        // Track move in game state history
+        const isWhite = gameState.moveHistory.length % 2 === 0;
+        gameState.moveHistory.push({
+          notation: selectedMove,
+          isCorrect: true,
+          isWhite,
+        });
+
         addMoveToHistory(dom.moveHistory, selectedMove, true);
         renderBoard(gameState.currentFEN);
 
-        // Check if there are more moves available for the human
-        const nextAvailableMoves = gameState.positionMap.get(
-          gameState.currentFEN,
-        );
-        if (nextAvailableMoves && nextAvailableMoves.length > 0) {
-          console.log("Available next moves:", nextAvailableMoves);
-          gameState.isHumanTurn = true;
-        } else {
-          showInfoToast("Position completed!");
+        // Check if we've reached the max depth
+        if (gameState.currentDepth >= gameState.maxDepth) {
+          // Max depth reached! Trigger confetti celebration
+          triggerRainbowBurst();
+          showSuccessToast(
+            `Max depth (${gameState.maxDepth}) reached! Great job!`,
+          );
           gameState.isPracticeActive = false;
+        } else {
+          // Check if there are more moves available for the human
+          const nextAvailableMoves = gameState.positionMap.get(
+            gameState.currentFEN,
+          );
+          if (nextAvailableMoves && nextAvailableMoves.length > 0) {
+            console.log("Available next moves:", nextAvailableMoves);
+            gameState.isHumanTurn = true;
+          } else {
+            // Check if there's a pinned position to restart from
+            if (gameState.pinnedPosition) {
+              showInfoToast(
+                "Position completed! You can restart from pinned position or continue to next line.",
+              );
+              // Don't set isPracticeActive to false yet - let user choose
+            } else {
+              showInfoToast("Position completed!");
+              gameState.isPracticeActive = false;
+            }
+          }
         }
       } else {
         console.warn(`Failed to parse castling move: ${fromToSquares}`);
@@ -377,7 +654,31 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
       const newFEN = applyMoveToFEN(gameState.currentFEN, chessMove);
       gameState.currentFEN = newFEN;
 
-      addMoveToHistory(dom.moveHistory, selectedMove, true);
+      // Track position history for undo functionality
+      gameState.positionHistory.push(newFEN);
+
+      // Convert computer move to proper SAN notation
+      const notationToggle = document.getElementById(
+        "practice-notation-toggle",
+      ) as HTMLSelectElement;
+      const pieceFormat =
+        notationToggle?.value === "unicode" ? "unicode" : "english";
+      const computerMoveNotation = moveToNotation(
+        chessMove,
+        "short",
+        pieceFormat,
+        gameState.currentFEN,
+      );
+
+      // Track move in game state history
+      const isWhite = gameState.moveHistory.length % 2 === 0;
+      gameState.moveHistory.push({
+        notation: computerMoveNotation,
+        isCorrect: true,
+        isWhite,
+      });
+
+      addMoveToHistory(dom.moveHistory, computerMoveNotation, true);
 
       // Re-render the board with the new FEN
       renderBoard(gameState.currentFEN);
@@ -385,17 +686,35 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
       // Highlight the last move (computer move)
       highlightLastMove(fromSquare, toSquare);
 
-      // Check if there are more moves available for the human
-      const nextAvailableMoves = gameState.positionMap.get(
-        gameState.currentFEN,
-      );
-      if (nextAvailableMoves && nextAvailableMoves.length > 0) {
-        console.log("Available next moves:", nextAvailableMoves);
-        // Human's turn
-        gameState.isHumanTurn = true;
-      } else {
-        showInfoToast("Position completed!");
+      // Check if we've reached the max depth
+      if (gameState.currentDepth >= gameState.maxDepth) {
+        // Max depth reached! Trigger confetti celebration
+        triggerRainbowBurst();
+        showSuccessToast(
+          `Max depth (${gameState.maxDepth}) reached! Great job!`,
+        );
         gameState.isPracticeActive = false;
+      } else {
+        // Check if there are more moves available for the human
+        const nextAvailableMoves = gameState.positionMap.get(
+          gameState.currentFEN,
+        );
+        if (nextAvailableMoves && nextAvailableMoves.length > 0) {
+          console.log("Available next moves:", nextAvailableMoves);
+          // Human's turn
+          gameState.isHumanTurn = true;
+        } else {
+          // Check if there's a pinned position to restart from
+          if (gameState.pinnedPosition) {
+            showInfoToast(
+              "Position completed! You can restart from pinned position or continue to next line.",
+            );
+            // Don't set isPracticeActive to false yet - let user choose
+          } else {
+            showInfoToast("Position completed!");
+            gameState.isPracticeActive = false;
+          }
+        }
       }
     } else {
       console.warn(`Invalid from-to squares: ${fromToSquares}`);
@@ -497,10 +816,4 @@ function highlightValidMoves(moves: string[]): void {
 
 function clearSelection(): void {
   clearBoardSelection();
-}
-
-interface ChessMove {
-  from: string;
-  to: string;
-  piece: string;
 }

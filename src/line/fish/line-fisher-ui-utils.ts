@@ -1,10 +1,12 @@
-import type { LineFisherConfig } from "./fish.js";
+import type { LineFisherConfig } from "./types.js";
 import { log } from "../../utils/logging.js";
 import {
   getInputElement,
   getElementByIdOrThrow,
 } from "../../utils/dom-helpers.js";
 import { getFEN } from "../../utils/chess-board.js";
+import { getStartingPlayer } from "../../utils/utils.js";
+import { PLAYER_COLORS } from "../types.js";
 
 // ============================================================================
 // LINE FISHER UI UTILITY FUNCTIONS
@@ -135,6 +137,18 @@ export const getLineFisherDefaultResponderCount = (): number => {
 };
 
 /**
+ * Get Line Fisher target depth from UI
+ * Read target depth from slider input
+ */
+export const getLineFisherTargetDepth = (): number => {
+  const targetDepthInput = getInputElement("line-fisher-target-depth");
+  if (!targetDepthInput) return 10; // Default to 10
+
+  const depth = parseInt(targetDepthInput.value, 10);
+  return isNaN(depth) ? 10 : Math.max(1, Math.min(20, depth));
+};
+
+/**
  * Get Line Fisher configuration from UI
  * TODO: Read all configuration values from UI elements
  */
@@ -145,7 +159,11 @@ export const getLineFisherConfigFromUI = (): LineFisherConfig => {
     maxDepth: getLineFisherDepth(),
     threads: getLineFisherThreads(),
     defaultResponderCount: getLineFisherDefaultResponderCount(),
+    targetDepth: getLineFisherTargetDepth(),
     rootFEN: getFEN(),
+    initiatorIsWhite: getStartingPlayer(getFEN()) === PLAYER_COLORS.WHITE,
+    baselineScore: 0,
+    baselineMoves: [],
   };
 };
 

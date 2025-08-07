@@ -13,17 +13,17 @@ let loggingEnabled = false;
  * @param args - Arguments to pass to console.log
  */
 export function log(...args) {
-    if (loggingEnabled) {
-        console.log(...args);
-    }
+  if (loggingEnabled) {
+    console.log(...args);
+  }
 }
 /**
  * Error logging utility function
  * @param args - Arguments to pass to console.error
  */
 export function logError(...args) {
-    if (loggingEnabled) {
-        console.error(...args);
-    }
+  if (loggingEnabled) {
+    console.error(...args);
+  }
 }
 //# sourceMappingURL=logging.js.map

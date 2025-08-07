@@ -1,4 +1,4 @@
-import type { LineFisherConfig } from "./fish.js";
+import type { LineFisherConfig } from "./types.js";
 /**
  * Calculate total nodes in the analysis tree
  */
@@ -8,7 +8,9 @@ export declare const calculateTotalNodes: (config: LineFisherConfig) => number;
  * @param config - The configuration for the Line Fisher analysis
  * @returns The number of responder nodes in the analysis tree
  */
-export declare const calculateResponderNodes: (config: LineFisherConfig) => number;
+export declare const calculateResponderNodes: (
+  config: LineFisherConfig,
+) => number;
 /**
  * Calculate total lines in the analysis
  */

@@ -1,60 +1,4 @@
-/**
- * Line Fisher analysis configuration
- */
-export interface LineFisherConfig {
-    initiatorMoves: string[];
-    responderMoveCounts: number[];
-    maxDepth: number;
-    threads: number;
-    defaultResponderCount: number;
-    rootFEN: string;
-    baselineScore?: number;
-    baselineMoves?: {
-        move: string;
-        score: number;
-    }[];
-}
-/**
- * Line Fisher result for a single line
- */
-export interface LineFisherResult {
-    lineIndex: number;
-    pcns: string[];
-    scores: number[];
-    deltas: number[];
-    sanLine: string;
-    nodeId: string;
-    isComplete: boolean;
-    isDone: boolean;
-    isTransposition?: boolean;
-    responderMoveList?: string[];
-    updateCount: number;
-}
-/**
- * Continue fish analysis from current state
- * Resume fish analysis from the current state if there are WIP lines
- */
-export declare const continueFishAnalysis: () => Promise<void>;
-/**
- * Import fish state from clipboard
- * Import fish analysis state from clipboard JSON format.
- * Parse JSON state, validate format, and load into current state
- */
-export declare const importFishStateFromClipboard: () => Promise<void>;
-/**
- * Represents a line being analyzed
- */
-interface FishLine {
-    lineIndex: number;
-    nodeId: string;
-    sanGame: string;
-    pcns: string[];
-    score: number;
-    delta: number;
-    position: string;
-    isDone: boolean;
-    isFull: boolean;
-}
+import { LineFisherConfig } from "./types.js";
 /**
  * Stop Fish analysis
  */
@@ -71,13 +15,15 @@ export declare const stopFishAnalysis: () => void;
  *    - If odd half-moves: initiator move (get best move)
  *    - Mark lines as done when max depth reached
  */
-export declare function fish(config: LineFisherConfig): Promise<FishLine[]>;
+export declare function fish(config: LineFisherConfig): Promise<void>;
+export declare const importFishStateFromClipboard: () => Promise<void>;
 /**
  * Export fish state to clipboard
  * Export current analysis state to clipboard in JSON format for import.
  * Serialize current state, copy to clipboard, and show success notification
  */
 export declare const exportFishStateToClipboard: () => Promise<void>;
+export declare function continueFishing(): Promise<void>;
 /**
  * Copy fish state to clipboard (for copy button)
  * Copy current analysis state to clipboard in plain text format.
@@ -92,4 +38,3 @@ export declare const initializeLineFisher: () => Promise<void>;
  * Reset Fish analysis
  */
 export declare const resetFishAnalysis: () => void;
-export {};

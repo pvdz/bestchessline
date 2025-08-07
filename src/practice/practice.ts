@@ -4,6 +4,8 @@ import {
   addDragAndDropListeners,
   reAddDragAndDropListeners,
   clearRightClickSelections,
+  clearLastMoveHighlight,
+  clearBoardSelectionWithoutLastMove,
 } from "./practice-board.js";
 import {
   parseOpeningLines,
@@ -17,6 +19,8 @@ import {
   showSuccessToast,
   showErrorToast,
   showInfoToast,
+  showWarningToast,
+  updateMoveHistoryDisplay,
 } from "./practice-ui.js";
 import {
   triggerConfetti,
@@ -25,9 +29,15 @@ import {
 import {
   handleSquareClick,
   makeMove,
+  makeComputerMove,
   showHintForCurrentPosition,
 } from "./practice-game.js";
-import { GameState, DOMElements } from "./practice-types.js";
+import {
+  initializeArrowDrawing,
+  cleanupArrowDrawing,
+  clearAllArrows,
+} from "./practice-arrow-utils.js";
+import { GameState, DOMElements, OpeningLine } from "./practice-types.js";
 import { convertLineToLongNotation } from "../utils/notation-utils.js";
 
 // Helper function to get element by ID or throw
@@ -37,6 +47,62 @@ function getElementByIdOrThrow(id: string): HTMLElement {
     throw new Error(`Element with id '${id}' not found`);
   }
   return element;
+}
+
+// Function to analyze maximum depth in opening lines
+function analyzeMaxDepth(openingLines: OpeningLine[]): number {
+  let maxDepth = 0;
+  let longestLine: OpeningLine | null = null;
+
+  for (const line of openingLines) {
+    // Count the number of full moves in this line
+    // Each numbered move (1., 2., 3., etc.) represents one full move
+    // So we count the number of numbered moves in the original line
+    const fullMoveCount = Math.ceil(line.moves.length / 2);
+
+    if (fullMoveCount > maxDepth) {
+      maxDepth = fullMoveCount;
+      longestLine = line;
+    }
+  }
+
+  // Return the actual maximum number of human moves
+  return Math.max(1, maxDepth);
+}
+
+// Function to update depth control based on opening lines
+function updateDepthControl(openingLines: OpeningLine[]): void {
+  const maxDepthInLines = analyzeMaxDepth(openingLines);
+
+  if (maxDepthInLines > 0) {
+    // Update the max attribute and value of the depth slider
+    dom.maxDepth.max = maxDepthInLines.toString();
+    dom.maxDepth.value = maxDepthInLines.toString();
+
+    // Update the slider value display
+    const sliderValue = document.getElementById("practice-slider-value");
+    if (sliderValue) {
+      sliderValue.textContent = maxDepthInLines.toString();
+    }
+
+    // Update the game state
+    gameState.maxDepth = maxDepthInLines;
+
+    console.log(`Depth control updated: max depth is ${maxDepthInLines} moves`);
+  } else {
+    // Default to 1 if no lines are loaded
+    dom.maxDepth.max = "15";
+    dom.maxDepth.value = "1";
+    gameState.maxDepth = 1;
+
+    // Update the slider value display
+    const sliderValue = document.getElementById("practice-slider-value");
+    if (sliderValue) {
+      sliderValue.textContent = "1";
+    }
+
+    console.log("No opening lines loaded, using default max depth of 1");
+  }
 }
 
 // Game state
@@ -49,6 +115,12 @@ let gameState: GameState = {
   openingLines: [],
   positionMap: new Map<string, string[]>(),
   computerMoveStrategy: "serial", // Default to serial strategy
+  maxDepth: 1,
+  currentDepth: 0,
+  positionHistory: ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
+  moveHistory: [],
+  pinnedPosition: null,
+  pinnedDepth: 0,
   statistics: {
     correctMoves: 0,
     totalMoves: 0,
@@ -89,6 +161,23 @@ function initializeDOMElements(): void {
     ) as HTMLButtonElement,
     board: getElementByIdOrThrow("practice-board-grid")
       .parentElement as HTMLElement,
+    maxDepth: getElementByIdOrThrow("practice-max-depth") as HTMLInputElement,
+    currentDepth: getElementByIdOrThrow("practice-current-depth"),
+    goBackBtn: getElementByIdOrThrow(
+      "practice-go-back-btn",
+    ) as HTMLButtonElement,
+    goBackRandomBtn: getElementByIdOrThrow(
+      "practice-go-back-random-btn",
+    ) as HTMLButtonElement,
+    pinPositionBtn: getElementByIdOrThrow(
+      "practice-pin-position-btn",
+    ) as HTMLButtonElement,
+    restartPinnedBtn: getElementByIdOrThrow(
+      "practice-restart-pinned-btn",
+    ) as HTMLButtonElement,
+    loadLinesBtn: getElementByIdOrThrow(
+      "practice-load-lines-btn",
+    ) as HTMLButtonElement,
   };
 }
 
@@ -121,9 +210,13 @@ export function startPractice(gameState: GameState, dom: DOMElements): void {
     lines,
     gameState.currentFEN,
   );
+
   // Build position map with long notation moves
   const positionMap = buildPositionMap(longNotationLines, gameState.currentFEN);
   gameState.positionMap = positionMap;
+
+  // Update depth control based on the loaded opening lines
+  updateDepthControl(longNotationLines);
 
   // Initialize game state for position-based approach
   gameState.openingLines = longNotationLines;
@@ -155,6 +248,9 @@ export function startPractice(gameState: GameState, dom: DOMElements): void {
   renderBoard(gameState.currentFEN);
   reAddDragAndDropListeners(gameState, dom);
 
+  // Initialize arrow drawing functionality
+  initializeArrowDrawing();
+
   showSuccessToast("Practice session started!");
 }
 
@@ -172,6 +268,12 @@ function resetPractice(): void {
       | "random"
       | "serial"
       | "adaptive",
+    maxDepth: parseInt(dom.maxDepth.value) || 10,
+    currentDepth: 0,
+    positionHistory: [dom.startingFEN.value],
+    moveHistory: [],
+    pinnedPosition: null,
+    pinnedDepth: 0,
     statistics: {
       correctMoves: 0,
       totalMoves: 0,
@@ -188,6 +290,9 @@ function resetPractice(): void {
   renderBoard(gameState.currentFEN);
   reAddDragAndDropListeners(gameState, dom);
   updateStatus(dom, gameState);
+
+  // Clean up arrow drawing
+  cleanupArrowDrawing();
 
   showInfoToast("Practice reset");
 }
@@ -208,15 +313,206 @@ function nextLine(): void {
   const startingFEN = dom.startingFEN.value.trim();
   gameState.currentFEN = startingFEN;
 
+  // Reset depth for new line
+  gameState.currentDepth = 0;
+
+  // Reset position and move history for new line
+  gameState.positionHistory = [startingFEN];
+  gameState.moveHistory = [];
+
+  // Reset pinned position for new line
+  gameState.pinnedPosition = null;
+  gameState.pinnedDepth = 0;
+
   // Hide overlay and activate board if not already active
   dom.startOverlay.classList.add("hidden");
   dom.board.classList.add("active");
 
+  // Clear last move indicators, selections, and arrows when starting a new line
+  clearLastMoveHighlight();
+  clearBoardSelectionWithoutLastMove();
+  clearAllArrows();
+
   renderBoard(gameState.currentFEN);
   reAddDragAndDropListeners(gameState, dom);
   updateStatus(dom, gameState);
+  updateStatistics(dom, gameState);
 
   showInfoToast("Switched to new position");
+}
+
+// Go back one move (let human retry)
+function goBackOneMove(): void {
+  if (gameState.moveHistory.length === 0) {
+    showWarningToast("No moves to go back from");
+    return;
+  }
+
+  // Remove the last move from history
+  const lastMove = gameState.moveHistory.pop();
+  gameState.positionHistory.pop(); // Remove the last position
+
+  // Restore the previous position
+  gameState.currentFEN =
+    gameState.positionHistory[gameState.positionHistory.length - 1];
+
+  // Decrement depth
+  gameState.currentDepth = Math.max(0, gameState.currentDepth - 1);
+
+  // Update statistics (remove the last correct move)
+  if (lastMove && lastMove.isCorrect) {
+    gameState.statistics.correctMoves = Math.max(
+      0,
+      gameState.statistics.correctMoves - 1,
+    );
+    gameState.statistics.totalMoves = Math.max(
+      0,
+      gameState.statistics.totalMoves - 1,
+    );
+  }
+
+  // Make it human's turn
+  gameState.isHumanTurn = true;
+  gameState.isPracticeActive = true;
+
+  // Clear selections and arrows
+  clearLastMoveHighlight();
+  clearBoardSelectionWithoutLastMove();
+  clearAllArrows();
+
+  // Re-render board and update UI
+  renderBoard(gameState.currentFEN);
+  reAddDragAndDropListeners(gameState, dom);
+  updateStatus(dom, gameState);
+  updateStatistics(dom, gameState);
+
+  // Update move history display
+  updateMoveHistoryDisplay(dom.moveHistory);
+
+  showInfoToast("Went back one move - your turn to retry");
+}
+
+// Go back one move and pick a random different computer move
+function goBackOneMoveRandom(): void {
+  if (gameState.moveHistory.length === 0) {
+    showWarningToast("No moves to go back from");
+    return;
+  }
+
+  // Remove the last move from history
+  const lastMove = gameState.moveHistory.pop();
+  gameState.positionHistory.pop(); // Remove the last position
+
+  // Restore the previous position
+  gameState.currentFEN =
+    gameState.positionHistory[gameState.positionHistory.length - 1];
+
+  // Decrement depth
+  gameState.currentDepth = Math.max(0, gameState.currentDepth - 1);
+
+  // Update statistics (remove the last correct move)
+  if (lastMove && lastMove.isCorrect) {
+    gameState.statistics.correctMoves = Math.max(
+      0,
+      gameState.statistics.correctMoves - 1,
+    );
+    gameState.statistics.totalMoves = Math.max(
+      0,
+      gameState.statistics.totalMoves - 1,
+    );
+  }
+
+  // Make it human's turn
+  gameState.isHumanTurn = true;
+  gameState.isPracticeActive = true;
+
+  // Clear selections and arrows
+  clearLastMoveHighlight();
+  clearBoardSelectionWithoutLastMove();
+  clearAllArrows();
+
+  // Re-render board and update UI
+  renderBoard(gameState.currentFEN);
+  reAddDragAndDropListeners(gameState, dom);
+  updateStatus(dom, gameState);
+  updateStatistics(dom, gameState);
+
+  // Update move history display
+  updateMoveHistoryDisplay(dom.moveHistory);
+
+  // Trigger a random computer move after a short delay
+  setTimeout(() => {
+    if (gameState.isPracticeActive && !gameState.isHumanTurn) {
+      makeComputerMove(gameState, dom);
+    }
+  }, 500);
+
+  showInfoToast("Went back one move - computer will make a different move");
+}
+
+// Pin the current position as a checkpoint
+function pinCurrentPosition(): void {
+  if (!gameState.isPracticeActive) {
+    showWarningToast("No active practice session to pin");
+    return;
+  }
+
+  gameState.pinnedPosition = gameState.currentFEN;
+  gameState.pinnedDepth = gameState.currentDepth;
+
+  showSuccessToast(
+    `Position pinned at depth ${gameState.currentDepth}! You can restart from here when the line ends.`,
+  );
+}
+
+// Restart from pinned position
+function restartFromPinnedPosition(): void {
+  if (!gameState.pinnedPosition) {
+    showWarningToast("No pinned position to restart from");
+    return;
+  }
+
+  // Reset to pinned position
+  gameState.currentFEN = gameState.pinnedPosition;
+  gameState.currentDepth = gameState.pinnedDepth;
+
+  // Reset position and move history to pinned state
+  const pinnedIndex = gameState.positionHistory.indexOf(
+    gameState.pinnedPosition,
+  );
+  if (pinnedIndex !== -1) {
+    gameState.positionHistory = gameState.positionHistory.slice(
+      0,
+      pinnedIndex + 1,
+    );
+    gameState.moveHistory = gameState.moveHistory.slice(0, pinnedIndex);
+  }
+
+  // Reset statistics to pinned state
+  gameState.statistics.correctMoves = gameState.pinnedDepth;
+  gameState.statistics.totalMoves = gameState.pinnedDepth;
+
+  // Make it human's turn
+  gameState.isHumanTurn = true;
+  gameState.isPracticeActive = true;
+
+  // Clear selections and arrows
+  clearLastMoveHighlight();
+  clearBoardSelectionWithoutLastMove();
+  clearAllArrows();
+
+  // Re-render board and update UI
+  renderBoard(gameState.currentFEN);
+  reAddDragAndDropListeners(gameState, dom);
+  updateStatus(dom, gameState);
+  updateStatistics(dom, gameState);
+
+  // Update move history display
+  updateMoveHistoryDisplay(dom.moveHistory);
+
+  showSuccessToast(
+    `Restarted from pinned position at depth ${gameState.pinnedDepth}`,
+  );
 }
 
 // Fisher copy functionality
@@ -268,6 +564,34 @@ async function copyLinesAsLongNotation(): Promise<void> {
   }
 }
 
+// Function to load lines from practice-lines.ts
+async function loadLinesFromFile(): Promise<void> {
+  try {
+    // Import the practice lines from the TypeScript file
+    const { practiceLines } = await import("./practice-lines.js");
+
+    // Set the textarea content to the imported lines
+    dom.openingLines.value = practiceLines;
+
+    // Parse and update depth control
+    const lines = parseOpeningLines(practiceLines);
+    const longNotationLines = convertOpeningLinesToPCN(
+      lines,
+      gameState.currentFEN,
+    );
+    updateDepthControl(longNotationLines);
+
+    showSuccessToast(
+      `Loaded ${lines.length} opening lines from practice-lines.ts`,
+    );
+
+    console.log(`Loaded ${lines.length} opening lines from practice-lines.ts`);
+  } catch (error) {
+    console.error("Error loading lines from practice-lines.ts:", error);
+    showErrorToast("Failed to load lines from practice-lines.ts");
+  }
+}
+
 // Initialize event listeners
 function initializeEventListeners(): void {
   // Overlay start button
@@ -303,6 +627,42 @@ function initializeEventListeners(): void {
       | "adaptive";
   });
 
+  // Notation toggle
+  const notationToggle = document.getElementById(
+    "practice-notation-toggle",
+  ) as HTMLSelectElement;
+  if (notationToggle) {
+    notationToggle.addEventListener("change", () => {
+      // The move history will update automatically when new moves are made
+      // since we check the notation preference in the move functions
+    });
+  }
+
+  // Max depth slider
+  dom.maxDepth.addEventListener("input", () => {
+    const newMaxDepth = parseInt(dom.maxDepth.value) || 10;
+    gameState.maxDepth = newMaxDepth;
+
+    // Update the slider value display
+    const sliderValue = document.getElementById("practice-slider-value");
+    if (sliderValue) {
+      sliderValue.textContent = newMaxDepth.toString();
+    }
+
+    console.log(`Max depth updated to: ${newMaxDepth}`);
+  });
+
+  // Opening lines textarea - update depth control when content changes
+  dom.openingLines.addEventListener("input", () => {
+    const linesText = dom.openingLines.value;
+    const lines = parseOpeningLines(linesText);
+    const longNotationLines = convertOpeningLinesToPCN(
+      lines,
+      gameState.currentFEN,
+    );
+    updateDepthControl(longNotationLines);
+  });
+
   // Confetti test button
   const confettiBtn = document.getElementById(
     "practice-confetti-btn",
@@ -325,6 +685,41 @@ function initializeEventListeners(): void {
       clearRightClickSelections();
     });
   }
+
+  // Clear arrows button
+  const clearArrowsBtn = document.getElementById(
+    "practice-clear-arrows-btn",
+  ) as HTMLButtonElement;
+  if (clearArrowsBtn) {
+    clearArrowsBtn.addEventListener("click", () => {
+      clearAllArrows();
+    });
+  }
+
+  // Go back button
+  dom.goBackBtn.addEventListener("click", () => {
+    goBackOneMove();
+  });
+
+  // Go back random button
+  dom.goBackRandomBtn.addEventListener("click", () => {
+    goBackOneMoveRandom();
+  });
+
+  // Pin position button
+  dom.pinPositionBtn.addEventListener("click", () => {
+    pinCurrentPosition();
+  });
+
+  // Restart from pinned position button
+  dom.restartPinnedBtn.addEventListener("click", () => {
+    restartFromPinnedPosition();
+  });
+
+  // Load lines from practice-lines.ts button
+  dom.loadLinesBtn.addEventListener("click", () => {
+    loadLinesFromFile();
+  });
 }
 
 // Initialize the application
@@ -333,4 +728,18 @@ export function initializePractice(): void {
   initializeBoardWithEventListeners();
   initializeEventListeners();
   resetPractice();
+
+  // Analyze initial opening lines content
+  const linesText = dom.openingLines.value;
+  const lines = parseOpeningLines(linesText);
+  const longNotationLines = convertOpeningLinesToPCN(
+    lines,
+    gameState.currentFEN,
+  );
+  updateDepthControl(longNotationLines);
+
+  // Auto-start practice with initial lines
+  if (lines.length > 0) {
+    startPractice(gameState, dom);
+  }
 }

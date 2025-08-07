@@ -22,6 +22,8 @@ import {
 } from "../../line/board/position-controls.js";
 import * as Board from "../../utils/chess-board.js";
 import { highlightLastMove } from "../../line/board/board-utils.js";
+import { clearLastMoveHighlight } from "../../utils/chess-board.js";
+import { hideMoveArrow } from "../../line/board/arrow-utils.js";
 
 /**
  * Game Navigation Utility Functions
@@ -125,6 +127,10 @@ export function nextMove(): void {
     updateFENInput();
     updateControlsFromPosition();
     resetPositionEvaluation();
+
+    // Clear last move indicators, arrows, and selections when starting on the "next line"
+    clearLastMoveHighlight();
+    hideMoveArrow();
   }
 }
 

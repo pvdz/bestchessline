@@ -95,35 +95,67 @@
                 />
                 <span id="line-fisher-depth-value">1</span>
               </div>
+              <div class="target-depth-controls">
+                <label for="line-fisher-target-depth">Target Depth:</label>
+                <input
+                  type="range"
+                  id="line-fisher-target-depth"
+                  min="1"
+                  max="20"
+                  value="10"
+                  class="line-fisher-slider"
+                  title="Depth at which to trigger confetti when human makes the proper move"
+                />
+                <span id="line-fisher-target-depth-value">10</span>
+              </div>
             </div>
           </div>
           <div id="line-fisher-status">Ready</div>
 
-          <div id="line-fisher-config" class="line-fisher-panel">
+          <div id="fish-config-root" class="line-fisher-panel">
             <h3>Configuration</h3>
-            <div class="line-fisher-config-board">
-              <div
-                id="line-fisher-board-display"
-                class="line-fisher-board-display"
-              >
-                <!-- Chess board will be rendered here -->
-              </div>
-              <div class="line-fisher-config-details">
-                <div class="line-fisher-config-item">
+            <div id="fish-config-board-root">
+              <div id="fish-board-display"></div>
+              <div id="fish-config-details">
+                <div class="fish-config-item">
                   <label>Initiator Moves:</label>
-                  <span id="line-fisher-initiator-display">-</span>
+                  <span id="fish-config-initiator-moves">-</span>
                 </div>
-                <div class="line-fisher-config-item">
+                <div class="fish-config-item">
                   <label>Responder Counts:</label>
-                  <span id="line-fisher-responder-display">-</span>
+                  <span id="fish-config-responder-counts">-</span>
                 </div>
-                <div class="line-fisher-config-item">
+                <div class="fish-config-item">
                   <label>Move Depth:</label>
-                  <span id="line-fisher-depth-display">-</span>
+                  <span id="fish-config-move-depth">-</span>
                 </div>
-                <div class="line-fisher-config-item">
+                <div class="fish-config-item">
                   <label>Threads:</label>
-                  <span id="line-fisher-threads-display">-</span>
+                  <span id="fish-config-threads">-</span>
+                </div>
+                <div class="fish-config-item">
+                  <label>Total nodes:</label>
+                  <span id="fish-config-total-nodes">-</span>
+                </div>
+                <div class="fish-config-item">
+                  <label>Total lines:</label>
+                  <span id="fish-config-total-lines">-</span>
+                </div>
+                <div class="fish-config-item">
+                  <label>Node formula:</label>
+                  <span id="fish-config-node-formula">-</span>
+                </div>
+                <div class="fish-config-item">
+                  <label>Line formula:</label>
+                  <span id="fish-config-line-formula">-</span>
+                </div>
+                <div class="fish-config-item">
+                  <label>Leaf nodes:</label>
+                  <span id="fish-config-leaf-nodes">-</span>
+                </div>
+                <div class="fish-config-item">
+                  <label>Root score:</label>
+                  <span id="fish-config-root-score">-</span>
                 </div>
               </div>
             </div>
@@ -132,32 +164,30 @@
           <div id="line-fisher-state-info" class="line-fisher-panel">
             <h3>Analysis Status</h3>
             <div class="line-fisher-progress-section">
-              <div class="line-fisher-progress-bar">
-                <div
-                  id="line-fisher-progress-fill"
-                  class="line-fisher-progress-fill"
-                ></div>
+              <div id="fish-status-progress-bar">
+                <div id="fish-status-progress-fill"></div>
               </div>
-              <div class="line-fisher-progress-stats">
-                <span class="line-fisher-stat"
-                  >Action:
-                  <span id="line-fisher-action-display">Ready</span></span
-                >
-                <span class="line-fisher-stat"
-                  >Lines: <span id="line-fisher-lines-display">0</span></span
-                >
-                <span class="line-fisher-stat"
+              <div id="fish-status-progress-stats">
+                <span class="fish-progress-item"
+                  >Lines:
+                  <span id="fish-status-lines"></span>
+                </span>
+                <span class="fish-progress-item"
+                  >Wips:
+                  <span id="fish-status-wips"></span>
+                </span>
+                <span class="fish-progress-item"
+                  >Dones:
+                  <span id="fish-status-dones"></span>
+                </span>
+                <span class="fish-progress-item"
                   >Position:
-                  <span id="line-fisher-position-display">-</span></span
-                >
+                  <span id="fish-status-position"></span>
+                </span>
               </div>
             </div>
           </div>
-          <div id="line-fisher-results" class="line-fisher-panel">
-            <h3 id="line-fisher-results-header">
-              Explored Lines (0) <small>(number of responder nodes + 1)</small>
-            </h3>
-          </div>
+          <div id="fish-results" class="line-fisher-panel"></div>
         </div>
 
         <!-- Chess Board -->
