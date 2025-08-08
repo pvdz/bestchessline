@@ -1,9 +1,4 @@
-import {
-  ChessMove,
-  AnalysisMove,
-  NotationFormat,
-  PieceFormat,
-} from "../types.js";
+import { ChessMove, AnalysisMove, NotationFormat, PieceFormat } from "../types.js";
 /**
  * Principal Variation Utility Functions
  *
@@ -17,12 +12,7 @@ import {
  * @param pieceFormat The piece format to use
  * @returns Formatted principal variation string
  */
-export declare function formatPVWithEffects(
-  pv: ChessMove[],
-  position: string,
-  format: NotationFormat,
-  pieceFormat: PieceFormat,
-): string;
+export declare function formatPVWithEffects(pv: ChessMove[], position: string, format: NotationFormat, pieceFormat: PieceFormat): string;
 /**
  * Update results panel with debouncing
  * @param moves Array of analysis moves to display

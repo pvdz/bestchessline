@@ -9,9 +9,9 @@ import { getElementByIdOrThrow } from "./dom-helpers.js";
  * @param message The status message to display
  */
 export function updateStatus(message) {
-  const statusElement = getElementByIdOrThrow("engine-status");
-  if (statusElement) {
-    statusElement.textContent = message;
-  }
+    const statusElement = getElementByIdOrThrow("engine-status");
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
 }
 //# sourceMappingURL=status-utils.js.map

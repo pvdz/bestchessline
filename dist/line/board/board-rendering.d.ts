@@ -6,7 +6,4 @@
 /**
  * Render a small board for the progress panel
  */
-export declare function renderProgressBoard(
-  boardElement: HTMLElement,
-  fen: string,
-): void;
+export declare function renderProgressBoard(boardElement: HTMLElement, fen: string): void;

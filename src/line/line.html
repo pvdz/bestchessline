@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Best Chess Line Discovery - by Peter van der Zee, July 2025</title>
+    <link rel="stylesheet" href="/src/line/styles.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   </head>
@@ -453,11 +454,11 @@
       window.exports = {};
       window.Stockfish = window.exports.Stockfish;
     </script>
-    <script src="../../dist/stockfish.js"></script>
+    <script src="/dist/stockfish.js"></script>
 
     <!-- Application script -->
     <script type="module">
-      import { initializeApp } from "../../dist/line/main.js";
+      import { initializeApp } from "/dist/line/main.js";
 
       // Initialize the application when DOM is loaded
       document.addEventListener("DOMContentLoaded", () => {

@@ -10,7 +10,4 @@
  * @param mateIn The number of moves required for mate (0 if not a mate)
  * @returns Formatted score string
  */
-export declare function formatScoreWithMateIn(
-  score: number,
-  mateIn: number,
-): string;
+export declare function formatScoreWithMateIn(score: number, mateIn: number): string;

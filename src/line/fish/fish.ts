@@ -17,6 +17,9 @@ import {
   updateLineFisherButtonStates,
 } from "./fish-ui.js";
 import { getRandomProofString, generateLineId } from "./fish-utils.js";
+import { importGame } from "../board/game-navigation.js";
+import { parseFEN } from "../../utils/fen-utils.js";
+import { PLAYER_COLORS } from "../types.js";
 
 const lineAppState: {
   isFishAnalysisRunning: boolean;
@@ -505,16 +508,44 @@ export function updateLiveLinesPreview(): void {
       doneHeading.textContent = `Done ${lastDone.length}/${state.done.length}`;
     }
 
-    const toList = (lines: typeof state.wip) =>
-      lines
-        .map((l) => {
-          // Display the fisher-produced line in PCN with move numbers
-          return formatPCNLineWithMoveNumbers(l.pcns) + "\n";
-        })
+    // Render lines as clickable elements
+    const renderLines = (container: HTMLElement, lines: typeof state.wip) => {
+      if (lines.length === 0) {
+        container.textContent = "(none)";
+        return;
+      }
+      const html = lines
+        .map(
+          (l) =>
+            `<div class="fish-live-line" data-line-id="${l.lineIndex}">${formatPCNLineWithMoveNumbers(
+              l.pcns,
+            )}</div>`,
+        )
         .join("");
+      container.innerHTML = html;
+    };
+    renderLines(wipContainer, lastWip);
+    renderLines(doneContainer, lastDone);
 
-    wipContainer.textContent = toList(lastWip) || "(none)";
-    doneContainer.textContent = toList(lastDone) || "(none)";
+    // Click-to-open on main board using event delegation
+    const delegateClick = (container: HTMLElement) => {
+      container.onclick = (e) => {
+        const target = e.target as HTMLElement;
+        const item = target.closest(".fish-live-line") as HTMLElement | null;
+        if (!item) return;
+        const idAttr = item.getAttribute("data-line-id");
+        if (!idAttr) return;
+        const id = parseInt(idAttr, 10);
+        const line =
+          state.wip.find((l) => l.lineIndex === id) ||
+          state.done.find((l) => l.lineIndex === id);
+        if (!line) return;
+        const notation = formatPCNLineWithMoveNumbers(line.pcns);
+        importGame(notation);
+      };
+    };
+    delegateClick(wipContainer);
+    delegateClick(doneContainer);
   } catch (e) {
     console.warn("Failed to update live lines preview", e);
   }

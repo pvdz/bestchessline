@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chess Practice</title>
-    <link rel="stylesheet" href="practice.css" />
+    <link rel="stylesheet" href="/src/practice/practice.css" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="practice-container">
@@ -222,6 +223,78 @@
           </div>
 
           <div class="practice-panel">
+            <h3 class="practice-panel-title">AI Coach</h3>
+            <div class="practice-input-group">
+              <label class="practice-label" for="practice-ai-api-key"
+                >API Key</label
+              >
+              <input
+                type="password"
+                class="practice-input"
+                id="practice-ai-api-key"
+                placeholder="sk-..."
+              />
+            </div>
+            <div class="practice-input-group">
+              <label class="practice-label" for="practice-ai-base-url"
+                >Base URL</label
+              >
+              <input
+                type="text"
+                class="practice-input"
+                id="practice-ai-base-url"
+                value="https://api.openai.com"
+              />
+            </div>
+            <div class="practice-input-group">
+              <label class="practice-label" for="practice-ai-model"
+                >Model</label
+              >
+              <input
+                type="text"
+                class="practice-input"
+                id="practice-ai-model"
+                value="gpt-4o-mini"
+              />
+            </div>
+            <div class="practice-input-group">
+              <label class="practice-label" for="practice-ai-level"
+                >Level</label
+              >
+              <select class="practice-select" id="practice-ai-level">
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+                <option value="expert">Expert</option>
+                <option value="gm">GM</option>
+              </select>
+            </div>
+            <div class="practice-input-group">
+              <label class="practice-label" for="practice-ai-question"
+                >Question (optional)</label
+              >
+              <textarea
+                class="practice-input practice-textarea"
+                id="practice-ai-question"
+                placeholder="Ask about plans, evaluation, why a move is good/bad..."
+              ></textarea>
+            </div>
+            <div class="practice-controls" style="gap: 8px; margin-top: 8px">
+              <button class="practice-button success" id="practice-ai-ask-btn">
+                Ask AI
+              </button>
+            </div>
+            <div class="practice-input-group">
+              <label class="practice-label">Answer</label>
+              <div
+                class="practice-input"
+                id="practice-ai-answer"
+                style="min-height: 120px; white-space: pre-wrap; overflow: auto"
+              ></div>
+            </div>
+          </div>
+
+          <div class="practice-panel">
             <h3 class="practice-panel-title">Configuration</h3>
             <div class="practice-config">
               <div class="practice-input-group">
@@ -377,7 +450,7 @@
 
     <!-- Application script -->
     <script type="module">
-      import { initializePractice } from "../dist/practice/practice.js";
+      import { initializePractice } from "/dist/practice/practice.js";
 
       // Initialize the application when DOM is loaded
       document.addEventListener("DOMContentLoaded", () => {

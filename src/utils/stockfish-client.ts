@@ -60,11 +60,11 @@ const isSharedArrayBufferSupported = (): boolean => {
  */
 const getStockfishWorkerUrl = (): string => {
   if (isSharedArrayBufferSupported()) {
-    return "../dist/stockfish.js";
+    return "/dist/stockfish.js";
   } else {
     // For GitHub Pages, we'll need to use a different approach
     // This will be handled by the fallback mechanism
-    return "../dist/stockfish-single.js";
+    return "/dist/stockfish-single.js";
   }
 };
 
@@ -289,7 +289,7 @@ const initializeStockfishFallback = (): void => {
     log("Initializing Stockfish in fallback mode...");
 
     // Create Web Worker for single-threaded Stockfish
-    const worker = new Worker("dist/stockfish-single.js");
+    const worker = new Worker("/dist/stockfish-single.js");
 
     // Set up message handler
     worker.onmessage = (event: MessageEvent) => {
@@ -699,17 +699,21 @@ const analyzePositionMono = async (
   options: StockfishOptions = {},
   onUpdate?: (result: AnalysisResult) => void,
 ): Promise<AnalysisResult> => {
-  console.log("Starting stockfish analyze()", options);
+  // console.log("Starting stockfish analyze()", options);
   const promise = new Promise<AnalysisResult>((resolve, reject) => {
     // Validate input parameters
     if (!fen || typeof fen !== "string") {
-      console.warn("Stockfish analyzePosition: Invalid FEN parameter:", fen);
+      console.warn(
+        "Stockfish analyzePosition: Invalid FEN parameter:",
+        fen,
+        options,
+      );
       reject(new Error("Invalid FEN parameter"));
       return;
     }
 
     if (!stockfishState.isReady) {
-      console.log("Stockfish not ready, queuing analysis...");
+      // console.log("Stockfish not ready, queuing analysis...");
       updateStockfishState({
         pendingAnalysis: () =>
           analyzePosition(fen, options, onUpdate).then(resolve).catch(reject),
@@ -750,7 +754,7 @@ const analyzePositionMono = async (
     // Set up completion callback
     const finalCallback = (result: AnalysisResult): void => {
       if (result.completed) {
-        console.log("Stockfish analysis completed", result);
+        // console.log("Stockfish analysis completed", result);
 
         resolve(result);
         // Remove this callback

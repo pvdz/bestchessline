@@ -1,0 +1,20 @@
+{
+  "initial_position": {
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "answer": "This is the starting chess position. Both sides aim to develop pieces, control the center (e4, d4 for White; …e5, …d5 for Black), and castle safely.\n\nFor White, common developing moves include Nf3, Nc3, g3 with Bg2, or the direct e4/d4. For Black, mirror plans apply: …Nf6, …Nc6, …g6 with …Bg7, or a direct …e5/…d5.\n\nFrom an opening-family perspective, the game can transpose into countless systems (Open Games, Reti/English, Closed openings). Study fundamental principles and typical pawn structures at your level to reduce mistakes and recognize familiar plans.",
+    "prompt_note": "Server will construct a prompt with FEN, ASCII board, piece list, and guidance."
+  },
+  "move_nf3_no_score": {
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "move": "Nf3",
+    "answer": "Opening: possible Reti/English transpositions. Nf3 is a natural developing move: it controls e5 and d4, helps prepare kingside castling, and keeps central options flexible (d4/c4 or g3/Bg2). It rarely concedes structural weaknesses and fits many setups. Typical ideas: quick development, contest center with pawns and pieces, avoid early material grabs. For Black: fight for central squares with …d5/…e5, develop …Nf6/…Nc6 and aim for equalization.",
+    "prompt_note": "Same robust prompt plus a caseType=move section describing the move parsing outcome."
+  },
+  "move_nf3_with_score": {
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "move": "Nf3",
+    "score": 20,
+    "answer": "Nf3 evaluated at roughly +0.20 reflects a small, positional edge for White from better central influence and smooth development—nothing decisive but healthy. From here, typical plans include g3/Bg2 and 0-0 or a quick d4/c4 depending on Black’s setup. Black equalizes with sensible development (…Nf6/…Nc6) and timely central counterplay (…d5/…e5). The score indicates White’s initiative is mainly in activity/space rather than immediate tactics.",
+    "prompt_note": "Robust prompt with caseType=move_scored and score added."
+  }
+}

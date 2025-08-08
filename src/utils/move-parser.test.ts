@@ -1007,6 +1007,19 @@ function runTests(): void {
     },
   ];
 
+  // Position-aware negative test: move should fail in given FEN
+  function testPositionAwareShouldFail(
+    move: string,
+    fen: string,
+    name: string,
+  ): boolean {
+    const result = parseMove(move, fen);
+    return assert(
+      result === null,
+      `${name} - Expected failure to parse, but got ${JSON.stringify(result)}`,
+    );
+  }
+
   let passed = 0;
   let failed = 0;
 
@@ -1025,6 +1038,21 @@ function runTests(): void {
     } else {
       failed++;
     }
+  }
+
+  // Append the reported failing case
+  const reportedFen =
+    "rnbqkbnr/p1pppppp/1p6/8/8/5NP1/PPPPPP1P/RNBQKB1R b KQkq - 0 1";
+  if (
+    testPositionAwareShouldFail(
+      "g3",
+      reportedFen,
+      "Reported case: black to move 'g3' invalid",
+    )
+  ) {
+    passed++;
+  } else {
+    failed++;
   }
 
   console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);

@@ -39,6 +39,7 @@ import {
 } from "./practice-arrow-utils.js";
 import { GameState, DOMElements, OpeningLine } from "./practice-types.js";
 import { convertLineToLongNotation } from "../utils/notation-utils.js";
+// Server-side AI integration
 
 // Helper function to get element by ID or throw
 function getElementByIdOrThrow(id: string): HTMLElement {
@@ -178,7 +179,68 @@ function initializeDOMElements(): void {
     loadLinesBtn: getElementByIdOrThrow(
       "practice-load-lines-btn",
     ) as HTMLButtonElement,
-  };
+  } as unknown as DOMElements;
+
+  // Extend: wire AI coach button
+  const askBtn = getElementByIdOrThrow(
+    "practice-ai-ask-btn",
+  ) as HTMLButtonElement;
+  const apiKeyEl = getElementByIdOrThrow(
+    "practice-ai-api-key",
+  ) as HTMLInputElement;
+  const baseUrlEl = getElementByIdOrThrow(
+    "practice-ai-base-url",
+  ) as HTMLInputElement;
+  const modelEl = getElementByIdOrThrow(
+    "practice-ai-model",
+  ) as HTMLInputElement;
+  const levelEl = getElementByIdOrThrow(
+    "practice-ai-level",
+  ) as HTMLSelectElement;
+  const questionEl = getElementByIdOrThrow(
+    "practice-ai-question",
+  ) as HTMLTextAreaElement;
+  const answerEl = getElementByIdOrThrow("practice-ai-answer");
+
+  askBtn.addEventListener("click", async () => {
+    try {
+      const apiKey = apiKeyEl.value.trim();
+      answerEl.textContent = "Asking AI...";
+      const includePrompt = true;
+      const engineSummary = ""; // Optionally provide client-side summary later
+      const payload = {
+        fen: gameState.currentFEN,
+        level: (levelEl.value as any) || "intermediate",
+        question: questionEl.value,
+        model: modelEl.value.trim() || "gpt-4o-mini",
+        engineSummary,
+        includePrompt,
+      };
+
+      const resp = await fetch("/api/ai/explain", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Pass API key via header for server-side use; server will use env key by default, this is optional
+          ...(apiKey ? { "X-AI-API-KEY": apiKey } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(txt);
+      }
+      const data = await resp.json();
+      const out = data.prompt
+        ? `Prompt\n----------------\n${data.prompt}\n\nAnswer\n----------------\n${data.answer}`
+        : data.answer;
+      answerEl.textContent = out;
+    } catch (e) {
+      console.error(e);
+      answerEl.textContent = "AI request failed. Check console.";
+      showErrorToast("AI request failed");
+    }
+  });
 }
 
 // Add drag and drop handlers to the board
