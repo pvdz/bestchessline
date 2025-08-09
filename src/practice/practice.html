@@ -144,6 +144,64 @@
               Restart from Pinned
             </button>
           </div>
+
+          <!-- AI Coach (Main Column) -->
+          <div class="practice-ai-main" id="practice-ai-coach">
+            <div class="practice-ai-header">
+              <div class="left">
+                <h3 class="practice-panel-title" style="border-bottom: 0; padding-bottom: 0; margin-bottom: 4px">
+                  <span class="practice-ai-icon" aria-hidden="true">🤖</span>
+                  AI Coach
+                </h3>
+                <div class="practice-ai-subtitle">From Blunder to Wunder</div>
+              </div>
+              <div class="right">
+                <div class="practice-ai-controls">
+                  <div class="left">
+                    <div class="practice-input-group" style="min-width: 220px">
+                      <label class="practice-label" for="practice-ai-api-key">API Key (optional)</label>
+                      <input type="password" class="practice-input" id="practice-ai-api-key" placeholder="sk-..." />
+                    </div>
+                    <div class="practice-input-group" style="min-width: 140px">
+                      <label class="practice-label" for="practice-ai-level">Level</label>
+                      <select class="practice-select" id="practice-ai-level">
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                        <option value="expert">Expert</option>
+                        <option value="gm">GM</option>
+                      </select>
+                    </div>
+                    <div class="practice-input-group" style="min-width: 160px">
+                      <label class="practice-label" for="practice-ai-model">Model</label>
+                      <input type="text" class="practice-input" id="practice-ai-model" value="gpt-4o-mini" />
+                    </div>
+                  </div>
+                  <div class="right">
+                    <button class="practice-button practice-ai-ask-button" id="practice-ai-ask-btn" aria-busy="false">Analyze Position</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional quick chip row removed to encourage single structured analysis -->
+
+            <div class="practice-input-group">
+              <label class="practice-label" for="practice-ai-question">Follow-up (optional)</label>
+              <textarea class="practice-input practice-textarea" id="practice-ai-question" placeholder="Ask a brief follow-up; the main analysis will still be structured."></textarea>
+            </div>
+
+            <div class="ai-summary" id="practice-ai-summary" aria-live="polite">
+              <em>Ask AI to populate a concise summary here…</em>
+            </div>
+
+            <div class="ai-sections" id="practice-ai-sections">
+              <!-- Filled dynamically with section cards -->
+            </div>
+
+            <!-- Raw answer fallback (hidden from view but kept for accessibility/inspection) -->
+            <div class="visually-hidden" id="practice-ai-answer"></div>
+          </div>
         </div>
 
         <div class="practice-sidebar">
@@ -223,76 +281,13 @@
           </div>
 
           <div class="practice-panel">
-            <h3 class="practice-panel-title">AI Coach</h3>
-            <div class="practice-input-group">
-              <label class="practice-label" for="practice-ai-api-key"
-                >API Key</label
-              >
-              <input
-                type="password"
-                class="practice-input"
-                id="practice-ai-api-key"
-                placeholder="sk-..."
-              />
-            </div>
-            <div class="practice-input-group">
-              <label class="practice-label" for="practice-ai-base-url"
-                >Base URL</label
-              >
-              <input
-                type="text"
-                class="practice-input"
-                id="practice-ai-base-url"
-                value="https://api.openai.com"
-              />
-            </div>
-            <div class="practice-input-group">
-              <label class="practice-label" for="practice-ai-model"
-                >Model</label
-              >
-              <input
-                type="text"
-                class="practice-input"
-                id="practice-ai-model"
-                value="gpt-4o-mini"
-              />
-            </div>
-            <div class="practice-input-group">
-              <label class="practice-label" for="practice-ai-level"
-                >Level</label
-              >
-              <select class="practice-select" id="practice-ai-level">
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="expert">Expert</option>
-                <option value="gm">GM</option>
-              </select>
-            </div>
-            <div class="practice-input-group">
-              <label class="practice-label" for="practice-ai-question"
-                >Question (optional)</label
-              >
-              <textarea
-                class="practice-input practice-textarea"
-                id="practice-ai-question"
-                placeholder="Ask about plans, evaluation, why a move is good/bad..."
-              ></textarea>
-            </div>
-            <div class="practice-controls" style="gap: 8px; margin-top: 8px">
-              <button class="practice-button success" id="practice-ai-ask-btn">
-                Ask AI
-              </button>
-            </div>
-            <div class="practice-input-group">
-              <label class="practice-label">Answer</label>
-              <div
-                class="practice-input"
-                id="practice-ai-answer"
-                style="min-height: 120px; white-space: pre-wrap; overflow: auto"
-              ></div>
+            <h3 class="practice-panel-title">Top Engine Moves (if available)</h3>
+            <div class="practice-top-moves" id="practice-top-moves">
+              <em>No engine metadata loaded</em>
             </div>
           </div>
+
+          
 
           <div class="practice-panel">
             <h3 class="practice-panel-title">Configuration</h3>

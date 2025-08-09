@@ -181,11 +181,22 @@ export const evaluateCurrentPosition = async (): Promise<void> => {
   try {
     // Get a proper evaluation with adequate depth and timeout
     const result = await Promise.race([
-      Stockfish.analyzePosition(currentFEN, {
-        depth: 20,
-        threads: 1,
-        multiPV: 1,
-      }),
+      Stockfish.analyzePosition(
+        currentFEN,
+        {
+          depth: 20,
+          threads: 1,
+          multiPV: 1,
+        },
+        // Update the button with current depth as it grows
+        (res) => {
+          try {
+            const d = res.moves[0]?.depth || 0;
+            const btn = getElementByIdOrThrow("position-evaluation-btn");
+            btn.textContent = `d${d}`;
+          } catch {}
+        },
+      ),
       new Promise<AnalysisResult>((_, reject) =>
         setTimeout(() => reject(new Error("Analysis timeout")), 10000),
       ),

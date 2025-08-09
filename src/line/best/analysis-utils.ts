@@ -15,11 +15,18 @@
  * @param direction The sort direction ("asc" for ascending, "desc" for descending)
  * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
  */
+type CompareDirection = "asc" | "desc";
+type CompareOptions = { direction: CompareDirection; prioritize?: "depth" | "score" };
+
 export function compareAnalysisMoves(
   a: { score: number; depth: number; mateIn: number },
   b: { score: number; depth: number; mateIn: number },
-  direction: "asc" | "desc" = "desc",
+  directionOrOptions: CompareDirection | CompareOptions = "desc",
 ): number {
+  const opts: CompareOptions =
+    typeof directionOrOptions === "string"
+      ? { direction: directionOrOptions, prioritize: "depth" }
+      : { direction: directionOrOptions.direction, prioritize: directionOrOptions.prioritize || "depth" };
   // Determine if moves are mate moves (|score| > 9000 indicates mate)
   const aIsMate = Math.abs(a.score) > 9000;
   const bIsMate = Math.abs(b.score) > 9000;
@@ -32,16 +39,18 @@ export function compareAnalysisMoves(
     return a.mateIn - b.mateIn;
   }
 
-  // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.
-  if (a.depth !== b.depth) return b.depth - a.depth;
-
-  // Both are non-mate moves, sort by score based on direction
-  if (direction === "asc") {
-    // Ascending order: low to high scores (good for black's turn)
-    return a.score - b.score;
-  } else {
-    // Descending order: high to low scores (good for white's turn)
+  // Non-mate moves ordering
+  if (opts.prioritize === "depth") {
+    // Depth-first (existing default behavior)
+    if (a.depth !== b.depth) return b.depth - a.depth;
+    if (opts.direction === "asc") return a.score - b.score;
     return b.score - a.score;
+  } else {
+    // Score-first (useful for best5 display), then prefer deeper
+    const scoreDiff = opts.direction === "asc" ? a.score - b.score : b.score - a.score;
+    if (scoreDiff !== 0) return scoreDiff;
+    if (a.depth !== b.depth) return b.depth - a.depth;
+    return 0;
   }
 }
 

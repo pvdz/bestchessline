@@ -288,6 +288,11 @@ export function makeMove(
     // Clear user arrows after move
     clearAllArrows();
 
+    // Update top moves panel for the new current position
+    try {
+      updateTopMovesPanelIfPresent(gameState, dom);
+    } catch {}
+
     // Check if we've reached the max human moves
     if (gameState.currentDepth >= gameState.maxDepth) {
       // Max human moves reached! Trigger confetti celebration
@@ -321,8 +326,26 @@ export function makeMove(
   } else {
     // This was an incorrect move
     gameState.statistics.totalMoves++;
-
-    showErrorToast("Incorrect move! Try again.");
+    // If metadata is available and the attempted move is in top-5, show delta vs best
+    const attemptedLong = `${fromSquare}${toSquare}`;
+    const topList = gameState.positionTopMoves?.get(previousFEN) || [];
+    const best = topList[0];
+    const found = topList.find((m) => m.move === attemptedLong);
+    if (best && found) {
+      const bestScore = best.score;
+      const moveScore = found.score;
+      const deltaCp = moveScore - bestScore;
+      const deltaStr =
+        Math.abs(deltaCp) >= 100
+          ? `${Math.round(deltaCp / 100)}`
+          : (deltaCp / 100).toFixed(1);
+      const sign = deltaCp > 0 ? "+" : "";
+      showErrorToast(
+        `Incorrect move. It was a top-5 choice, but ${sign}${deltaStr} vs best (${best.move}).`,
+      );
+    } else {
+      showErrorToast("Incorrect move! Try again.");
+    }
 
     // Add the incorrect move to the attempted moves section
     addMoveToHistory(dom.moveHistory, moveNotation, false);
@@ -618,6 +641,9 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
           if (nextAvailableMoves && nextAvailableMoves.length > 0) {
             console.log("Available next moves:", nextAvailableMoves);
             gameState.isHumanTurn = true;
+            try {
+              updateTopMovesPanelIfPresent(gameState, dom);
+            } catch {}
           } else {
             // Check if there's a pinned position to restart from
             if (gameState.pinnedPosition) {
@@ -703,6 +729,9 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
           console.log("Available next moves:", nextAvailableMoves);
           // Human's turn
           gameState.isHumanTurn = true;
+          try {
+            updateTopMovesPanelIfPresent(gameState, dom);
+          } catch {}
         } else {
           // Check if there's a pinned position to restart from
           if (gameState.pinnedPosition) {
@@ -728,6 +757,29 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
   }
 
   updateStatus(dom, gameState);
+}
+
+// Local helper to call the panel update from practice.ts without circular import
+function updateTopMovesPanelIfPresent(gameState: GameState, _dom: DOMElements) {
+  const panel = document.getElementById("practice-top-moves");
+  if (!panel) return;
+  const meta = gameState.positionTopMoves;
+  if (!meta) {
+    panel.innerHTML = "<em>No engine metadata loaded</em>";
+    return;
+  }
+  const list = meta.get(gameState.currentFEN);
+  if (!list || list.length === 0) {
+    panel.innerHTML = "<em>No top moves for this position</em>";
+    return;
+  }
+  const items = list
+    .map((m, i) => {
+      const scoreStr = Math.abs(m.score) >= 10000 ? (m.score > 0 ? "#" : "-#") : (m.score / 100).toFixed(2);
+      return `${i + 1}. ${m.move}  (score ${scoreStr})`;
+    })
+    .join("<br/>");
+  panel.innerHTML = items;
 }
 
 // Select computer move based on strategy

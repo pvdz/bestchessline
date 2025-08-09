@@ -94,11 +94,16 @@ export async function explainCurrentPositionWithAI(
 
   let analysis: AnalysisResult | null = null;
   try {
-    analysis = await analyzePosition(gameState.currentFEN, {
-      depth: cfg.depth ?? 16,
-      multiPV: cfg.maxLines ?? 5,
-      threads: 1,
-    });
+    analysis = await analyzePosition(
+      gameState.currentFEN,
+      {
+        depth: cfg.depth ?? 16,
+        multiPV: cfg.maxLines ?? 5,
+        threads: 1,
+      },
+      // For AI context, just track minimal info to keep it light
+      () => {},
+    );
   } catch (e) {
     // Continue without engine context
     analysis = null;

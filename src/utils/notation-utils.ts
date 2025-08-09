@@ -432,7 +432,7 @@ export function convertSANLineToLongNotation(
 
         currentFEN = applyMoveToFEN(currentFEN, parsedMove);
       } else {
-        console.warn(`Failed to parse move: ${move}`);
+        console.warn(`convertSANLineToLongNotation: Failed to parse move: ${move}`, 'starting at', [startingFEN], 'step', i,' while applying this line:',sanMoves);
         // Skip this move if we can't parse it
       }
     } catch (error) {

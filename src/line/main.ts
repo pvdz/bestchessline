@@ -346,6 +346,38 @@ const initializeEventListeners = (): void => {
     await importFishStateFromClipboard();
   });
 
+  // Quick preset button: responder=2, overrides empty, depth=4
+  const quickPresetBtn = document.getElementById(
+    "fish-preset-quick",
+  ) as HTMLButtonElement | null;
+  if (quickPresetBtn) {
+    quickPresetBtn.addEventListener("click", () => {
+      // Set default responder to 2
+      const defaultResponder = getInputElement("fish-default-responder-count");
+      if (defaultResponder) {
+        defaultResponder.value = "2";
+        const val = getElementByIdOrThrow(
+          "fish-default-responder-count-value",
+        );
+        val.textContent = "2";
+      }
+
+      // Clear responder overrides
+      const overrides = getInputElement("fish-responder-counts");
+      if (overrides) {
+        overrides.value = "";
+      }
+
+      // Set move depth to 4
+      const depthInput = getInputElement("fish-depth");
+      if (depthInput) {
+        depthInput.value = "4";
+        const depthVal = getElementByIdOrThrow("fish-depth-value");
+        depthVal.textContent = "4";
+      }
+    });
+  }
+
   // Line Fisher thread control
   const lineFisherThreadsInput = getElementByIdOrThrow(
     "fish-threads",
@@ -391,21 +423,7 @@ const initializeEventListeners = (): void => {
     lineFisherDefaultResponderValue.textContent = count;
   });
 
-  // Line Fisher target depth control
-  const lineFisherTargetDepthInput = getElementByIdOrThrow(
-    "fish-target-depth",
-  ) as HTMLInputElement;
-  const lineFisherTargetDepthValue = getElementByIdOrThrow(
-    "fish-target-depth-value",
-  );
-
-  // Initialize with default value
-  lineFisherTargetDepthValue.textContent = lineFisherTargetDepthInput.value;
-
-  lineFisherTargetDepthInput.addEventListener("input", () => {
-    const depth = lineFisherTargetDepthInput.value;
-    lineFisherTargetDepthValue.textContent = depth;
-  });
+  // Removed: target depth control (not used)
 
   // Live lines preview toggle
   const fishLinesToggle = document.getElementById(
@@ -421,30 +439,7 @@ const initializeEventListeners = (): void => {
     });
   }
 
-  // Stockfish loading event listeners
-  window.addEventListener("stockfish-loading", ((event: Event) => {
-    const customEvent = event as CustomEvent;
-    const message = customEvent.detail?.message || "Loading Stockfish...";
-    updateLineFisherStatus(message);
-  }) as EventListener);
-
-  window.addEventListener("stockfish-ready", (() => {
-    updateLineFisherStatus("Stockfish ready");
-  }) as EventListener);
-
-  window.addEventListener("stockfish-analyzing", ((event: Event) => {
-    const customEvent = event as CustomEvent;
-    const message = customEvent.detail?.message || "Analyzing...";
-    const position = customEvent.detail?.position || "";
-    updateLineFisherStatus(`${message} ${position}`);
-  }) as EventListener);
-
-  window.addEventListener("stockfish-analysis-complete", ((event: Event) => {
-    const customEvent = event as CustomEvent;
-    const message = customEvent.detail?.message || "Analysis complete";
-    const movesFound = customEvent.detail?.movesFound || 0;
-    updateLineFisherStatus(`${message} (${movesFound} moves)`);
-  }) as EventListener);
+  // Note: Global Stockfish UI updates were removed.
 
   // Handle Stockfish crash events
   window.addEventListener("stockfish-crash", (() => {
@@ -466,6 +461,7 @@ const initializeEventListeners = (): void => {
     recoveryBtn.style.display = "inline-block";
 
     log("UI state reset after Stockfish crash");
+    clearEnginePvTicker();
   }) as EventListener);
 
   // Position controls
@@ -513,6 +509,64 @@ const initializeEventListeners = (): void => {
   // Update threads input based on fallback mode
   updateThreadsInputForFallbackMode();
 };
+
+// =========================================================================
+// Engine PV ticker under Stockfish status (throttled)
+// =========================================================================
+
+let lastPvTickerUpdateMs = 0;
+const PV_TICKER_INTERVAL_MS = 1000;
+
+function clearEnginePvTicker(): void {
+  const el = document.getElementById("engine-pv-ticker");
+  if (el) el.textContent = "";
+}
+
+function updateEnginePvTickerThrottled(force: boolean = false): void {
+  const now = Date.now();
+  if (!force && now - lastPvTickerUpdateMs < PV_TICKER_INTERVAL_MS) return;
+  lastPvTickerUpdateMs = now;
+
+  const el = document.getElementById("engine-pv-ticker");
+  if (!el) return;
+
+  const snapshot = Stockfish.getCurrentAnalysisSnapshot?.()
+    || (getAppState().currentResults as any);
+  if (!snapshot || !snapshot.moves || snapshot.moves.length === 0) {
+    el.textContent = "";
+    return;
+  }
+
+  const position = parseFEN(snapshot.position);
+  const direction = position.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
+
+  // Sort: mate first, then depth, then score
+  const moves = [...snapshot.moves].sort((a: AnalysisMove, b: AnalysisMove) =>
+    compareAnalysisMoves(a, b, direction as any),
+  );
+
+  const lines = moves.map((m: AnalysisMove, idx: number) => {
+    const depthStr = `d${m.depth}`;
+    const scoreStr = formatScoreWithMateIn(m.score, m.mateIn);
+    const pvStr = m.pv.map((mv: ChessMove) => `${mv.from}${mv.to}`).join(" ");
+    return `${idx + 1}. ${depthStr} ${scoreStr}  ${pvStr}`;
+  });
+
+  el.textContent = lines.join("\n");
+}
+
+// Live updates from Stockfish info stream
+window.addEventListener("stockfish-info-update", (() => {
+  updateEnginePvTickerThrottled();
+}) as EventListener);
+
+// Keep it fresh when engine (re)loads
+window.addEventListener("stockfish-ready", (() => {
+  updateEnginePvTickerThrottled(true);
+}) as EventListener);
+window.addEventListener("stockfish-loading", (() => {
+  clearEnginePvTicker();
+}) as EventListener);
 
 /**
  * Initialize position controls

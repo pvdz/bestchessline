@@ -2,7 +2,7 @@ import { analyzePosition } from "../../utils/stockfish-client.js";
 import { parseMove } from "../../utils/move-parsing.js";
 import { applyMoveToFEN } from "../../utils/fen-manipulation.js";
 import { getPieceCapitalized } from "../../utils/notation-utils.js";
-import { getPieceAtSquareFromFEN } from "../../utils/fen-utils.js";
+import { getPieceAtSquareFromFEN, parseFEN } from "../../utils/fen-utils.js";
 import { log } from "../../utils/logging.js";
 import { compareAnalysisMoves } from "../best/analysis-utils.js";
 import { getCurrentFishState } from "./fish-state.js";
@@ -12,6 +12,14 @@ export async function initFishing() {
     const threads = Number(getInputElementOrThrow("fish-threads").value);
     console.log("Fishing with", threads, "threads");
     getCurrentFishState().config.threads = threads;
+    // Ensure initiator color reflects the side to move at root
+    try {
+        const rootTurn = parseFEN(rootFEN).turn;
+        getCurrentFishState().config.initiatorIsWhite = rootTurn === "w";
+    }
+    catch (e) {
+        console.warn("Failed to parse rootFEN for initiator color; keeping existing flag");
+    }
     // Get root score and update config
     let rootAnalysis;
     try {
@@ -27,6 +35,9 @@ export async function initFishing() {
         console.error("Error in root analysis:", error);
         throw error;
     }
+    // Sort from the perspective of the initiator at root.
+    // If initiatorIsWhite: positive is good for white. If initiatorIsWhite is false: positive is good for black.
+    // compareAnalysisMoves expects direction relative to WHITE perspective: desc favors white, asc favors black.
     const direction = getCurrentFishState().config.initiatorIsWhite
         ? "desc"
         : "asc";
@@ -36,7 +47,11 @@ export async function initFishing() {
     getCurrentFishState().config.baselineMoves = rootAnalysis.moves
         .sort((a, b) => compareAnalysisMoves(a, b, direction))
         .slice(0, 5)
-        .map((m) => ({ move: m.move.from + m.move.to, score: m.score }));
+        .map((m) => ({
+        move: m.move.from + m.move.to,
+        // Keep engine score as-is; interpretation will be normalized at usage time
+        score: m.score,
+    }));
 }
 export async function initInitialMove() {
     // Create initial move
@@ -71,7 +86,11 @@ async function createInitialMove() {
                 multiPV: 1,
                 depth: 20,
             });
-            score = analysis.moves[0]?.score || 0;
+            const s = analysis.moves[0]?.score || 0;
+            // Normalize to initiator perspective using newFEN (opponent to move)
+            const turn = parseFEN(newFEN).turn;
+            const initiatorIsWhite = getCurrentFishState().config.initiatorIsWhite;
+            score = (turn === "w") === initiatorIsWhite ? s : -s;
         }
         const piece = getPieceAtSquareFromFEN(parsedMove.from, config.rootFEN);
         const pieceName = getPieceCapitalized(piece);
@@ -135,17 +154,20 @@ export async function keepFishing(onUpdate) {
             onUpdate("Analysis stopped by user");
             return;
         }
-        const currentLine = getCurrentFishState().wip.shift();
-        const halfMoves = currentLine.pcns.length;
+        const pcns = getCurrentFishState().wip[0].pcns;
+        const halfMoves = pcns.length;
         const isEvenHalfMoves = halfMoves % 2 === 0;
-        onUpdate(`Analyzing line: ${currentLine.pcns.join(" ")}`);
+        onUpdate(`Analyzing line: ${pcns.join(" ")}`);
+        // Proceed to analysis; re-queueing/done updates happen inside the step functions
         if (isEvenHalfMoves) {
             // Initiator move (human move in practice app) -- get best move from Stockfish
-            await findBestInitiatorMove(currentLine);
+            onUpdate("Preparing initiator analysis…");
+            await findBestInitiatorMove(onUpdate);
         }
         else {
             // Responder move - get N best moves from Stockfish
-            await findNextResponseMoves(currentLine);
+            onUpdate("Preparing responder analysis…");
+            await findNextResponseMoves(onUpdate);
         }
         // Update progress and results in UI
         onUpdate("Progress updated");
@@ -157,30 +179,79 @@ export async function keepFishing(onUpdate) {
 /**
  * Process responder move - get N best moves from current position
  */
-async function findNextResponseMoves(line) {
+async function findNextResponseMoves(onUpdate) {
+    // Dequeue current line for processing
+    const line = getCurrentFishState().wip[0];
     const { config } = getCurrentFishState();
     const depth = Math.floor(line.pcns.length / 2);
     // Determine number of responses to analyze
     const responderCount = config.responderMoveCounts?.[depth] || config.defaultResponderCount;
     // Get N best moves from Stockfish
+    onUpdate?.("Analyzing responder options…");
     const analysis = await analyzePosition(line.position, {
         threads: config.threads,
         multiPV: responderCount,
         depth: 20,
     });
-    // Mark current line as done and move to done list
-    line.isDone = true;
-    line.best5 = analysis.moves.slice(0, 5).map((move) => ({
+    onUpdate?.("Responder analysis complete");
+    // Debug: After exactly one initiator half-move (first move), dump raw SF top list PVs
+    try {
+        const halfMovesAtThisNode = line.pcns.length;
+        if (halfMovesAtThisNode === 1) {
+            const dump = analysis.moves
+                .slice(0, 5)
+                .map((m) => ({
+                move: m.move.from + m.move.to,
+                score: m.score,
+                depth: m.depth,
+                pv: m.pv.map((p) => p.from + p.to).join(" "),
+            }));
+            console.log("SF raw top5 after first initiator move:", dump);
+        }
+    }
+    catch { }
+    // Sort by quality using the central comparator, from the actual side to move
+    const toMove = parseFEN(line.position).turn;
+    const direction = toMove === "w" ? "desc" : "asc";
+    const finalDepth = analysis.depth || 20;
+    const sortedAll = analysis.moves
+        .slice()
+        .sort((a, b) => compareAnalysisMoves(a, b, { direction, prioritize: "score" }));
+    const fully = sortedAll.filter((m) => Math.abs(m.score) > 9000 || m.depth >= finalDepth);
+    const selectedResponses = [];
+    for (const m of fully) {
+        if (selectedResponses.length < responderCount)
+            selectedResponses.push(m);
+    }
+    if (selectedResponses.length < responderCount) {
+        for (const m of sortedAll) {
+            if (selectedResponses.includes(m))
+                continue;
+            selectedResponses.push(m);
+            if (selectedResponses.length >= responderCount)
+                break;
+        }
+    }
+    // Update line with best5 (prefer fully fleshed, then backfill) for display
+    const best5List = [];
+    for (const m of fully) {
+        if (best5List.length < 5)
+            best5List.push(m);
+    }
+    if (best5List.length < 5) {
+        for (const m of sortedAll) {
+            if (best5List.includes(m))
+                continue;
+            best5List.push(m);
+            if (best5List.length >= 5)
+                break;
+        }
+    }
+    line.best5 = best5List.slice(0, 5).map((move) => ({
         move: move.move.from + move.move.to,
         score: move.score,
     }));
-    getCurrentFishState().done.push(line);
-    // Sort by quality: mate moves first, then by score
-    // For LineFisherConfig, we assume white is the initiator (standard chess)
-    const direction = "desc"; // White pieces are uppercase, so desc for white
-    const responses = analysis.moves
-        .sort((a, b) => compareAnalysisMoves(a, b, direction))
-        .slice(0, responderCount);
+    const responses = selectedResponses;
     // Create new lines for each response
     for (const analysisMove of responses) {
         const newFEN = applyMoveToFEN(line.position, analysisMove.move);
@@ -206,11 +277,17 @@ async function findNextResponseMoves(line) {
         };
         getCurrentFishState().wip.push(newLine);
     }
+    // Parent line has been expanded: mark as done (not necessarily full)
+    line.isDone = true;
+    getCurrentFishState().wip.shift(); // _now_ remove it.
+    getCurrentFishState().done.push(line);
+    onUpdate?.("Expanded responder line");
 }
 /**
  * Process initiator move - get best move from current position
  */
-async function findBestInitiatorMove(line) {
+async function findBestInitiatorMove(onUpdate) {
+    const line = getCurrentFishState().wip[0];
     // - Find best five moves (from stockfish)
     // - Record it for feedback
     // - If there is a predefined move:
@@ -229,24 +306,48 @@ async function findBestInitiatorMove(line) {
     // the best responses to predefined steps. First two steps leads to only 200k
     // positions. We can easily hold that and apply a filter for predefined moves.
     // Get best moves from Stockfish
+    onUpdate?.("Analyzing initiator best move…");
     const analysis = await analyzePosition(line.position, {
         threads: getCurrentFishState().config.threads,
         depth: 20,
         multiPV: 5,
     });
+    onUpdate?.("Initiator analysis complete");
     // White position score values positive, so order desc for white to have moves[0] be best
     const direction = getCurrentFishState().config.initiatorIsWhite
         ? "desc"
         : "asc";
-    analysis.moves.sort((a, b) => compareAnalysisMoves(a, b, direction));
-    line.best5 = analysis.moves.slice(0, 5).map((move) => ({
+    // Prefer fully fleshed moves (mates or reached final depth), backfill to 5 for display
+    const finalInitDepth = analysis.depth || 20;
+    const toMoveInit = parseFEN(line.position).turn;
+    const initDirection = toMoveInit === "w" ? "desc" : "asc";
+    const sortedAllInit = analysis.moves
+        .slice()
+        .sort((a, b) => compareAnalysisMoves(a, b, { direction: initDirection, prioritize: "score" }));
+    const fullyInit = sortedAllInit.filter((m) => Math.abs(m.score) > 9000 || m.depth >= finalInitDepth);
+    const best5Init = [];
+    for (const m of fullyInit) {
+        if (best5Init.length < 5)
+            best5Init.push(m);
+    }
+    if (best5Init.length < 5) {
+        for (const m of sortedAllInit) {
+            if (best5Init.includes(m))
+                continue;
+            best5Init.push(m);
+            if (best5Init.length >= 5)
+                break;
+        }
+    }
+    line.best5 = best5Init.slice(0, 5).map((move) => ({
         move: move.move.from + move.move.to,
         score: move.score,
     }));
     // Check if there's a predefined move for this depth
     const { config } = getCurrentFishState();
     const depth = Math.floor(line.pcns.length / 2);
-    const predefinedMove = config.initiatorMoves[depth];
+    const hasPredefined = depth < config.initiatorMoves.length;
+    const predefinedMove = hasPredefined ? config.initiatorMoves[depth] : undefined;
     // Note: we must have the predefined move in long notation (because that's what stockfish gives us and we must compare it)
     const predefinedLongMove = predefinedMove
         ? parseMove(predefinedMove, line.position)
@@ -266,6 +367,18 @@ async function findBestInitiatorMove(line) {
                 predefinedLongMove.from +
                 predefinedLongMove.to);
             line.score = found.score;
+            // Advance position after initiator move
+            line.position = applyMoveToFEN(line.position, predefinedLongMove);
+            // Re-queue or finalize
+            const halfMovesNow = line.pcns.length;
+            if (halfMovesNow >= config.maxDepth * 2 + 1) {
+                line.isDone = true;
+                line.isFull = true;
+                getCurrentFishState().wip.shift();
+                getCurrentFishState().done.push(line);
+                return;
+            }
+            return;
         }
         else {
             // Predefined move was not one of the top five moves found by Stockfish so ask it for this one.
@@ -296,8 +409,21 @@ async function findBestInitiatorMove(line) {
                 console.warn(`Failed to parse move ${best.move.from + best.move.to} in position ${line.position}`);
                 return;
             }
-            line.pcns.push(bestMove.piece + predefinedLongMove.from + predefinedLongMove.to);
+            // Push the predefined move (which we validated is the best result) and advance position
+            line.pcns.push(predefinedLongMove.piece +
+                predefinedLongMove.from +
+                predefinedLongMove.to);
             line.score = best.score;
+            line.position = applyMoveToFEN(line.position, predefinedLongMove);
+            const halfMovesNow = line.pcns.length;
+            if (halfMovesNow >= config.maxDepth * 2 + 1) {
+                line.isDone = true;
+                line.isFull = true;
+                getCurrentFishState().wip.shift();
+                getCurrentFishState().done.push(line);
+                return;
+            }
+            return;
         }
     }
     else {
@@ -317,17 +443,17 @@ async function findBestInitiatorMove(line) {
         }
         line.pcns.push(bestMove.piece + bestMove.from + bestMove.to);
         line.score = best.score;
-    }
-    // Check if max depth reached
-    const halfMoves = line.pcns.length;
-    if (halfMoves >= config.maxDepth * 2 + 1) {
-        line.isDone = true;
-        line.isFull = true;
-        getCurrentFishState().done.push(line);
-    }
-    else {
-        // Line can stay in queue for next responder move
-        getCurrentFishState().wip.push(line);
+        // Advance position after initiator move
+        line.position = applyMoveToFEN(line.position, bestMove);
+        const halfMovesNow = line.pcns.length;
+        if (halfMovesNow >= config.maxDepth * 2 + 1) {
+            line.isDone = true;
+            line.isFull = true;
+            getCurrentFishState().wip.shift();
+            getCurrentFishState().done.push(line);
+            return;
+        }
+        return;
     }
 }
 //# sourceMappingURL=fishing.js.map

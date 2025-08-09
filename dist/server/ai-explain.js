@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseFEN, coordsToSquare, toFEN } from "../utils/fen-utils.js";
-import { parseMove } from "../utils/move-parsing.js";
 const AI_API_BASE_URL = process.env.AI_API_BASE_URL || "https://api.openai.com";
 const AI_API_KEY = process.env.AI_API_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "gpt-4o-mini";
@@ -115,44 +114,36 @@ function buildPrompt(body) {
     const engineText = body.engineSummary
         ? `Engine context (user-provided, may be truncated):\n${body.engineSummary}`
         : "No engine context provided.";
-    let caseSection = "";
-    const ct = body.caseType || "position";
-    const describeMove = (label, mv, sc, dl) => {
-        if (!mv)
-            return `${label}: (none)`;
-        const parsed = parseMove(mv, body.fen);
-        const legal = parsed ? "(parsed OK)" : "(could not parse)";
-        let line = `${label}: ${mv} ${legal}`;
-        if (typeof sc === "number")
-            line += `, score: ${(sc / 100).toFixed(2)}`;
-        if (typeof dl === "number")
-            line += `, delta: ${(dl / 100).toFixed(2)}`;
-        return line;
-    };
-    if (ct === "move")
-        caseSection = describeMove("Move", body.move);
-    else if (ct === "move_scored")
-        caseSection = describeMove("Move", body.move, body.score);
-    else if (ct === "move_scored_delta")
-        caseSection = describeMove("Move", body.move, body.score, body.delta);
-    else if (ct === "compare")
-        caseSection = `${describeMove("Move A", body.move, body.score, body.delta)}\n${describeMove("Move B", body.compareMove, body.compareScore, body.compareDelta)}\nCompare A vs B: discuss pros/cons, plans, evaluation differences, and when each shines.`;
-    else
-        caseSection = "Position-only request.";
-    const guidance = "Discuss: opening family if recognizable, typical plans for both sides, pawn structure, tactical motifs, strategic ideas, good vs bad moves, and what to study next. Be concrete and non-hallucinatory; use the FEN, ASCII board, and piece list to anchor facts.";
+    const outputSchema = `Return a single JSON object with these keys:
+{
+  "summary": string,
+  "background": string, // opening family or known lines/games if applicable
+  "themes": string,     // common motifs, pawn structure, imbalances
+  "plans": {
+    "white": string,
+    "black": string
+  },
+  "alternatives": string, // candidate moves and why they work/don't
+  "traps": string,        // pitfalls to avoid (optional, can be empty)
+  "study": string         // what to study next (books/keywords)
+}`;
+    const guidance = "Be concrete, avoid hallucinations. Anchor all claims to the FEN, ASCII board, and piece list. Keep variations short but illustrative.";
     const question = body.question?.trim()
-        ? `User question: ${body.question.trim()}`
-        : "Explain why the top candidate moves are good/bad and what ideas they aim for.";
+        ? `Follow-up (optional): ${body.question.trim()}`
+        : "";
+    // Order: static first (header + schema), then position (more cacheable), then engine context, then question
     return [
         header,
+        outputSchema,
         position,
         boardText,
         piecesText,
         engineText,
-        caseSection,
         guidance,
         question,
-    ].join("\n\n");
+    ]
+        .filter(Boolean)
+        .join("\n\n");
 }
 async function callAI(prompt, model, apiKeyOverride) {
     const key = apiKeyOverride || AI_API_KEY;

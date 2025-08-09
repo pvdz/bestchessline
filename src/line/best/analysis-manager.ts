@@ -47,9 +47,9 @@ const MATE_SCORE_THRESHOLD = 10000;
 /**
  * Start analysis
  */
-export function startAnalysis(): Promise<void> {
+export async function startAnalysis(): Promise<void> {
   const appState = getAppState();
-  if (appState.isAnalyzing) return Promise.resolve();
+  if (appState.isAnalyzing) return;
 
   updateAppState({
     isAnalyzing: true,
@@ -57,30 +57,28 @@ export function startAnalysis(): Promise<void> {
   updateButtonStates();
   updatePositionEvaluationDisplay();
 
-  return Stockfish.analyzePosition(
-    Board.getFEN(),
-    getAnalysisOptions(),
-    (analysisResult) => {
-      updateAppState({
-        currentResults: analysisResult,
-        isAnalyzing: !analysisResult.completed,
+  try {
+    const result = await Stockfish.analyzePosition(
+      Board.getFEN(),
+      getAnalysisOptions(),
+      (analysisResult) => {
+        updateAppState({
+          currentResults: analysisResult,
+          isAnalyzing: !analysisResult.completed,
+        });
+        updateResults(analysisResult);
+        updateButtonStates();
       });
-      updateResults(analysisResult);
-      updateButtonStates();
-    },
-  )
-    .then((result) => {
-      updateAppState({
-        currentResults: result,
-        isAnalyzing: false,
-      });
-      updateButtonStates();
-    })
-    .catch((error) => {
-      logError("Analysis failed:", error);
-      updateAppState({ isAnalyzing: false });
-      updateButtonStates();
+    updateAppState({
+      currentResults: result,
+      isAnalyzing: false,
     });
+    updateButtonStates();
+  } catch (error) {
+    logError("Analysis failed:", error);
+    updateAppState({ isAnalyzing: false });
+    updateButtonStates();
+  }
 }
 
 /**
@@ -111,7 +109,6 @@ export function updateResults(result: AnalysisResult): void {
  */
 export function actuallyUpdateResultsPanel(moves: AnalysisMove[]): void {
   const resultsPanel = getElementByIdOrThrow("analysis-results");
-  if (!resultsPanel) return;
 
   // Clear existing arrows
   hideMoveArrow();

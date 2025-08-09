@@ -14,6 +14,11 @@
  * @param direction The sort direction ("asc" for ascending, "desc" for descending)
  * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
  */
+type CompareDirection = "asc" | "desc";
+type CompareOptions = {
+    direction: CompareDirection;
+    prioritize?: "depth" | "score";
+};
 export declare function compareAnalysisMoves(a: {
     score: number;
     depth: number;
@@ -22,8 +27,9 @@ export declare function compareAnalysisMoves(a: {
     score: number;
     depth: number;
     mateIn: number;
-}, direction?: "asc" | "desc"): number;
+}, directionOrOptions?: CompareDirection | CompareOptions): number;
 /**
  * Calculate total positions with overrides
  */
 export declare function calculateTotalPositionsWithOverrides(maxDepth: number, responderResponses: number, firstReplyOverride?: number, secondReplyOverride?: number): number;
+export {};

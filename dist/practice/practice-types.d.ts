@@ -6,6 +6,10 @@ export interface GameState {
     validMoves: string[];
     openingLines: OpeningLine[];
     positionMap: Map<string, string[]>;
+    positionTopMoves?: Map<string, {
+        move: string;
+        score: number;
+    }[]>;
     computerMoveStrategy: "random" | "serial" | "adaptive";
     maxDepth: number;
     currentDepth: number;
@@ -49,6 +53,7 @@ export interface DOMElements {
     accuracy: HTMLElement;
     currentLine: HTMLElement;
     moveHistory: HTMLElement;
+    topMoves: HTMLElement;
     startOverlay: HTMLElement;
     startOverlayBtn: HTMLButtonElement;
     board: HTMLElement;

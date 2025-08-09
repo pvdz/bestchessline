@@ -416,7 +416,7 @@ export function parseMove(
     }
   }
 
-  console.log(
+  console.trace(
     `[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
   );
 

@@ -1,12 +1,11 @@
-import { formatPCNLineWithMoveNumbers, computeSanGameFromPCN, } from "../../utils/pcn-utils.js";
+import { formatPCNLineWithMoveNumbers, } from "../../utils/pcn-utils.js";
 import { getElementByIdOrThrow } from "../../utils/dom-helpers.js";
 import { showToast } from "../../utils/ui-utils.js";
 import { initFishing, initInitialMove, keepFishing } from "./fishing.js";
 import { getCurrentFishState } from "./fish-state.js";
 import { importFishState } from "./fish-state.js";
-import { updateFishConfigDisplay, updateFishStatus, updateFishProgress, updateFishRootScore, updateLineElement, updateLineFisherButtonStates, } from "./fish-ui.js";
+import { updateFishConfigDisplay, updateFishStatus, updateFishProgress, updateFishRootScore, updateLineFisherButtonStates, } from "./fish-ui.js";
 import { getRandomProofString, generateLineId } from "./fish-utils.js";
-import { importGame } from "../board/game-navigation.js";
 const lineAppState = {
     isFishAnalysisRunning: false,
     shouldStopFishAnalysis: false,
@@ -91,7 +90,6 @@ export async function fish(config) {
         updateFishConfigDisplay(state.config);
         updateFishStatus("Starting root analysis...");
         updateFishProgress(getCurrentFishState());
-        updateLiveLinesPreview();
         await initFishing();
         // Update root score in UI
         updateFishRootScore(getCurrentFishState().config.baselineScore);
@@ -99,12 +97,14 @@ export async function fish(config) {
         await initInitialMove();
         // Update progress and results after initial move
         updateFishProgress(getCurrentFishState());
-        // updateLineFisherExploredLines(getCurrentFishState().done.concat(getCurrentFishState().wip), getCurrentFishState().config.rootFEN);
         await keepFishing((msg) => {
             updateFishStatus(msg);
-            updateFishProgress(getCurrentFishState());
-            updateLiveLinesPreview();
-            // updateLineFisherExploredLines(        getCurrentFishState().done,        getCurrentFishState().config.rootFEN,      );
+            // Only do expensive updates when structure changed or phase completed
+            // Keep progress and live-lines in sync: update both together on any progress bump
+            if (msg === "Progress updated" || msg.startsWith("Expanded") || msg.endsWith("complete")) {
+                const state = getCurrentFishState();
+                updateFishProgress(state);
+            }
         });
         // Update button states - enable start, disable stop
         updateFishButtonStates(false);
@@ -179,8 +179,6 @@ export async function continueFishing() {
     await keepFishing((msg) => {
         updateFishStatus(msg);
         updateFishProgress(getCurrentFishState());
-        updateLiveLinesPreview();
-        // updateLineFisherExploredLines(      getCurrentFishState().done,      getCurrentFishState().config.rootFEN,    );
     });
     console.log("Continued fishing stopped");
 }
@@ -294,47 +292,6 @@ const createLineHTMLStructure = (line) => {
   `;
 };
 /**
- * Update Line Fisher explored lines display with incremental updates
- * Only add new lines and update existing ones without re-rendering everything
- */
-const updateLineFisherExploredLines = (results, rootFEN) => {
-    const resultsElement = getElementByIdOrThrow("fish-results");
-    if (results.length === 0) {
-        resultsElement.innerHTML = "<p>No results to show yet...</p>";
-        return;
-    }
-    // Show only the first 50 lines to keep it manageable
-    const displayCount = Math.min(results.length, 50);
-    // Process each line
-    for (let i = 0; i < displayCount; i++) {
-        const line = results[i];
-        if (!line.sanGame) {
-            line.sanGame = computeSanGameFromPCN(line.pcns, rootFEN);
-        }
-        try {
-            if (line.nodeId) {
-                const lineElement = getElementByIdOrThrow(line.nodeId);
-                updateLineElement(lineElement, line);
-            }
-            else {
-                // Create new line element
-                const lineElement = createLineElement(line);
-                lineElement.innerHTML = createLineHTMLStructure(line);
-            }
-        }
-        catch (error) {
-            console.warn(`Failed to update line ${i}:`, error);
-            // Continue with next line
-        }
-    }
-    if (resultsElement.childElementCount === displayCount + 1) {
-        const moreElement = document.createElement("div");
-        moreElement.className = "fish-more";
-        moreElement.textContent = `... hiding other lines for performance...`;
-        resultsElement.appendChild(moreElement);
-    }
-};
-/**
  * Initialize Line Fisher (placeholder for compatibility)
  */
 export const initializeLineFisher = async () => {
@@ -361,88 +318,4 @@ export const resetFishAnalysis = () => {
     resultsElement.innerHTML = "<p>No results to show yet...</p>";
     showToast("Fish analysis reset", "#FF9800", 3000);
 };
-/**
- * Live lines preview: render last few WIP and Done lines at an interval-gated cadence.
- * Visible only when toggled on; when toggled off, rendering stops but panel remains visible.
- */
-let fishLiveLinesLastRenderAt = 0;
-const FISH_LIVE_LINES_MIN_INTERVAL_MS = 500; // throttle UI updates
-function isLiveLinesEnabled() {
-    const checkbox = document.getElementById("fish-lines-toggle");
-    return !!(checkbox && checkbox.checked);
-}
-export function updateLiveLinesPreview() {
-    try {
-        const now = Date.now();
-        if (now - fishLiveLinesLastRenderAt < FISH_LIVE_LINES_MIN_INTERVAL_MS)
-            return;
-        fishLiveLinesLastRenderAt = now;
-        const panel = document.getElementById("fish-lines-panel");
-        if (!panel)
-            return;
-        // Always keep panel visible once it appeared; only gate updates by toggle
-        const enabled = isLiveLinesEnabled();
-        if (enabled && panel.style.display === "none") {
-            panel.style.display = "block";
-        }
-        if (!enabled)
-            return; // do not update when disabled
-        const state = getCurrentFishState();
-        const wipContainer = document.getElementById("fish-lines-wip");
-        const doneContainer = document.getElementById("fish-lines-done");
-        if (!wipContainer || !doneContainer)
-            return;
-        // Show last up to 10 entries from each list (Fisher-generated lines)
-        const lastWip = state.wip.slice(-10);
-        const lastDone = state.done.slice(-10);
-        // Update headings with showing/queue counts
-        const wipHeading = document.querySelector("#fish-lines-wip")
-            ?.previousElementSibling;
-        const doneHeading = document.querySelector("#fish-lines-done")
-            ?.previousElementSibling;
-        if (wipHeading) {
-            wipHeading.textContent = `WIP ${lastWip.length}/${state.wip.length}`;
-        }
-        if (doneHeading) {
-            doneHeading.textContent = `Done ${lastDone.length}/${state.done.length}`;
-        }
-        // Render lines as clickable elements
-        const renderLines = (container, lines) => {
-            if (lines.length === 0) {
-                container.textContent = "(none)";
-                return;
-            }
-            const html = lines
-                .map((l) => `<div class="fish-live-line" data-line-id="${l.lineIndex}">${formatPCNLineWithMoveNumbers(l.pcns)}</div>`)
-                .join("");
-            container.innerHTML = html;
-        };
-        renderLines(wipContainer, lastWip);
-        renderLines(doneContainer, lastDone);
-        // Click-to-open on main board using event delegation
-        const delegateClick = (container) => {
-            container.onclick = (e) => {
-                const target = e.target;
-                const item = target.closest(".fish-live-line");
-                if (!item)
-                    return;
-                const idAttr = item.getAttribute("data-line-id");
-                if (!idAttr)
-                    return;
-                const id = parseInt(idAttr, 10);
-                const line = state.wip.find((l) => l.lineIndex === id) ||
-                    state.done.find((l) => l.lineIndex === id);
-                if (!line)
-                    return;
-                const notation = formatPCNLineWithMoveNumbers(line.pcns);
-                importGame(notation);
-            };
-        };
-        delegateClick(wipContainer);
-        delegateClick(doneContainer);
-    }
-    catch (e) {
-        console.warn("Failed to update live lines preview", e);
-    }
-}
 //# sourceMappingURL=fish.js.map

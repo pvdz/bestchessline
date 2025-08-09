@@ -8,7 +8,7 @@ export interface LineFisherConfig {
   maxDepth: number; // Maximum analysis depth
   threads: number; // Number of CPU threads
   defaultResponderCount: number; // Default responder count for levels not specified
-  targetDepth: number; // Target depth for confetti trigger
+  // targetDepth removed from line app (confetti only lives in practice)
   rootFEN: string; // Root position for analysis
   baselineScore: number; // Score of the root position for delta calculations
   baselineMoves: { move: string; score: number }[]; // Top moves from root position

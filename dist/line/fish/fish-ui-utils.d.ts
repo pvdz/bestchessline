@@ -27,11 +27,6 @@ export declare const getLineFisherThreads: () => number;
  */
 export declare const getLineFisherDefaultResponderCount: () => number;
 /**
- * Get Line Fisher target depth from UI
- * Read target depth from slider input
- */
-export declare const getLineFisherTargetDepth: () => number;
-/**
  * Get Line Fisher configuration from UI
  * TODO: Read all configuration values from UI elements
  */

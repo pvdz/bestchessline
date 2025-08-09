@@ -32,6 +32,7 @@
               <button id="fish-export">Export</button>
               <button id="fish-import">Import</button>
               <button id="fish-continue">Continue</button>
+                <button id="fish-preset-quick" title="Set responder=2, overrides empty, depth=4">Preset 2/4</button>
               <div class="thread-controls">
                 <label for="fish-threads">Threads:</label>
                 <input
@@ -98,22 +99,10 @@
                 />
                 <span id="fish-depth-value">1</span>
               </div>
-              <div class="target-depth-controls">
-                <label for="fish-target-depth">Target Depth:</label>
-                <input
-                  type="range"
-                  id="fish-target-depth"
-                  min="1"
-                  max="20"
-                  value="10"
-                  class="fish-slider"
-                  title="Depth at which to trigger confetti when human makes the proper move"
-                />
-                <span id="fish-target-depth-value">10</span>
-              </div>
             </div>
           </div>
           <div id="fish-status">Ready</div>
+          <div class="pv-ticker" id="fish-pv-ticker"></div>
 
           <div id="fish-config-root" class="fish-panel">
             <h3>Configuration</h3>
@@ -165,9 +154,10 @@
           </div>
 
           <div id="fish-state-info" class="fish-panel">
-            <h3>Analysis Status</h3>
+            <h3 id="fish-status-title">Analysis Status</h3>
             <div class="fish-progress-section">
               <div id="fish-status-progress-bar">
+                <div id="fish-status-progress-fill-total"></div>
                 <div id="fish-status-progress-fill"></div>
               </div>
               <div id="fish-status-progress-stats">
@@ -443,6 +433,7 @@
             <div class="status-title">Stockfish</div>
             <p id="engine-status">Ready</p>
           </div>
+            <div class="pv-ticker" id="engine-pv-ticker"></div>
           <div id="analysis-results" class="results-panel"></div>
         </div>
       </div>

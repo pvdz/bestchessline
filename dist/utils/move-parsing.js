@@ -360,7 +360,7 @@ export function parseMove(moveText, currentFEN) {
             return { from: fromSquare, to: toSquare, piece };
         }
     }
-    console.log(`[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`);
+    console.trace(`[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`);
     return null;
 }
 /**

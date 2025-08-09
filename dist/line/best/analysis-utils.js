@@ -4,17 +4,10 @@
  * Provides functions for analyzing chess moves, comparing scores,
  * and calculating position counts for tree analysis.
  */
-/**
- * Compare two analysis moves for sorting. The moves should always be for the same player
- * from the same position, maybe even the same piece (with different targets).
- * Mate is always the best move. When two moves mate or have same score, use consistent ordering.
- *
- * @param a First analysis move. Score is negative if in favor of black, otherwise in favor of white
- * @param b Second analysis move. Score is negative if in favor of black, otherwise in favor of white
- * @param direction The sort direction ("asc" for ascending, "desc" for descending)
- * @returns Negative if a should come before b, positive if b should come before a, 0 if equal
- */
-export function compareAnalysisMoves(a, b, direction = "desc") {
+export function compareAnalysisMoves(a, b, directionOrOptions = "desc") {
+    const opts = typeof directionOrOptions === "string"
+        ? { direction: directionOrOptions, prioritize: "depth" }
+        : { direction: directionOrOptions.direction, prioritize: directionOrOptions.prioritize || "depth" };
     // Determine if moves are mate moves (|score| > 9000 indicates mate)
     const aIsMate = Math.abs(a.score) > 9000;
     const bIsMate = Math.abs(b.score) > 9000;
@@ -27,17 +20,23 @@ export function compareAnalysisMoves(a, b, direction = "desc") {
         // Both are mate moves, prefer shorter mates (lower mateIn value)
         return a.mateIn - b.mateIn;
     }
-    // Prefer scores that have been checked deeper. Neither is mate so then it's just a move.
-    if (a.depth !== b.depth)
-        return b.depth - a.depth;
-    // Both are non-mate moves, sort by score based on direction
-    if (direction === "asc") {
-        // Ascending order: low to high scores (good for black's turn)
-        return a.score - b.score;
+    // Non-mate moves ordering
+    if (opts.prioritize === "depth") {
+        // Depth-first (existing default behavior)
+        if (a.depth !== b.depth)
+            return b.depth - a.depth;
+        if (opts.direction === "asc")
+            return a.score - b.score;
+        return b.score - a.score;
     }
     else {
-        // Descending order: high to low scores (good for white's turn)
-        return b.score - a.score;
+        // Score-first (useful for best5 display), then prefer deeper
+        const scoreDiff = opts.direction === "asc" ? a.score - b.score : b.score - a.score;
+        if (scoreDiff !== 0)
+            return scoreDiff;
+        if (a.depth !== b.depth)
+            return b.depth - a.depth;
+        return 0;
     }
 }
 /**

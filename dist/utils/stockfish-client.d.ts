@@ -12,6 +12,7 @@ export declare const initializeStockfish: () => void;
  */
 export declare const analyzePosition: (fen: string, options?: StockfishOptions, onUpdate?: (result: AnalysisResult) => void) => Promise<AnalysisResult>;
 export declare const stopAnalysis: () => void;
+export declare const getCurrentAnalysisSnapshot: () => AnalysisResult | null;
 /**
  * Handle Stockfish crash and reset UI state
  */

@@ -134,17 +134,7 @@ export const getLineFisherDefaultResponderCount = (): number => {
   return isNaN(count) ? 3 : Math.max(1, Math.min(15, count));
 };
 
-/**
- * Get Line Fisher target depth from UI
- * Read target depth from slider input
- */
-export const getLineFisherTargetDepth = (): number => {
-  const targetDepthInput = getInputElement("fish-target-depth");
-  if (!targetDepthInput) return 10; // Default to 10
-
-  const depth = parseInt(targetDepthInput.value, 10);
-  return isNaN(depth) ? 10 : Math.max(1, Math.min(20, depth));
-};
+// Removed target depth UI: not applicable in line app
 
 /**
  * Get Line Fisher configuration from UI
@@ -157,7 +147,6 @@ export const getLineFisherConfigFromUI = (): LineFisherConfig => {
     maxDepth: getLineFisherDepth(),
     threads: getLineFisherThreads(),
     defaultResponderCount: getLineFisherDefaultResponderCount(),
-    targetDepth: getLineFisherTargetDepth(),
     rootFEN: getFEN(),
     initiatorIsWhite: getStartingPlayer(getFEN()) === PLAYER_COLORS.WHITE,
     baselineScore: 0,

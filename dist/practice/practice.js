@@ -101,6 +101,7 @@ function initializeDOMElements() {
         accuracy: getElementByIdOrThrow("practice-accuracy"),
         currentLine: getElementByIdOrThrow("practice-current-line"),
         moveHistory: getElementByIdOrThrow("practice-moves"),
+        topMoves: getElementByIdOrThrow("practice-top-moves"),
         startOverlay: getElementByIdOrThrow("practice-start-overlay"),
         startOverlayBtn: getElementByIdOrThrow("practice-start-overlay-btn"),
         board: getElementByIdOrThrow("practice-board-grid")
@@ -115,15 +116,14 @@ function initializeDOMElements() {
     };
     // Extend: wire AI coach button
     const askBtn = getElementByIdOrThrow("practice-ai-ask-btn");
-    const apiKeyEl = getElementByIdOrThrow("practice-ai-api-key");
-    const baseUrlEl = getElementByIdOrThrow("practice-ai-base-url");
     const modelEl = getElementByIdOrThrow("practice-ai-model");
     const levelEl = getElementByIdOrThrow("practice-ai-level");
     const questionEl = getElementByIdOrThrow("practice-ai-question");
     const answerEl = getElementByIdOrThrow("practice-ai-answer");
+    const apiKeyEl = getElementByIdOrThrow("practice-ai-api-key");
     askBtn.addEventListener("click", async () => {
         try {
-            const apiKey = apiKeyEl.value.trim();
+            askBtn.setAttribute("aria-busy", "true");
             answerEl.textContent = "Asking AI...";
             const includePrompt = true;
             const engineSummary = ""; // Optionally provide client-side summary later
@@ -139,8 +139,9 @@ function initializeDOMElements() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    // Pass API key via header for server-side use; server will use env key by default, this is optional
-                    ...(apiKey ? { "X-AI-API-KEY": apiKey } : {}),
+                    ...(apiKeyEl.value.trim()
+                        ? { "X-AI-API-KEY": apiKeyEl.value.trim() }
+                        : {}),
                 },
                 body: JSON.stringify(payload),
             });
@@ -149,17 +150,111 @@ function initializeDOMElements() {
                 throw new Error(txt);
             }
             const data = await resp.json();
-            const out = data.prompt
-                ? `Prompt\n----------------\n${data.prompt}\n\nAnswer\n----------------\n${data.answer}`
-                : data.answer;
-            answerEl.textContent = out;
+            const rawAnswer = data.answer || "";
+            // Render raw answer hidden for inspection
+            answerEl.textContent = data.prompt
+                ? `Prompt\n----------------\n${data.prompt}\n\nAnswer\n----------------\n${rawAnswer}`
+                : rawAnswer;
+            // Try to parse structured JSON first
+            const summary = document.getElementById("practice-ai-summary");
+            const sections = document.getElementById("practice-ai-sections");
+            if (summary && sections) {
+                let parsed = null;
+                try {
+                    parsed = JSON.parse(rawAnswer);
+                }
+                catch { }
+                if (parsed && typeof parsed === "object") {
+                    // Render structured
+                    summary.textContent = parsed.summary || "";
+                    const cards = [];
+                    if (parsed.background)
+                        cards.push({ title: "Background", body: parsed.background });
+                    if (parsed.themes)
+                        cards.push({ title: "Themes", body: parsed.themes });
+                    if (parsed.plans) {
+                        const pb = [
+                            parsed.plans.white ? `White: ${parsed.plans.white}` : "",
+                            parsed.plans.black ? `Black: ${parsed.plans.black}` : "",
+                        ]
+                            .filter(Boolean)
+                            .join("\n\n");
+                        if (pb)
+                            cards.push({ title: "Plans", body: pb });
+                    }
+                    if (parsed.alternatives)
+                        cards.push({ title: "Alternatives", body: parsed.alternatives });
+                    if (parsed.traps)
+                        cards.push({ title: "Traps & Pitfalls", body: parsed.traps });
+                    if (parsed.study)
+                        cards.push({ title: "Study Next", body: parsed.study });
+                    sections.innerHTML = cards
+                        .map((c) => `\n<div class="ai-card"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`)
+                        .join("");
+                }
+                else {
+                    // Fallback to heuristic parsing
+                    const text = rawAnswer;
+                    const first = text.split(/\n\n+/)[0] || text.substring(0, 240);
+                    summary.textContent = first;
+                    const cards = [];
+                    const add = (title, body) => {
+                        if (!body.trim())
+                            return;
+                        cards.push({ title, body });
+                    };
+                    const blocks = text.split(/\n\s*(?=Ideas:|Background:|Themes:|Alternatives:|Lines:|Games:)/);
+                    if (blocks.length > 1) {
+                        blocks.forEach((b) => {
+                            const m = b.match(/^(Ideas|Background|Themes|Alternatives|Lines|Games):\s*[\r\n]?([\s\S]*)$/);
+                            if (m)
+                                add(m[1], m[2].trim());
+                        });
+                    }
+                    else {
+                        const paras = text.split(/\n\n+/).filter(Boolean);
+                        const chunk = (arr, title) => add(title, arr.join("\n\n"));
+                        if (paras.length >= 4) {
+                            chunk(paras.slice(1, 2), "Background");
+                            chunk(paras.slice(2, 3), "Ideas");
+                            chunk(paras.slice(3, 4), "Alternatives");
+                            chunk(paras.slice(4), "Other notes");
+                        }
+                        else if (paras.length >= 2) {
+                            chunk(paras.slice(1), "Details");
+                        }
+                    }
+                    sections.innerHTML = cards
+                        .map((c) => `\n<div class=\"ai-card\"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`)
+                        .join("");
+                }
+            }
         }
         catch (e) {
             console.error(e);
             answerEl.textContent = "AI request failed. Check console.";
             showErrorToast("AI request failed");
         }
+        finally {
+            askBtn.setAttribute("aria-busy", "false");
+        }
     });
+    // Quick prompt chips
+    const quick = document.getElementById("practice-ai-quick");
+    if (quick) {
+        quick.addEventListener("click", (e) => {
+            const target = e.target;
+            const btn = target.closest(".practice-ai-chip-btn");
+            if (!btn)
+                return;
+            const txt = btn.getAttribute("data-text") || "";
+            if (!txt)
+                return;
+            const existing = questionEl.value.trim();
+            questionEl.value = existing ? existing + "\n" + txt : txt;
+            questionEl.focus();
+        });
+    }
 }
 // Add drag and drop handlers to the board
 function addDragAndDropHandlersToBoard() {
@@ -176,6 +271,15 @@ function initializeBoardWithEventListeners() {
 export function startPractice(gameState, dom) {
     // Parse opening lines from textarea
     const linesText = dom.openingLines.value;
+    // Optional: try to parse JSON with metadata from Fish export
+    const maybeMeta = tryParseFishJson(linesText);
+    if (maybeMeta) {
+        // Build a top-moves map from imported fish state
+        gameState.positionTopMoves = buildTopMovesMapFromFish(maybeMeta);
+    }
+    else {
+        gameState.positionTopMoves = undefined;
+    }
     const lines = parseOpeningLines(linesText);
     if (lines.length === 0) {
         showErrorToast("No valid opening lines found!");
@@ -211,6 +315,7 @@ export function startPractice(gameState, dom) {
     clearMoveHistory(dom.moveHistory);
     renderBoard(gameState.currentFEN);
     reAddDragAndDropListeners(gameState, dom);
+    updateTopMovesPanel(dom, gameState);
     // Initialize arrow drawing functionality
     initializeArrowDrawing();
     showSuccessToast("Practice session started!");
@@ -246,6 +351,7 @@ function resetPractice() {
     renderBoard(gameState.currentFEN);
     reAddDragAndDropListeners(gameState, dom);
     updateStatus(dom, gameState);
+    updateTopMovesPanel(dom, gameState);
     // Clean up arrow drawing
     cleanupArrowDrawing();
     showInfoToast("Practice reset");
@@ -279,6 +385,7 @@ function nextLine() {
     reAddDragAndDropListeners(gameState, dom);
     updateStatus(dom, gameState);
     updateStatistics(dom, gameState);
+    updateTopMovesPanel(dom, gameState);
     showInfoToast("Switched to new position");
 }
 // Go back one move (let human retry)
@@ -312,6 +419,7 @@ function goBackOneMove() {
     reAddDragAndDropListeners(gameState, dom);
     updateStatus(dom, gameState);
     updateStatistics(dom, gameState);
+    updateTopMovesPanel(dom, gameState);
     // Update move history display
     updateMoveHistoryDisplay(dom.moveHistory);
     showInfoToast("Went back one move - your turn to retry");
@@ -347,6 +455,7 @@ function goBackOneMoveRandom() {
     reAddDragAndDropListeners(gameState, dom);
     updateStatus(dom, gameState);
     updateStatistics(dom, gameState);
+    updateTopMovesPanel(dom, gameState);
     // Update move history display
     updateMoveHistoryDisplay(dom.moveHistory);
     // Trigger a random computer move after a short delay
@@ -397,6 +506,7 @@ function restartFromPinnedPosition() {
     reAddDragAndDropListeners(gameState, dom);
     updateStatus(dom, gameState);
     updateStatistics(dom, gameState);
+    updateTopMovesPanel(dom, gameState);
     // Update move history display
     updateMoveHistoryDisplay(dom.moveHistory);
     showSuccessToast(`Restarted from pinned position at depth ${gameState.pinnedDepth}`);
@@ -510,6 +620,12 @@ function initializeEventListeners() {
     // Opening lines textarea - update depth control when content changes
     dom.openingLines.addEventListener("input", () => {
         const linesText = dom.openingLines.value;
+        // Refresh imported metadata if the textarea contains JSON
+        const maybeMeta = tryParseFishJson(linesText);
+        gameState.positionTopMoves = maybeMeta
+            ? buildTopMovesMapFromFish(maybeMeta)
+            : undefined;
+        updateTopMovesPanel(dom, gameState);
         const lines = parseOpeningLines(linesText);
         const longNotationLines = convertOpeningLinesToPCN(lines, gameState.currentFEN);
         updateDepthControl(longNotationLines);
@@ -571,9 +687,61 @@ export function initializePractice() {
     const lines = parseOpeningLines(linesText);
     const longNotationLines = convertOpeningLinesToPCN(lines, gameState.currentFEN);
     updateDepthControl(longNotationLines);
+    updateTopMovesPanel(dom, gameState);
     // Auto-start practice with initial lines
     if (lines.length > 0) {
         startPractice(gameState, dom);
     }
+}
+// Try to parse Fish JSON state pasted into the opening lines textarea
+function tryParseFishJson(text) {
+    try {
+        const data = JSON.parse(text);
+        if (data && typeof data === "object" && data.type === "fish-state") {
+            return data;
+        }
+    }
+    catch (_e) {
+        // Not JSON — ignore
+    }
+    return null;
+}
+// Build a map from FEN -> top moves [{move, score}] using fish state
+function buildTopMovesMapFromFish(state) {
+    const map = new Map();
+    if (!state || !state.done)
+        return map;
+    for (const line of state.done) {
+        if (line && typeof line.position === "string" && Array.isArray(line.best5)) {
+            // best5 is array of { move: string; score: number }
+            map.set(line.position, line.best5.slice(0, 5));
+        }
+    }
+    // Also include root cached baseline moves if present
+    if (state.config && Array.isArray(state.config.baselineMoves) && typeof state.config.rootFEN === "string") {
+        map.set(state.config.rootFEN, state.config.baselineMoves.slice(0, 5));
+    }
+    return map;
+}
+// Update the side panel with top-5 moves for current FEN (if available)
+function updateTopMovesPanel(dom, gameState) {
+    const container = dom.topMoves;
+    const meta = gameState.positionTopMoves;
+    if (!meta) {
+        container.innerHTML = "<em>No engine metadata loaded</em>";
+        return;
+    }
+    const list = meta.get(gameState.currentFEN);
+    if (!list || list.length === 0) {
+        container.innerHTML = "<em>No top moves for this position</em>";
+        return;
+    }
+    const items = list
+        .map((m, i) => {
+        const scoreStr = Math.abs(m.score) >= 10000 ? (m.score > 0 ? "#" : "-#") : (m.score / 100).toFixed(2);
+        return `${i + 1}. ${m.move}  (score ${scoreStr})`;
+    })
+        .join("<br/>");
+    container.innerHTML = items;
 }
 //# sourceMappingURL=practice.js.map

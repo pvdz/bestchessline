@@ -1,5 +1,5 @@
 import { FishState, FishLine, LineFisherConfig } from "./types.js";
-import { computeSanGameFromPCN } from "../../utils/pcn-utils.js";
+import { computeSanGameFromPCN, formatPCNLineWithMoveNumbers } from "../../utils/pcn-utils.js";
 import {
   getElementByIdOrThrow,
   querySelectorOrThrow,
@@ -7,12 +7,27 @@ import {
 import {
   calculateTotalNodes,
   calculateTotalLines,
+  calculateResponderNodes,
 } from "./fish-calculations.js";
 import { getCurrentFishState } from "./fish-state.js";
+import { getCurrentAnalysisSnapshot } from "../../utils/stockfish-client.js";
+import { compareAnalysisMoves } from "../best/analysis-utils.js";
+import { parseFEN } from "../../utils/fen-utils.js";
+import { PLAYER_COLORS, AnalysisMove, ChessMove } from "../types.js";
+import { formatScoreWithMateIn } from "../../utils/formatting-utils.js";
 import {
   coordsToSquare,
   getPieceAtSquareFromFEN,
 } from "../../utils/fen-utils.js";
+import { importGame } from "../board/game-navigation.js";
+
+/**
+ * Live lines preview: render last few WIP and Done lines at an interval-gated cadence.
+ * Visible only when toggled on; when toggled off, rendering stops but panel remains visible.
+ */
+let liveLineRenderBackoff = false;
+let liveLienRenderRequested = false;
+const FISH_LIVE_LINES_MIN_INTERVAL_MS = 300; // throttle UI updates
 
 /**
  * Update fish config display in UI
@@ -111,12 +126,7 @@ const renderLineFisherBoard = (fen: string): void => {
  * Non-blocking UI update with error handling
  */
 export function updateFishStatus(message: string): void {
-  try {
-    const statusElement = getElementByIdOrThrow("fish-status");
-    statusElement.textContent = message;
-  } catch (error) {
-    console.error("Failed to update fish status:", error);
-  }
+  getElementByIdOrThrow("fish-status").textContent = message;
 }
 
 /**
@@ -134,7 +144,7 @@ export function updateFishProgress(state: FishState): void {
     doneDisplay.textContent = doneCount.toString();
 
     // Calculate totals (line-based progress)
-    const totalLines = calculateTotalLines(state.config);
+    const totalLines = calculateResponderNodes(state.config) + 1;
     const progressPercent =
       totalLines > 0 ? (state.done.length / totalLines) * 100 : 0;
 
@@ -155,20 +165,199 @@ export function updateFishProgress(state: FishState): void {
     // Update progress bar (line-based progress)
     const progressBar = getElementByIdOrThrow("fish-status-progress-bar");
     const progressFill = getElementByIdOrThrow("fish-status-progress-fill");
-    // Cap progress at 100%
+    const progressFillTotal = getElementByIdOrThrow(
+      "fish-status-progress-fill-total",
+    );
+    // Done-only progress (dark blue)
     const cappedProgress = Math.min(progressPercent, 100);
     progressFill.style.width = `${cappedProgress}%`;
+    // Done+WIP (light overlay)
+    const inFlight = state.done.length + state.wip.length;
+    const totalOverlayPercent =
+      totalLines > 0 ? Math.min((inFlight / totalLines) * 100, 100) : 0;
+    progressFillTotal.style.width = `${totalOverlayPercent}%`;
     // Expose max/current via ARIA for clarity
     progressBar.setAttribute("role", "progressbar");
     progressBar.setAttribute("aria-valuemin", "0");
     progressBar.setAttribute("aria-valuemax", String(totalLines));
     progressBar.setAttribute("aria-valuenow", String(state.done.length));
 
-    // Update leaf node count display
-    updateLeafNodeCount(state);
+    // Keep the progress/system max in sync with what we present here
+    const leafNodeElement = getElementByIdOrThrow("fish-config-leaf-nodes");
+    const reachedLines = state.done.length + state.wip.length;
+    const percentage = totalLines > 0 ? (reachedLines / totalLines) * 100 : 0;
+    leafNodeElement.textContent = `${reachedLines} / ${totalLines} (${percentage.toFixed(1)}%)`;
+
+    updateLiveLinesPreview();
+
+    // Also update PV ticker (throttled internally)
+    updateFishPvTickerThrottled();
+
   } catch (error) {
     console.error("Failed to update fish progress:", error);
-    // Non-blocking: continue analysis even if UI update fails
+  }
+}
+
+// ---------------------------------------------------------
+// PV ticker below fish-status (throttled) - explicit updates only
+// ---------------------------------------------------------
+let fishPvLastUpdate = 0;
+const FISH_PV_MIN_INTERVAL_MS = 1000;
+let lastFishPvKeys: string[] = [];
+let lastFishPvMoves: AnalysisMove[] = [];
+let lastFishPvFen: string = "";
+
+export function updateFishPvTickerThrottled(
+  moves: AnalysisMove[],
+  fen: string,
+  force: boolean = false,
+): void {
+  // Store last received moves/fen immediately; render when throttle allows
+  lastFishPvMoves = moves || [];
+  lastFishPvFen = fen || "";
+
+  const now = Date.now();
+  if (!force && now - fishPvLastUpdate < FISH_PV_MIN_INTERVAL_MS) return;
+  fishPvLastUpdate = now;
+
+  if (!getCurrentFishState().isFishing) return;
+
+  const el = document.getElementById("fish-pv-ticker");
+  if (!el) return;
+
+  if (!lastFishPvMoves.length) {
+    el.textContent = ["", "", "", "", ""].join("\n");
+    return;
+  }
+
+  const dir = parseFEN(lastFishPvFen).turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
+  const sorted = [...lastFishPvMoves]
+    .sort((a: AnalysisMove, b: AnalysisMove) => {
+      const cmp = compareAnalysisMoves(a, b, dir as any);
+      if (cmp !== 0) return cmp;
+      const aKey = `${a.move.from}${a.move.to}`;
+      const bKey = `${b.move.from}${b.move.to}`;
+      return aKey.localeCompare(bKey);
+    })
+    .slice(0, 5);
+
+  const newKeys = sorted.map((m) => `${m.move.from}${m.move.to}`);
+  const sameSet =
+    lastFishPvKeys.length === newKeys.length &&
+    new Set(lastFishPvKeys).size === new Set(newKeys).size &&
+    lastFishPvKeys.every((k) => newKeys.includes(k));
+  const display = sameSet
+    ? lastFishPvKeys
+        .map((k) => sorted.find((m) => `${m.move.from}${m.move.to}` === k)!)
+        .filter(Boolean)
+    : sorted;
+  lastFishPvKeys = newKeys;
+
+  const linesArr = display.map((m: AnalysisMove, i: number) => {
+    const d = `d${m.depth}`;
+    const s = formatScoreWithMateIn(m.score, m.mateIn);
+    const pv = m.pv.map((mv: ChessMove) => mv.from + mv.to).join(" ");
+    return `${i + 1}. ${d} ${s}  ${pv}`;
+  });
+  while (linesArr.length < 5) linesArr.push("");
+  el.textContent = linesArr.join("\n");
+}
+
+function isLiveLinesEnabled(): boolean {
+  const checkbox = document.getElementById(
+    "fish-lines-toggle",
+  ) as HTMLInputElement | null;
+  return !!(checkbox && checkbox.checked);
+}
+
+export function updateLiveLinesPreview(): void {
+  if (liveLineRenderBackoff) {
+    liveLienRenderRequested = true;
+    return;
+  }
+  // Throttle and schedule it
+  setTimeout(() => {
+    liveLineRenderBackoff = false;
+    if (liveLienRenderRequested) {
+      updateLiveLinesPreview();
+    }
+  }, FISH_LIVE_LINES_MIN_INTERVAL_MS);
+  liveLineRenderBackoff = true;
+  liveLienRenderRequested = false;
+
+  try {
+    const panel = document.getElementById("fish-lines-panel");
+    if (!panel) return;
+
+    // Always keep panel visible once it appeared; only gate updates by toggle
+    const enabled = isLiveLinesEnabled();
+    if (enabled && panel.style.display === "none") {
+      panel.style.display = "block";
+    }
+    if (!enabled) return; // do not update when disabled
+
+    const state = getCurrentFishState();
+
+    const wipContainer = document.getElementById("fish-lines-wip");
+    const doneContainer = document.getElementById("fish-lines-done");
+    if (!wipContainer || !doneContainer) return;
+
+    // Show last up to 10 entries from each list (Fisher-generated lines)
+    const lastWip = state.wip.slice(-10);
+    const lastDone = state.done.slice(-10);
+
+    // Update headings with showing/queue counts
+    const wipHeading = document.querySelector("#fish-lines-wip")
+      ?.previousElementSibling as HTMLElement | undefined;
+    const doneHeading = document.querySelector("#fish-lines-done")
+      ?.previousElementSibling as HTMLElement | undefined;
+    if (wipHeading) {
+      wipHeading.textContent = `WIP ${lastWip.length}/${state.wip.length}`;
+    }
+    if (doneHeading) {
+      doneHeading.textContent = `Done ${lastDone.length}/${state.done.length}`;
+    }
+
+    // Render lines as clickable elements
+    const renderLines = (container: HTMLElement, lines: typeof state.wip) => {
+      if (lines.length === 0) {
+        container.textContent = "(none)";
+        return;
+      }
+      const html = lines
+        .map(
+          (l) =>
+            `<div class="fish-live-line" data-line-id="${l.lineIndex}">${formatPCNLineWithMoveNumbers(
+              l.pcns,
+            )}</div>`,
+        )
+        .join("");
+      container.innerHTML = html;
+    };
+    renderLines(wipContainer, lastWip);
+    renderLines(doneContainer, lastDone);
+
+    // Click-to-open on main board using event delegation
+    const delegateClick = (container: HTMLElement) => {
+      container.onclick = (e) => {
+        const target = e.target as HTMLElement;
+        const item = target.closest(".fish-live-line") as HTMLElement | null;
+        if (!item) return;
+        const idAttr = item.getAttribute("data-line-id");
+        if (!idAttr) return;
+        const id = parseInt(idAttr, 10);
+        const line =
+          state.wip.find((l) => l.lineIndex === id) ||
+          state.done.find((l) => l.lineIndex === id);
+        if (!line) return;
+        const notation = formatPCNLineWithMoveNumbers(line.pcns);
+        importGame(notation);
+      };
+    };
+    delegateClick(wipContainer);
+    delegateClick(doneContainer);
+  } catch (e) {
+    console.warn("Failed to update live lines preview", e);
   }
 }
 
@@ -187,23 +376,6 @@ export function updateFishRootScore(score: number): void {
     scoreSpan.textContent = scoreText;
   } catch (error) {
     console.error("Failed to update fish root score:", error);
-  }
-}
-
-/**
- * Update leaf node count display
- * Non-blocking UI update with error handling
- */
-function updateLeafNodeCount(state: FishState): void {
-  try {
-    // Check if leaf node count element already exists
-    const leafNodeElement = getElementByIdOrThrow("fish-config-leaf-nodes");
-    const totalNodes = calculateTotalNodes(state.config);
-    const reachedNodes = state.done.length + state.wip.length;
-    const percentage = totalNodes > 0 ? (reachedNodes / totalNodes) * 100 : 0;
-    leafNodeElement.textContent = `${reachedNodes} / ${totalNodes} (${percentage.toFixed(1)}%)`;
-  } catch (error) {
-    console.error("Failed to update leaf node count:", error);
   }
 }
 

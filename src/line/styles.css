@@ -1,3 +1,19 @@
+.pv-ticker {
+  margin: 8px 0 12px 0;
+  padding: 8px 10px;
+  background: #f8fbff;
+  border: 1px solid #e6eef9;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #1f2d3d;
+  /* Prevent wrapping so each PV occupies exactly one line */
+  white-space: pre;
+  /* Fix per-line height and reserve space for exactly 5 lines */
+  line-height: 16px;
+  height: calc(6 * 16px); /* reserve ~1 extra line for header/spacing */
+  overflow: auto;
+}
 /* Reset and base styles */
 * {
   margin: 0;
@@ -1889,6 +1905,18 @@ input.error:focus {
   border: 1px solid #e9ecef;
 }
 
+.pv-ticker {
+  margin: 8px 0 12px 0;
+  padding: 8px 10px;
+  background: #f8fbff;
+  border: 1px solid #e6eef9;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #1f2d3d;
+  white-space: pre-wrap;
+}
+
 #fish-state-info {
   background: #f8f9fa;
   padding: 15px;
@@ -2038,14 +2066,29 @@ tr:nth-child(even) .fish-board-square:nth-child(odd) {
 }
 
 #fish-status-progress-bar {
+  position: relative;
   width: 100%;
-  height: 8px;
+  height: 10px;
   background: #e9ecef;
-  border-radius: 4px;
+  border-radius: 5px;
   overflow: hidden;
 }
 
+#fish-status-progress-fill-total {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(0, 123, 255, 0.15), rgba(0, 123, 255, 0.25));
+  transition: width 0.3s ease;
+}
+
 #fish-status-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   height: 100%;
   background: #007bff;
   width: 0%;

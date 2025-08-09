@@ -8,6 +8,8 @@ export interface GameState {
   validMoves: string[];
   openingLines: OpeningLine[];
   positionMap: Map<string, string[]>; // Map of FEN positions to expected moves
+  // Optional: metadata with top engine moves per position, if provided via import
+  positionTopMoves?: Map<string, { move: string; score: number }[]>;
   computerMoveStrategy: "random" | "serial" | "adaptive";
   maxDepth: number;
   currentDepth: number;
@@ -54,6 +56,7 @@ export interface DOMElements {
   accuracy: HTMLElement;
   currentLine: HTMLElement;
   moveHistory: HTMLElement;
+  topMoves: HTMLElement; // Container for showing top-5 engine moves if available
   startOverlay: HTMLElement;
   startOverlayBtn: HTMLButtonElement;
   board: HTMLElement;

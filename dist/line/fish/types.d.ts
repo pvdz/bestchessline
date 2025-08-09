@@ -8,7 +8,6 @@ export interface LineFisherConfig {
     maxDepth: number;
     threads: number;
     defaultResponderCount: number;
-    targetDepth: number;
     rootFEN: string;
     baselineScore: number;
     baselineMoves: {

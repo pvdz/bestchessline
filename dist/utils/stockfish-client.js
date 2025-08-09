@@ -62,6 +62,7 @@ let stockfishState = {
     isAnalyzing: false,
     currentAnalysis: null,
     analysisCallbacks: [],
+    analysisResolve: null,
     engineStatus: {
         engineLoaded: false,
         engineReady: false,
@@ -504,6 +505,16 @@ const handleBestMove = (message) => {
             stockfishState.analysisCallbacks.forEach((callback) => {
                 callback(stockfishState.currentAnalysis);
             });
+            // Resolve any awaiting analyzePosition promise
+            const resolver = stockfishState.analysisResolve;
+            if (resolver) {
+                try {
+                    resolver(stockfishState.currentAnalysis);
+                }
+                finally {
+                    updateStockfishState({ analysisResolve: null });
+                }
+            }
         }
     }
 };
@@ -577,25 +588,31 @@ const analyzePositionMono = async (fen, options = {}, onUpdate) => {
         updateStockfishState({
             currentAnalysis: analysisResult,
             isAnalyzing: true,
+            analysisResolve: resolve,
         });
         if (onUpdate) {
             updateStockfishState({
                 analysisCallbacks: [...stockfishState.analysisCallbacks, onUpdate],
             });
         }
-        // Set up completion callback
-        const finalCallback = (result) => {
-            if (result.completed) {
-                // console.log("Stockfish analysis completed", result);
-                resolve(result);
-                // Remove this callback
-                updateStockfishState({
-                    analysisCallbacks: stockfishState.analysisCallbacks.filter((cb) => cb !== finalCallback),
-                });
+        // MultiPV completion gate: wait until we have N PVs at target depth (or mate), then stop
+        const targetDepth = analysisResult.depth;
+        const requiredPV = Math.max(1, options.multiPV || 1);
+        const gateCallback = (result) => {
+            try {
+                const okCount = (result.moves || []).filter((m) => {
+                    const isMate = Math.abs(m.score) >= 10000;
+                    return isMate || m.depth >= targetDepth;
+                }).length;
+                if (okCount >= requiredPV) {
+                    // Stop engine and resolve once final callback runs
+                    uciCmd("stop");
+                }
             }
+            catch { }
         };
         updateStockfishState({
-            analysisCallbacks: [...stockfishState.analysisCallbacks, finalCallback],
+            analysisCallbacks: [...stockfishState.analysisCallbacks, gateCallback],
         });
         // Configure Stockfish
         uciCmd("position fen " + fen);
@@ -628,6 +645,13 @@ const analyzePositionMono = async (fen, options = {}, onUpdate) => {
             .filter(Boolean)
             .join(" ");
         uciCmd(goCommand);
+        // Announce analyzing state
+        try {
+            window.dispatchEvent(new CustomEvent("stockfish-analyzing", {
+                detail: { message: "Analyzing...", position: fen },
+            }));
+        }
+        catch { }
     });
     return promise;
 };
@@ -636,6 +660,18 @@ export const stopAnalysis = () => {
         uciCmd("stop");
         updateStockfishState({ isAnalyzing: false });
     }
+};
+// Expose a snapshot of the current analysis (for UI rendering)
+export const getCurrentAnalysisSnapshot = () => {
+    const cur = stockfishState.currentAnalysis;
+    if (!cur)
+        return null;
+    return {
+        position: cur.position,
+        depth: cur.depth,
+        completed: cur.completed,
+        moves: [...cur.moves],
+    };
 };
 /**
  * Handle Stockfish crash and reset UI state
