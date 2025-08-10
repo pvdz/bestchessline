@@ -27,6 +27,8 @@ export interface GameState {
     accuracy: number;
     lineAttempts: Record<string, number>;
   };
+  // Last engine move in long notation (e.g., g8f6) for UI highlighting
+  lastEngineMoveLong?: string | null;
 }
 
 export interface ChessMove {

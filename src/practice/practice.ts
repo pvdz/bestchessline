@@ -38,6 +38,8 @@ import {
   clearAllArrows,
 } from "./practice-arrow-utils.js";
 import { GameState, DOMElements, OpeningLine } from "./practice-types.js";
+import { parseMove } from "../utils/move-parsing.js";
+import { applyMoveToFEN } from "../utils/fen-manipulation.js";
 import { convertLineToLongNotation } from "../utils/notation-utils.js";
 // Server-side AI integration
 
@@ -364,7 +366,10 @@ export function startPractice(gameState: GameState, dom: DOMElements): void {
     // Build a top-moves map from imported fish state
     gameState.positionTopMoves = buildTopMovesMapFromFish(maybeMeta);
   } else {
-    gameState.positionTopMoves = undefined;
+    gameState.positionTopMoves = buildTopMovesMapFromFishCopy(
+      linesText,
+      gameState.currentFEN,
+    );
   }
   const lines = parseOpeningLines(linesText);
 
@@ -833,7 +838,7 @@ function initializeEventListeners(): void {
     const maybeMeta = tryParseFishJson(linesText);
     gameState.positionTopMoves = maybeMeta
       ? buildTopMovesMapFromFish(maybeMeta)
-      : undefined;
+      : buildTopMovesMapFromFishCopy(linesText, gameState.currentFEN);
     updateTopMovesPanel(dom, gameState);
     const lines = parseOpeningLines(linesText);
     const longNotationLines = convertOpeningLinesToPCN(
@@ -965,6 +970,76 @@ function buildTopMovesMapFromFish(
   return map;
 }
 
+// Build a map from FEN -> top moves using per-line fish copy metadata (alts/replies)
+function buildTopMovesMapFromFishCopy(
+  text: string,
+  startingFEN: string,
+): Map<string, { move: string; score: number }[]> {
+  const map = new Map<string, { move: string; score: number }[]>();
+  if (!text || !text.trim()) return map;
+  const lines = text.trim().split(/\n+/);
+  for (const raw of lines) {
+    const m = raw.match(/^(.*?)(?:\s*\/\/\s*(\{[\s\S]*\}))\s*$/);
+    if (!m) continue; // no metadata
+    const movesPart = (m[1] || "").trim();
+    const jsonPart = m[2];
+    let meta: any = null;
+    try {
+      meta = JSON.parse(jsonPart);
+    } catch {
+      continue;
+    }
+    if (!meta) continue;
+    // Extract moves (remove move numbers)
+    const moveTokens = movesPart
+      .replace(/\d+\./g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .filter(Boolean);
+
+    // Replay moves to find FENs
+    let currentFEN = startingFEN;
+    let prevFEN = currentFEN;
+    for (let i = 0; i < moveTokens.length; i++) {
+      const token = moveTokens[i];
+      prevFEN = currentFEN;
+      const parsed = parseMove(token, currentFEN);
+      if (!parsed) {
+        if (token === "O-O" || token === "O-O-O") {
+          const m2 = parseMove(token, currentFEN);
+          if (!m2) break;
+          currentFEN = applyMoveToFEN(currentFEN, m2);
+        } else if (/^[a-h][1-8][a-h][1-8]$/.test(token)) {
+          const m2 = parseMove(token, currentFEN);
+          if (!m2) break;
+          currentFEN = applyMoveToFEN(currentFEN, m2);
+        } else {
+          break;
+        }
+      } else {
+        currentFEN = applyMoveToFEN(currentFEN, parsed);
+      }
+    }
+
+    // Map: player's top-5 (alts) to prevFEN
+    if (Array.isArray(meta.alts) && meta.alts.length) {
+      map.set(
+        prevFEN,
+        (meta.alts as Array<{ move: string; score: number }>).slice(0, 5),
+      );
+    }
+    // Map: engine's top-5 replies for the last step to currentFEN
+    if (Array.isArray(meta.replies) && meta.replies.length) {
+      map.set(
+        currentFEN,
+        (meta.replies as Array<{ move: string; score: number }>).slice(0, 5),
+      );
+    }
+  }
+  return map;
+}
+
 // Update the side panel with top-5 moves for current FEN (if available)
 function updateTopMovesPanel(dom: DOMElements, gameState: GameState): void {
   const container = dom.topMoves;
@@ -973,21 +1048,49 @@ function updateTopMovesPanel(dom: DOMElements, gameState: GameState): void {
     container.innerHTML = "<em>No engine metadata loaded</em>";
     return;
   }
-  const list = meta.get(gameState.currentFEN);
-  if (!list || list.length === 0) {
-    container.innerHTML = "<em>No top moves for this position</em>";
-    return;
-  }
-  const items = list
-    .map((m, i) => {
-      const scoreStr =
-        Math.abs(m.score) >= 10000
-          ? m.score > 0
-            ? "#"
-            : "-#"
-          : (m.score / 100).toFixed(2);
-      return `${i + 1}. ${m.move}  (score ${scoreStr})`;
-    })
-    .join("<br/>");
-  container.innerHTML = items;
+  const currentFEN = gameState.currentFEN;
+  const prevHumanFEN =
+    gameState.positionHistory.length >= 2
+      ? gameState.positionHistory[gameState.positionHistory.length - 2]
+      : null;
+
+  const altsList = meta.get(currentFEN) || [];
+  // If it's engine's turn now (computer to move), show replies for current FEN.
+  // If it's human's turn (engine already moved), keep showing the replies to the previous human move (prevHumanFEN).
+  const repliesList = gameState.isHumanTurn
+    ? prevHumanFEN
+      ? meta.get(prevHumanFEN) || []
+      : []
+    : meta.get(currentFEN) || [];
+
+  const scoreToStr = (cp: number) =>
+    Math.abs(cp) >= 10000 ? (cp > 0 ? "#" : "-#") : (cp / 100).toFixed(2);
+
+  const altsHtml = altsList.length
+    ? `<div class="practice-alts">
+         <div class="practice-subheading">Scores for top-5 options</div>
+         <div class="practice-score-row">${altsList
+           .slice(0, 5)
+           .map(
+             (m) =>
+               `<span class="practice-score-chip">${scoreToStr(m.score)}</span>`,
+           )
+           .join("")}</div>
+       </div>`
+    : `<div class="practice-alts"><em>No scores available</em></div>`;
+
+  const repliesHtml = repliesList.length
+    ? `<div class="practice-replies">
+         <div class="practice-subheading">Engine replies to your last move</div>
+         <div class="practice-replies-list">${repliesList
+           .slice(0, 5)
+           .map((m, i) => {
+             const s = scoreToStr(m.score);
+             return `${i + 1}. ${m.move} (score ${s})`;
+           })
+           .join("<br/>")}</div>
+       </div>`
+    : `<div class="practice-replies"><em>No replies available</em></div>`;
+
+  container.innerHTML = `${altsHtml}<div style="height:6px"></div>${repliesHtml}`;
 }

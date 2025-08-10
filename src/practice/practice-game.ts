@@ -289,9 +289,7 @@ export function makeMove(
     clearAllArrows();
 
     // Update top moves panel for the new current position
-    try {
-      updateTopMovesPanelIfPresent(gameState, dom);
-    } catch {}
+    updateTopMovesPanelIfPresent(gameState, dom, undefined, true);
 
     // Check if we've reached the max human moves
     if (gameState.currentDepth >= gameState.maxDepth) {
@@ -704,6 +702,9 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
         isWhite,
       });
 
+      // Record last engine move in long notation for panel highlighting
+      gameState.lastEngineMoveLong = fromToSquares;
+
       addMoveToHistory(dom.moveHistory, computerMoveNotation, true);
 
       // Re-render the board with the new FEN
@@ -711,6 +712,9 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
 
       // Highlight the last move (computer move)
       highlightLastMove(fromSquare, toSquare);
+
+      // Update top moves panel to show engine's replies for this new computer-to-move position (or next human-to-move if you prefer)
+      updateTopMovesPanelIfPresent(gameState, dom, undefined, true);
 
       // Check if we've reached the max depth
       if (gameState.currentDepth >= gameState.maxDepth) {
@@ -729,9 +733,7 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
           console.log("Available next moves:", nextAvailableMoves);
           // Human's turn
           gameState.isHumanTurn = true;
-          try {
-            updateTopMovesPanelIfPresent(gameState, dom);
-          } catch {}
+          updateTopMovesPanelIfPresent(gameState, dom, undefined, true);
         } else {
           // Check if there's a pinned position to restart from
           if (gameState.pinnedPosition) {
@@ -760,7 +762,12 @@ export function makeComputerMove(gameState: GameState, dom: DOMElements): void {
 }
 
 // Local helper to call the panel update from practice.ts without circular import
-function updateTopMovesPanelIfPresent(gameState: GameState, _dom: DOMElements) {
+function updateTopMovesPanelIfPresent(
+  gameState: GameState,
+  _dom: DOMElements,
+  _fenOverride?: string,
+  _scoresOnly?: boolean,
+) {
   const panel = document.getElementById("practice-top-moves");
   if (!panel) return;
   const meta = gameState.positionTopMoves;
@@ -768,23 +775,131 @@ function updateTopMovesPanelIfPresent(gameState: GameState, _dom: DOMElements) {
     panel.innerHTML = "<em>No engine metadata loaded</em>";
     return;
   }
-  const list = meta.get(gameState.currentFEN);
-  if (!list || list.length === 0) {
-    panel.innerHTML = "<em>No top moves for this position</em>";
-    return;
-  }
-  const items = list
-    .map((m, i) => {
-      const scoreStr =
-        Math.abs(m.score) >= 10000
-          ? m.score > 0
-            ? "#"
-            : "-#"
-          : (m.score / 100).toFixed(2);
-      return `${i + 1}. ${m.move}  (score ${scoreStr})`;
-    })
-    .join("<br/>");
-  panel.innerHTML = items;
+
+  const currentFEN = gameState.currentFEN;
+  const prevHumanFEN =
+    gameState.positionHistory.length >= 2
+      ? gameState.positionHistory[gameState.positionHistory.length - 2]
+      : null;
+
+  const altsList = meta.get(currentFEN) || [];
+  const repliesList = gameState.isHumanTurn
+    ? prevHumanFEN
+      ? meta.get(prevHumanFEN) || []
+      : []
+    : meta.get(currentFEN) || [];
+
+  const scoreToStr = (cp: number) =>
+    Math.abs(cp) >= 10000 ? (cp > 0 ? "#" : "-#") : (cp / 100).toFixed(2);
+
+  const altsHtml = altsList.length
+    ? `<div class="practice-alts">
+         <div class="practice-subheading">Scores for top-5 options</div>
+         <div class="practice-score-row">${altsList
+           .slice(0, 5)
+           .map(
+             (m) =>
+               `<span class=\"practice-score-chip\">${scoreToStr(m.score)}</span>`,
+           )
+           .join("")}</div>
+       </div>`
+    : `<div class="practice-alts"><em>No scores available</em></div>`;
+
+  // Determine FEN context for replies (same logic as list origin)
+  const fenForReplies = gameState.isHumanTurn
+    ? prevHumanFEN || gameState.currentFEN
+    : gameState.currentFEN;
+  const notationToggle = document.getElementById(
+    "practice-notation-toggle",
+  ) as HTMLSelectElement | null;
+  const pieceFormat =
+    notationToggle?.value === "unicode" ? "unicode" : "english";
+
+  const repliesHtml = repliesList.length
+    ? `<div class="practice-replies">
+         <div class="practice-subheading">Engine replies to your last move</div>
+         <div class="practice-replies-row">${repliesList
+           .slice(0, 5)
+           .map((m) => {
+             const s = scoreToStr(m.score);
+             const cls =
+               Math.abs(m.score) >= 10000
+                 ? "score-mate"
+                 : m.score > 0
+                   ? "score-positive"
+                   : m.score < 0
+                     ? "score-negative"
+                     : "score-neutral";
+             const isLast =
+               gameState.lastEngineMoveLong &&
+               m.move === gameState.lastEngineMoveLong;
+             const hi = isLast ? " highlight" : "";
+             const from = m.move.substring(0, 2);
+             const to = m.move.substring(2, 4);
+             // Convert to SAN for display, keep long in title
+             let displayMove = m.move;
+             const parsed = parseMove(m.move, fenForReplies);
+             if (parsed) {
+               displayMove = moveToNotation(
+                 parsed,
+                 "short",
+                 pieceFormat,
+                 fenForReplies,
+               );
+             }
+             return `<span class=\"practice-reply-chip${hi}\" data-from=\"${from}\" data-to=\"${to}\" title=\"${m.move}\"><span class=\"reply-move\">${displayMove}</span><span class=\"reply-score ${cls}\">${s}</span></span>`;
+           })
+           .join("")}</div>
+       </div>`
+    : `<div class="practice-replies"><em>No replies available</em></div>`;
+
+  panel.innerHTML = `${altsHtml}<div style="height:6px"></div>${repliesHtml}`;
+
+  // Hover arrows on reply chips
+  const chips = panel.querySelectorAll(".practice-reply-chip");
+  chips.forEach((chip) => {
+    chip.addEventListener("mouseenter", () => {
+      const from = (chip as HTMLElement).getAttribute("data-from");
+      const to = (chip as HTMLElement).getAttribute("data-to");
+      if (!from || !to) return;
+      const existing = document.querySelector(".practice-arrow-preview");
+      if (existing) existing.remove();
+      const board = document.querySelector(
+        ".practice-board",
+      ) as HTMLElement | null;
+      const fromEl = document.querySelector(
+        `[data-square="${from}"]`,
+      ) as HTMLElement | null;
+      const toEl = document.querySelector(
+        `[data-square="${to}"]`,
+      ) as HTMLElement | null;
+      if (!board || !fromEl || !toEl) return;
+      const br = board.getBoundingClientRect();
+      const fr = fromEl.getBoundingClientRect();
+      const tr = toEl.getBoundingClientRect();
+      const fx = fr.left + fr.width / 2 - br.left;
+      const fy = fr.top + fr.height / 2 - br.top;
+      const tx = tr.left + tr.width / 2 - br.left;
+      const ty = tr.top + tr.height / 2 - br.top;
+      const angle = Math.atan2(ty - fy, tx - fx);
+      const dist = Math.hypot(tx - fx, ty - fy);
+      const preview = document.createElement("div");
+      preview.className = "practice-arrow-preview";
+      preview.style.left = `${fx}px`;
+      preview.style.top = `${fy}px`;
+      preview.style.width = `${Math.max(0, dist - 20)}px`;
+      preview.style.transform = `rotate(${angle}rad)`;
+      preview.style.transformOrigin = "0 50%";
+      preview.style.setProperty("--arrow-color", "rgba(0, 123, 255, 0.95)");
+      const existing2 = document.querySelector(".practice-arrow-preview");
+      if (existing2) existing2.remove();
+      board.appendChild(preview);
+    });
+    chip.addEventListener("mouseleave", () => {
+      const existing = document.querySelector(".practice-arrow-preview");
+      if (existing) existing.remove();
+    });
+  });
 }
 
 // Select computer move based on strategy

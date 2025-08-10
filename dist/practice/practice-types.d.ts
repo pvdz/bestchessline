@@ -30,6 +30,7 @@ export interface GameState {
     accuracy: number;
     lineAttempts: Record<string, number>;
   };
+  lastEngineMoveLong?: string | null;
 }
 export interface ChessMove {
   from: string;

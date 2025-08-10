@@ -358,23 +358,23 @@ const initializeEventListeners = (): void => {
       // Set default responder to 2
       const defaultResponder = getInputElement("fish-default-responder-count");
       if (defaultResponder) {
-        defaultResponder.value = "2";
+        defaultResponder.value = "5";
         const val = getElementByIdOrThrow("fish-default-responder-count-value");
-        val.textContent = "2";
+        val.textContent = "5";
       }
 
       // Clear responder overrides
       const overrides = getInputElement("fish-responder-counts");
       if (overrides) {
-        overrides.value = "";
+        overrides.value = "10 10";
       }
 
       // Set move depth to 4
       const depthInput = getInputElement("fish-depth");
       if (depthInput) {
-        depthInput.value = "4";
+        depthInput.value = "5";
         const depthVal = getElementByIdOrThrow("fish-depth-value");
-        depthVal.textContent = "4";
+        depthVal.textContent = "5";
       }
     });
   }

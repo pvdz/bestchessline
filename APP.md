@@ -1,306 +1,110 @@
-# App status
+# Best Chess Line – App Overview
+
+This document is the high‑level mental model for the project. Read it to get productive fast without opening every file.
+
+## What the app does
+
+A browser-based chess toolkit with three complementary workflows:
+
+- Next Best Moves (bestmove panel)
+  - Runs Stockfish on the current board position and shows the best lines (mate-aware scores, depths, PVs).
+  - Lets you apply a suggested move directly to the game.
+
+- Line Fisher (deep line discovery)
+  - Systematically explores a position by alternating between an Initiator move (player) and Responder moves (engine, top‑N).
+  - Maintains WIP (queue) and Done lists of lines; each line is a sequence of PCN moves with metadata.
+  - Exposes structured per-line metadata for Practice: alts (top‑5 human alternatives, scores) and replies (top‑5 engine replies, move+score).
+
+- Practice (openings trainer)
+  - Imports opening lines as SAN/PCN or the structured Fish export/copy format.
+  - Trains the user by checking correctness, tracking stats, and showing:
+    - Human’s “Scores for top‑5 options” (scores-only chips).
+    - Engine “Replies to your last move” (SAN move + score chips) that stay visible across turns.
+
+All workflows share core utilities for FEN, move parsing/formatting, and Stockfish integration.
+
+## Directory map (high level)
+
+- `src/line/`
+  - `best/` – bestmove manager, PV formatting, UI config, utilities
+  - `fish/` – fisher state/loop, UI, copy/export, structured metadata
+  - `board/` – board rendering, navigation, arrows, position controls
+  - `main.ts` – analysis page bootstrap and orchestration
+- `src/practice/` – practice app (board, parser, UI, game flow)
+- `src/utils/` – Stockfish client, FEN/move/notation helpers, DOM/status/buttons/formatting
+- `dist/` – built artifacts and Stockfish workers
+
+## Core modules (what to read first)
+
+- Stockfish client: `src/utils/stockfish-client.ts`
+  - Web Worker integration (multi-thread when SharedArrayBuffer is available; fallback worker otherwise).
+  - UCI lifecycle: `uci` → `isready` → `ucinewgame/position/setoption` → `go/stop`.
+  - Streams “info … pv …” updates (depth, score, mate, PV) to a typed callback.
+  - Resolves with a typed `AnalysisResult` on `bestmove`.
+  - `getCurrentAnalysisSnapshot()` exposes a stable snapshot for tickers.
+
+- Bestmove (Next Best Moves)
+  - `src/line/best/bestmove-manager.ts` – start/stop, render best lines, status, PV click‑to‑apply, mate‑aware sort.
+  - `src/line/best/bestmove-pv-utils.ts` – PV formatting with effects and click metadata.
+  - `src/line/best/bestmove-config.ts` – UI options (depth, threads, MultiPV) and button state.
+
+- Line Fisher
+  - State/types: `src/line/fish/types.ts`
+  - Orchestration: `src/line/fish/fish.ts`
+  - Search loop: `src/line/fish/fishing.ts`
+    - Initiator step: choose one move (from predefined or engine); record `alts` (top‑5 human alternatives, scores) by reference.
+    - Responder step: compute `best5` once (top‑5 engine replies, move+score) for the line; record `replies` by reference.
+  - UI/preview/status: `src/line/fish/fish-ui.ts`
+  - Copy/Export: per-line trailing JSON includes `alts` and `replies` for Practice to consume.
+
+- Practice
+  - Bootstrap & import: `src/practice/practice.ts`
+    - Parses SAN/PCN or Fish JSON; or per‑line copy with `// { … }` metadata.
+    - Replays moves from the starting FEN to map metadata to positions:
+      - `alts` → previous human FEN (scores chips)
+      - `replies` → current engine FEN (move + score chips)
+  - Game flow: `src/practice/practice-game.ts`
+    - Human turn: shows “Scores for top‑5 options” (scores‑only chips).
+    - Computer turn: shows engine “Replies to your last move” (SAN move + score) and keeps it visible when human starts next move.
+  - Board/UI: `src/practice/practice-board.ts`, `src/practice/practice.css`, `src/practice/practice-ui.ts`
+
+## Key terms & data shapes
+
+- FEN – Forsyth–Edwards Notation; we index metadata by FEN and step positions via `applyMoveToFEN()`.
+- Move notations
+  - SAN – e.g., `Nf3`, `O-O` (user facing)
+  - PCN – e.g., `Ng1f3` (internal clarity)
+  - Long – e.g., `g1f3` (Stockfish and practice mapping)
+- `AnalysisMove` – `{ move: ChessMove, score: number, depth: number, pv: ChessMove[], nodes: number, time: number, mateIn: number, multipv?: number }`
+- Fisher metadata on a line
+  - `best5` – engine replies for responder node (move + score), set once per line
+  - `alts` – top‑5 human alternatives (scores) for the last initiator move
+  - `replies` – the engine’s top‑5 replies (move + score) to that last human move
+
+## Sorting & scores (shared behavior)
+
+- Scores are normalized to White’s perspective. When Black to move, invert for comparison.
+- Comparator `compareAnalysisMoves()` is mate‑aware and supports prioritizing depth or score (bestmove favors mate/depth, fisher top‑5 often favors score per side‑to‑move).
+
+## UI conventions
+
+- Plain TS + HTML + CSS; no frameworks.
+- Strong IDs + `getElementByIdOrThrow()` for reliability and greppability.
+- Keep UI updates simple and explicit; avoid broad try/catch in UI.
+
+## Constraints & style
+
+- Strict TypeScript; no `any` (use `unknown` sparingly, cast intentionally).
+- No classes, no generators, no dynamic imports; small, focused modules.
+- Minimal temporary logging; remove after use.
+
+## Quick start reading
 
-This file serves as the AI memory/description for this application. It should reflect the current project status such that an AI can take a task for this project and complete it without having to analyze every file in detail.
+- Bestmove: `src/line/best/bestmove-manager.ts`, `src/utils/stockfish-client.ts`
+- Fisher: `src/line/fish/fishing.ts`, `src/line/fish/fish.ts`, `src/line/fish/types.ts`
+- Practice: `src/practice/practice.ts`, `src/practice/practice-game.ts`
+- Utilities: `src/utils/` (Stockfish client, FEN/move parsing, DOM helpers)
 
-### File Organization - COMPLETED ✅
+IMPORTANT
 
-The project has been reorganized with a clean, modular structure:
-
-**Line-specific files organized into subdirectories:**
-
-- `src/line/fish/` - Fish analysis utilities (`line-fisher-ui-utils.ts`, `line-fisher-calculations.ts`)
-- `src/line/best/` - Best engine moves analysis (`analysis-manager.ts`, `analysis-utils.ts`, `analysis-config.ts`, `pv-utils.ts`)
-- `src/line/board/` - Game board components (`board-utils.ts`, `board-rendering.ts`, `position-controls.ts`, `arrow-utils.ts`, `game-navigation.ts`)
-- `src/line/` - Root level line utilities (`line-analysis.ts`, `main.ts`)
-
-**Generic utilities remain in `src/utils/`:**
-
-- Core utilities: `fen-utils.ts`, `notation-utils.ts`, `move-parsing.ts`, `dom-helpers.ts`
-- Analysis utilities: `analysis-manager.ts`, `pv-utils.ts`
-- UI utilities: `ui-utils.ts`, `button-utils.ts`, `formatting-utils.ts`
-
-### Types Refactoring - COMPLETED ✅
-
-**Shared types moved to `src/utils/types.ts`:**
-
-- Core chess types: `ChessMove`, `ChessPosition`, `PLAYER_COLORS`, `AnalysisMove`, etc.
-- Stockfish types: `StockfishState`, `StockfishInstance`, `StockfishOptions`
-- UI types: `MoveItemElement`, `AnalysisResultsElement`, `ButtonElement`, etc.
-- Piece notation types: `PieceNotation`, `WhitePieceNotation`, `BlackPieceNotation`
-
-**Line-specific types in `src/line/types.ts`:**
-
-- Line Fisher types: `LineFisherConfig`, `LineFisherResult`, `FishLine`, `FishState`
-- Tree digger types: `TreeDiggerNode`, `TreeDiggerAnalysis`
-- Extended app state: `ExtendedAppState`, `BranchState`
-
-### Fish Function Implementation - COMPLETED ✅
-
-The `fish()` function has been fully implemented with the following features:
-
-- **Queue-based analysis**: Uses WIP (work-in-progress) and done lists
-- **Initiator/Responder logic**: Alternates between initiator and responder moves
-- **Predefined moves**: Supports `initiatorMoves` array
-- **Responder overrides**: Supports `responderMoveCounts` array
-- **Stockfish integration**: Uses `analyzePosition` for move generation
-- **Delta calculations**: Calculates deltas from baseline score
-- **UI integration**: Real-time progress and results display
-- **Export functionality**: Clipboard export for WIP and done lines
-
-### Stockfish Integration - COMPLETED ✅
-
-**Stockfish worker paths fixed:**
-
-- Main mode: `../dist/stockfish.js` (multi-threaded)
-- Fallback mode: `../dist/stockfish-single.js` (single-threaded)
-- Server correctly maps `src/dist/` to `dist/` directory
-
-**SharedArrayBuffer detection:**
-
-- Proper detection of SharedArrayBuffer support
-- Automatic fallback to single-threaded mode when not supported
-- Server sends required headers: `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`
-
-### Recent Major Fixes:
-
-- ✅ **File Reorganization**: Moved line-specific files to appropriate subdirectories
-- ✅ **Tree Digger Removal**: Eliminated old tree digger components and dependencies
-- ✅ **Import Path Cleanup**: Fixed all import paths after reorganization
-- ✅ **TypeScript Compilation**: Resolved all compilation errors
-- ✅ **createBranch Logic**: Restored without tree digger dependencies
-- ✅ **Types Refactoring**: Moved shared types to `src/utils/types.ts`
-- ✅ **Piece Notation Fix**: Fixed `isPieceNotation` regex to allow lowercase letters
-- ✅ **Stockfish Path Fix**: Fixed worker URLs to use correct relative paths
-- ✅ **Castling Detection Fix**: Improved castling detection to work with any king move >1 square
-- ✅ **Enhanced Confetti System**: Completely reworked confetti with rainbow effects and focused corner pop
-
-### Current Status:
-
-- ✅ **All TypeScript errors fixed**: 0 errors, 0 warnings
-- ✅ **File organization complete**: Clean modular structure
-- ✅ **Fish export/import working**: Full state preservation and reconstruction
-- ✅ **Button states working**: Proper enable/disable during analysis
-- ✅ **Continue functionality working**: Resumes analysis from imported state
-- ✅ **UI display correct**: Imported states show proper completion status
-- ✅ **createBranch restored**: Simple chess move handling without tree digger
-- ✅ **Import paths clean**: All imports correctly resolved
-- ✅ **Stockfish integration working**: Both multi-threaded and single-threaded modes
-- ✅ **Piece notation validation fixed**: Supports both uppercase and lowercase letters
-- ✅ **Castling detection working**: Any king move >1 square triggers castling automatically
-- ✅ **Confetti celebration system**: Enhanced rainbow confetti with focused corner pop effect
-
-## Application Overview
-
-A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, enhanced move validation with effect detection, Fish analysis for deep position analysis, and practice mode with castling detection and celebration effects. Built with simple vanilla TypeScript and HTML/CSS.
-
-## Core Architecture
-
-### State Management
-
-The application uses global state objects to manage different aspects:
-
-```typescript
-// Main application state
-interface AppState {
-  // Game state
-  moves: ChessMove[];
-  initialFEN: string;
-  currentMoveIndex: number;
-
-  // Analysis state
-  isAnalyzing: boolean;
-  currentResults: AnalysisResult | null;
-
-  // Branching state
-  branchMoves: ChessMove[];
-  branchStartIndex: number;
-  isInBranch: boolean;
-}
-
-// Fish analysis state
-interface FishState {
-  isFishing: boolean;
-  wip: FishLine[];
-  done: FishLine[];
-  config: LineFisherConfig;
-}
-
-// Fish line representation
-interface FishLine {
-  sanGame: string;
-  pcns: string[];
-  score: number;
-  delta: number;
-  position: string;
-  isDone: boolean;
-  isFull: boolean;
-}
-```
-
-### Key Components
-
-#### 1. Main Application (`src/line/main.ts`)
-
-- **Orchestration**: Coordinates board, Stockfish, and UI updates
-- **Event Management**: Handles all user interactions and state changes
-- **Game Logic**: Manages move validation, game import, and navigation
-- **Analysis Control**: Manages Stockfish analysis and result display
-- **Branching System**: Temporary move branches for exploring variations
-- **UI State Management**: Button states, analysis status, format controls
-
-#### 2. Fish Analysis (`src/line/fish/fish.ts`)
-
-- **Queue-based Analysis**: WIP and done lists for progressive analysis
-- **Initiator/Responder Logic**: Alternates between predefined and Stockfish moves
-- **Delta Calculations**: Score deltas from baseline position
-- **Export/Import**: Full state preservation and reconstruction
-- **Real-time Updates**: Progress tracking and UI updates
-
-#### 3. Stockfish Integration (`src/utils/stockfish-client.ts`)
-
-- **Multi-threaded Mode**: Uses SharedArrayBuffer for full performance
-- **Single-threaded Fallback**: Automatic fallback when SharedArrayBuffer not available
-- **Worker Management**: Web Worker communication with Stockfish engine
-- **Analysis Queue**: Manages multiple analysis requests
-- **Error Handling**: Comprehensive crash detection and recovery
-
-#### 4. Line Organization (`src/line/`)
-
-- **Fish Utilities** (`src/line/fish/`): Line Fisher UI and calculation utilities
-- **Best Moves** (`src/line/best/`): Analysis management and principal variation utilities
-- **Board Components** (`src/line/board/`): Board rendering, position controls, game navigation
-- **Line Analysis** (`src/line/`): Core line analysis and main application logic
-
-#### 5. Generic Utilities (`src/utils/`)
-
-- **Core Utilities**: FEN manipulation, notation conversion, move parsing
-- **UI Utilities**: DOM helpers, button management, formatting
-- **Analysis Utilities**: Stockfish integration, analysis management
-- **Celebration Utilities**: Enhanced confetti system with rainbow effects
-- **Shared Types**: All core chess types and interfaces
-
-## Key Features & Implementation
-
-### 1. Fish Analysis System
-
-#### Queue-based Analysis
-
-**Critical implementation details:**
-
-- Uses WIP (work-in-progress) and done lists for progressive analysis
-- Alternates between initiator moves (predefined or Stockfish best) and responder moves (multiple Stockfish options)
-- Supports predefined moves via `initiatorMoves` array
-- Supports responder count overrides via `responderMoveCounts` array
-- Calculates deltas from baseline score for move quality assessment
-
-**Analysis Flow:**
-
-1. **Initialization**: Create state, get root score, set baseline
-2. **Initial move**: Create first move (predefined or Stockfish)
-3. **Main loop**: Process WIP queue until empty
-4. **Initiator moves**: Get best move (predefined or Stockfish)
-5. **Responder moves**: Get N best moves, create new lines
-6. **State updates**: Update global state for export functionality
-
-#### Delta Calculation System
-
-**Delta calculation logic:**
-
-- **Baseline**: Root position score (0.0 delta)
-- **Formula**: `delta = moveScore - baselineScore`
-- **Display**: Formatted as "+0.5", "-0.3", "="
-
-### 2. Stockfish Integration
-
-#### Multi-threaded vs Single-threaded
-
-**Detection logic:**
-
-- **SharedArrayBuffer support**: Detected via WebAssembly.Memory with shared flag
-- **Automatic fallback**: Single-threaded mode when SharedArrayBuffer not available
-- **Performance difference**: Multi-threaded significantly faster for complex analysis
-
-**Worker paths:**
-
-- **Multi-threaded**: `../dist/stockfish.js`
-- **Single-threaded**: `../dist/stockfish-single.js`
-- **Server mapping**: `src/dist/` → `dist/` directory
-
-### 3. File Organization
-
-#### Modular Structure
-
-**Line-specific organization:**
-
-- **Fish analysis**: `src/line/fish/` - Line Fisher UI and calculations
-- **Best moves**: `src/line/best/` - Analysis management and PV utilities
-- **Board components**: `src/line/board/` - Board rendering and game navigation
-- **Core line logic**: `src/line/` - Main application and line analysis
-
-**Generic utilities:**
-
-- **Core utilities**: `src/utils/` - FEN, notation, move parsing, DOM helpers
-- **Analysis utilities**: `src/utils/` - Stockfish integration, analysis management
-- **UI utilities**: `src/utils/` - Button management, formatting, notifications
-
-### 4. Import/Export System
-
-#### State Preservation
-
-**Export functionality:**
-
-- **Full state export**: Complete `FishState` object with WIP and done lines
-- **Format preservation**: PCN moves, scores, deltas, completion status
-- **Import reconstruction**: Full state restoration from exported data
-- **Toast notifications**: Success/error feedback to user
-
-### 5. Practice Mode System
-
-#### Castling Detection
-
-**Enhanced castling logic:**
-
-- **Distance-based detection**: Any king move >1 square triggers castling
-- **Direction detection**: Right movement = kingside (O-O), left = queenside (O-O-O)
-- **No validation**: Castling always works regardless of position map
-- **Automatic rook movement**: Both king and rook move simultaneously
-
-#### Celebration System
-
-**Enhanced confetti effects:**
-
-- **Focused corner pop**: All confetti launches from bottom-right corner
-- **Rainbow color palette**: 12 vibrant colors with varied particle shapes
-- **Realistic physics**: Gravity, air resistance, rotation, and scaling
-- **High velocity**: 700-1500+ initial speed for dramatic effect
-- **Trail effects**: Particles leave colorful trails as they move
-- **Performance optimized**: Efficient particle management and cleanup
-
-## Development Patterns
-
-### File Organization
-
-- **Line-specific files**: Organized into appropriate subdirectories under `src/line/`
-- **Generic utilities**: Remain in `src/utils/` for shared access
-- **Import paths**: Use relative paths from current file location
-- **Type definitions**: Centralized in `src/utils/types.ts` and `src/line/types.ts`
-
-### Code Style
-
-- **TypeScript**: Strict typing with proper interfaces
-- **Error handling**: Comprehensive try-catch blocks with user feedback
-- **Logging**: Debug logging for development and troubleshooting
-- **Modular design**: Clear separation of concerns with focused modules
-
-### Testing Approach
-
-- **TypeScript compilation**: Always check for errors before testing
-- **Incremental development**: Small, focused changes with immediate validation
-- **User feedback**: Toast notifications and status updates for user guidance
-
-### Stockfish Configuration
-
-- **Multi-threaded mode**: Default when SharedArrayBuffer supported
-- **Single-threaded fallback**: Automatic when SharedArrayBuffer not available
-- **Server headers**: Required for SharedArrayBuffer support
-- **Worker paths**: Correctly mapped for both modes
+Always follow RULES.md
