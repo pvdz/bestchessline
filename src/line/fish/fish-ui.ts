@@ -13,7 +13,8 @@ import {
   calculateResponderNodes,
 } from "./fish-calculations.js";
 import { getCurrentFishState } from "./fish-state.js";
-import { getCurrentAnalysisSnapshot } from "../../utils/stockfish-client.js";
+// Removed unused import
+// import { getCurrentAnalysisSnapshot } from "../../utils/stockfish-client.js";
 import { compareAnalysisMoves } from "../best/bestmove-utils.js";
 import { parseFEN } from "../../utils/fen-utils.js";
 import { PLAYER_COLORS, AnalysisMove, ChessMove } from "../types.js";
@@ -194,6 +195,24 @@ export function updateFishProgress(state: FishState): void {
 
     updateLiveLinesPreview();
 
+    // Live Stockfish stats (nps, depth, nodes, time)
+    const statusBar = document.getElementById("fish-status");
+    if (statusBar) {
+      const onStats = (e: Event) => {
+        const { nps, depth, nodes, time } = (e as CustomEvent).detail || {};
+        if (typeof nps === "number" && typeof depth === "number") {
+          statusBar.textContent = `Analyzing… d${depth} | ${(nps || 0).toLocaleString()} nps | ${(nodes || 0).toLocaleString()} nodes | ${time || 0}ms`;
+        }
+      };
+      // Attach once; remove previous to avoid duplicates
+      window.removeEventListener(
+        "stockfish-stats",
+        (statusBar as any).__onStats,
+      );
+      window.addEventListener("stockfish-stats", onStats as EventListener);
+      (statusBar as any).__onStats = onStats;
+    }
+
     // Also update PV ticker (throttled internally) using last snapshot
     if (lastFishPvMoves)
       updateFishPvTickerThrottled(lastFishPvMoves, lastFishPvFen);
@@ -208,7 +227,7 @@ export function updateFishProgress(state: FishState): void {
 const FISH_PV_MIN_INTERVAL_MS = 1000;
 let lastFishPvMoves: null | AnalysisMove[] = [];
 let lastFishPvFen: string = "";
-let fishPvTickerTimer: any;
+let fishPvTickerTimer: ReturnType<typeof setTimeout> | null;
 
 export function updateFishPvTickerThrottled(
   moves: AnalysisMove[],
@@ -219,11 +238,9 @@ export function updateFishPvTickerThrottled(
   lastFishPvMoves = moves || [];
   lastFishPvFen = fen || "";
 
-  const now = Date.now();
   if (!force && fishPvTickerTimer) {
     if (!lastFishPvMoves) lastFishPvMoves = moves;
-    return;
-    log("updateFishPvTickerThrottled() nope: throttled");
+    // Throttled; skip this update
     return;
   }
   fishPvTickerTimer = setTimeout(() => {
@@ -432,10 +449,7 @@ export const updateLineElement = (
     lineElement,
     ".fish-line-score",
   ) as HTMLElement;
-  const lineDeltaElement = querySelectorOrThrow(
-    lineElement,
-    ".fish-line-delta",
-  ) as HTMLElement;
+  // Note: delta element is not used in compact view updates
   const lineNotationElement = querySelectorOrThrow(
     lineElement,
     ".fish-line-notation",

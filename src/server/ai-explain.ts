@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseFEN, coordsToSquare, toFEN } from "../utils/fen-utils.js";
 import type { ChessPosition } from "../utils/types.js";
-import { parseMove } from "../utils/move-parsing.js";
+// import { parseMove } from "../utils/move-parsing.js";
 import type { IncomingHttpHeaders } from "node:http";
 
 export interface ExplainRequestBody {
@@ -73,7 +73,7 @@ function writeCacheFile(fen: string, answer: string, prompt: string) {
     );
   } catch {}
 }
-function loadExamples(): any {
+function loadExamples(): Record<string, { answer: string }> {
   try {
     ensureCacheDir();
     if (!fs.existsSync(EXAMPLES_FILE)) return {};

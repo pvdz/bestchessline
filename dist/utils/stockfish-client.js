@@ -324,7 +324,7 @@ async function handleUciMessageFromStockfish(message) {
       }),
     );
   } else if (message === "readyok") {
-    console.log("Stockfish readyok!");
+    // console.log("Stockfish readyok!");
     window.dispatchEvent(new CustomEvent("stockfish-ready"));
     stockfishState.engineStatus.engineReady = true;
     if (stockfishState.pendingAnalysis) {
@@ -332,12 +332,10 @@ async function handleUciMessageFromStockfish(message) {
       updateStockfishState({ pendingAnalysis: null });
       cb();
     }
-    console.log("Go!", stockfishState.go);
+    // console.log("Go!", stockfishState.go);
     uciCmd(stockfishState.go);
   } else if (message.startsWith("bestmove")) {
     // Okay, treat as finish. Assume we've collected all lines (pv's) reported so far
-    const parts = message.split(" ");
-    console.log("Best move (depth mode experiment):", parts[1]);
     await handleStockfishBestMoveMessage();
   } else if (message.startsWith("info")) {
     parseInfoMessage(message);
@@ -381,6 +379,7 @@ function parseInfoMessage(message) {
   let score = 0;
   let pv = [];
   let nodes = 0;
+  let nps = 0;
   let time = 0;
   let multipv = 1; // Default to first principal variation
   let mateIn = 0;
@@ -424,7 +423,10 @@ function parseInfoMessage(message) {
         mateIn = parseInt(parts[++i]);
         break;
       }
-      case "nps":
+      case "nps": {
+        nps = parseInt(parts[++i]);
+        break;
+      }
       case "seldepth":
       case "multipv":
       case "hashfull":
@@ -485,6 +487,14 @@ function parseInfoMessage(message) {
     `Adding new move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}, isBlack=${isBlack}, moves=${stockfishState.currentAnalysis.moves.map((m) => m.move.from + m.move.to).join(", ")}`,
   );
   stockfishState.currentAnalysis.moves.push(analysisMove);
+  // Broadcast live stats for interested UIs (e.g., Fisher)
+  try {
+    window.dispatchEvent(
+      new CustomEvent("stockfish-stats", {
+        detail: { nps, depth, nodes, time },
+      }),
+    );
+  } catch {}
   // Determine direction based on whose turn it is
   const direction = isBlack ? "asc" : "desc";
   // Sort moves based on direction
@@ -575,7 +585,7 @@ async function analyzePositionMono(fen, options = {}) {
   ]
     .filter(Boolean)
     .join(" ");
-  console.log("Sending isready...", options);
+  // console.log("Sending isready...", options);
   uciCmd("isready");
 }
 export function stopAnalysis() {

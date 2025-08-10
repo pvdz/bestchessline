@@ -33,7 +33,7 @@ import {
 import { updateNavigationButtons } from "../utils/button-utils.js";
 import { updateThreadsInputForFallbackMode } from "../utils/thread-utils.js";
 import { getAnalysisOptions } from "./best/bestmove-config.js";
-import { updateLineFisherStatus } from "../utils/status-management.js";
+// import { updateLineFisherStatus } from "../utils/status-management.js";
 import {
   addMove,
   importGame,

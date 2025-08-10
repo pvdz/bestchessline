@@ -1,16 +1,10 @@
-import {
-  parseFEN,
-  squareToCoords,
-  coordsToSquare,
-} from "../utils/fen-utils.js";
+import { parseFEN, coordsToSquare } from "../utils/fen-utils.js";
 import type { GameState, DOMElements } from "./practice-types";
 import { makeMove } from "./practice-game.js";
 import { getPieceAtSquareFromFEN } from "../utils/fen-utils.js";
-import {
-  isArrowDrawingActive,
-  shouldHandleArrowRightClick,
-} from "./practice-arrow-utils.js";
+import { shouldHandleArrowRightClick } from "./practice-arrow-utils.js";
 import { handleSquareClick } from "./practice-game.js";
+import { clearAllArrows } from "./practice-arrow-utils.js";
 
 // Unicode chess pieces
 export const CHESS_PIECES: Record<string, string> = {
@@ -64,6 +58,9 @@ let dragState: DragState = {
   originalSquare: null,
   startPosition: null,
 };
+
+// Track pending right-click square to toggle on mouseup (so we don't interfere with arrow drags)
+let pendingRightClickSquare: string | null = null;
 
 // Store references to event handlers for removal
 let currentHandlers: {
@@ -125,20 +122,17 @@ export function addDragAndDropListeners(
       // Right mouse button
       event.preventDefault();
 
-      // Check if this right-click should be handled by arrow drawing
-      if (shouldHandleArrowRightClick(event)) {
-        // Let the arrow system handle this right-click
-        return;
-      }
+      // If arrow drawing wants this, do not toggle here (defer to mouseup anyway)
 
-      // Otherwise, handle as square selection
-      const squareEl = target.closest(".practice-square") as HTMLElement;
-      if (squareEl) {
-        const square = squareEl.dataset.square;
-        if (square) {
-          toggleSquareSelection(square);
-        }
-      }
+      // Defer toggling to mouseup so it doesn't interfere with gestures
+      const squareEl = (target.closest(".practice-square") ||
+        (target
+          .closest(".practice-piece")
+          ?.closest(".practice-square") as HTMLElement)) as HTMLElement;
+      pendingRightClickSquare = squareEl?.dataset.square || null;
+      console.log("[RC mousedown] square:", pendingRightClickSquare, {
+        isDrawing: (window as any).practiceIsArrowDrawing?.() || false,
+      });
       return;
     }
 
@@ -154,6 +148,10 @@ export function addDragAndDropListeners(
         event.clientY,
         gameState,
       );
+    } else {
+      // Left-click on the board (not on a piece): clear selections and arrows
+      clearBoardSelectionWithoutLastMove();
+      clearAllArrows();
     }
   };
 
@@ -251,6 +249,20 @@ export function addDragAndDropListeners(
   };
 
   const handleMouseUp = (event: MouseEvent): void => {
+    // Right-click toggle occurs on mouseup if not used for arrow drawing
+    if (event.button === 2) {
+      // If an arrow gesture occurred, do not toggle; otherwise toggle pending square
+      const hadArrow =
+        (window as any).practiceConsumeRecentArrowCompleted?.() || false;
+      console.log("[RC mouseup] square:", pendingRightClickSquare, {
+        hadArrow,
+      });
+      if (pendingRightClickSquare && !hadArrow) {
+        toggleSquareSelection(pendingRightClickSquare);
+      }
+      pendingRightClickSquare = null;
+      return;
+    }
     if (dragState.isDragging) {
       endDrag(event.clientX, event.clientY, gameState, dom);
     } else if (dragState.startPosition) {
@@ -476,6 +488,8 @@ export function renderBoard(fen: string): void {
       }
     }
   }
+
+  // No default toggled squares; right-click toggling is handled by mouse events
 }
 
 // Clear board selection
@@ -602,70 +616,7 @@ export function clearBoardSelectionWithoutLastMove(): void {
 }
 
 // Find valid moves for a piece (simplified)
-function findValidMoves(square: string, piece: string, fen: string): string[] {
-  const position = parseFEN(fen);
-  const [rank, file] = squareToCoords(square);
-  const moves: string[] = [];
-
-  // Simple move generation (this is a simplified version)
-  // In a real implementation, you'd want more sophisticated move generation
-
-  if (piece.toUpperCase() === "P") {
-    // Pawn moves
-    const direction = piece === "P" ? -1 : 1;
-    const startRank = piece === "P" ? 6 : 1;
-
-    // Forward move
-    const newRank = rank + direction;
-    if (newRank >= 0 && newRank < 8 && position.board[newRank][file] === "") {
-      moves.push(coordsToSquare(newRank, file));
-
-      // Double move from start
-      if (
-        rank === startRank &&
-        position.board[newRank + direction]?.[file] === ""
-      ) {
-        moves.push(coordsToSquare(newRank + direction, file));
-      }
-    }
-
-    // Captures
-    for (const fileOffset of [-1, 1]) {
-      const newFile = file + fileOffset;
-      if (newFile >= 0 && newFile < 8) {
-        const targetPiece = position.board[newRank]?.[newFile];
-        if (
-          targetPiece &&
-          targetPiece !== "" &&
-          ((piece === "P" && targetPiece === targetPiece.toLowerCase()) ||
-            (piece === "p" && targetPiece === targetPiece.toUpperCase()))
-        ) {
-          moves.push(coordsToSquare(newRank, newFile));
-        }
-      }
-    }
-  } else {
-    // Other pieces - simplified
-    for (let r = 0; r < 8; r++) {
-      for (let f = 0; f < 8; f++) {
-        if (r !== rank || f !== file) {
-          const targetPiece = position.board[r][f];
-          if (
-            targetPiece === "" ||
-            (piece === piece.toUpperCase() &&
-              targetPiece === targetPiece.toLowerCase()) ||
-            (piece === piece.toLowerCase() &&
-              targetPiece === targetPiece.toUpperCase())
-          ) {
-            moves.push(coordsToSquare(r, f));
-          }
-        }
-      }
-    }
-  }
-
-  return moves;
-}
+// Removed unused findValidMoves helper (moved to practice-game alternative)
 
 // Show hint by highlighting a piece
 export function showHint(square: string): void {

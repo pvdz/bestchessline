@@ -368,7 +368,6 @@ export function parseMove(
     // If still not found, try more sophisticated inference based on the destination square
     if (!fromSquare) {
       const toRank = parseInt(toSquare[1]);
-      const toFile = toSquare.charCodeAt(0) - "a".charCodeAt(0);
 
       // For black pawns (moving down), look for pawns on higher ranks
       if (!isWhiteTurn) {

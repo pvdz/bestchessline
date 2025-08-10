@@ -26,10 +26,10 @@ export async function initFishing() {
   // Get root score and update config
   let rootAnalysis;
   try {
-    console.log(
-      "SF: 5 for root analysis:",
-      getCurrentFishState().config.threads,
-    );
+    // console.log(
+    //   "SF: 5 for root analysis:",
+    //   getCurrentFishState().config.threads,
+    // );
     rootAnalysis = await analyzePosition(
       rootFEN,
       {
@@ -80,7 +80,7 @@ export async function initInitialMove() {
  */
 async function createInitialMove() {
   const { config } = getCurrentFishState();
-  console.log("SF: createInitialMove()", config.initiatorMoves[0]);
+  // console.log("SF: createInitialMove()", config.initiatorMoves[0]);
   // Check if there's a predefined move for depth 0
   const predefinedMove = config.initiatorMoves[0];
   if (predefinedMove) {
@@ -96,17 +96,17 @@ async function createInitialMove() {
     let score = 0;
     if (top) {
       score = top.score;
-      console.log(
-        "SF: initial move was part of top5 of the root position (",
-        predefinedMove,
-        ")",
-      );
+      // console.log(
+      //   "SF: initial move was part of top5 of the root position (",
+      //   predefinedMove,
+      //   ")",
+      // );
     } else {
-      console.log(
-        "SF: initial move (find out for predefined move",
-        predefinedMove,
-        ")",
-      );
+      // console.log(
+      //   "SF: initial move (find out for predefined move",
+      //   predefinedMove,
+      //   ")",
+      // );
       const analysis = await analyzePosition(
         newFEN,
         {
@@ -148,7 +148,7 @@ async function createInitialMove() {
     };
   } else {
     // Ask Stockfish for best move
-    console.log("SF: initial move (find best for missing a predefined move)");
+    // console.log("SF: initial move (find best for missing a predefined move)");
     const analysis = await analyzePosition(
       config.rootFEN,
       {
@@ -235,8 +235,9 @@ async function findNextResponseMoves(onUpdate) {
   const responderCount =
     config.responderMoveCounts?.[depth] || config.defaultResponderCount;
   // Get N best moves from Stockfish
-  onUpdate?.("Analyzing responder options…");
-  console.log(`SF: ${responderCount} for findNextResponseMoves()`);
+  onUpdate?.(`Analyzing responder options to ${line.pcns.join(" ")}`);
+  updateFishStatus(`Analyzing responder options to ${line.pcns.join(" ")}`);
+  // console.log(`SF: ${responderCount} for findNextResponseMoves()`);
   const analysis = await analyzePosition(
     line.position,
     {
@@ -245,12 +246,7 @@ async function findNextResponseMoves(onUpdate) {
       depth: 20,
     },
     (res) => {
-      const minDepth = res.moves.length
-        ? Math.min(...res.moves.map((m) => m.depth))
-        : 0;
-      updateFishStatus(
-        `Analyzing responder options… (min d${minDepth}/${res.depth})`,
-      );
+      // just update PV ticker; depth display handled elsewhere
       updateFishPvTickerThrottled(res.moves, res.position);
     },
   );
@@ -319,8 +315,9 @@ async function findBestInitiatorMove(onUpdate) {
   // the best responses to predefined steps. First two steps leads to only 200k
   // positions. We can easily hold that and apply a filter for predefined moves.
   // Get best moves from Stockfish
-  onUpdate?.("Analyzing initiator best move…");
-  console.log("SF: 5 for findBestInitiatorMove()");
+  onUpdate?.(`Analyzing initiator best moves to ${line.pcns.join(" ")}`);
+  updateFishStatus(`Analyzing initiator best moves to ${line.pcns.join(" ")}`);
+  // console.log("SF: 5 for findBestInitiatorMove()");
   const analysis = await analyzePosition(
     line.position,
     {
@@ -329,12 +326,6 @@ async function findBestInitiatorMove(onUpdate) {
       multiPV: 5,
     },
     (res) => {
-      const minDepth = res.moves.length
-        ? Math.min(...res.moves.map((m) => m.depth))
-        : 0;
-      updateFishStatus(
-        `Analyzing initiator best move… (min d${minDepth}/${res.depth})`,
-      );
       updateFishPvTickerThrottled(res.moves, res.position);
     },
   );

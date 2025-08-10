@@ -7,7 +7,7 @@ export declare function getRandomProofString(): string;
 export declare function sortPvMoves(
   moves: AnalysisMove[],
   firstMoveTurn: "w" | "b",
-  maxDepth?: number,
+  _maxDepth?: number,
 ): AnalysisMove[];
 export declare function filterPvMoves(
   moves: AnalysisMove[],

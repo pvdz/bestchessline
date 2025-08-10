@@ -1,12 +1,260 @@
 import { initializeBoard, renderBoard, addDragAndDropListeners, reAddDragAndDropListeners, clearRightClickSelections, clearLastMoveHighlight, clearBoardSelectionWithoutLastMove, } from "./practice-board.js";
 import { parseOpeningLines, convertOpeningLinesToPCN, buildPositionMap, } from "./practice-parser.js";
 import { updateStatistics, updateStatus, clearMoveHistory, showSuccessToast, showErrorToast, showInfoToast, showWarningToast, updateMoveHistoryDisplay, } from "./practice-ui.js";
-import { triggerRainbowBurst, } from "../utils/confetti-utils.js";
-import { makeComputerMove, showHintForCurrentPosition, } from "./practice-game.js";
+import { triggerRainbowBurst } from "../utils/confetti-utils.js";
+import { showHintForCurrentPosition } from "./practice-game.js";
+import { highlightLastMove } from "./practice-board.js";
 import { initializeArrowDrawing, cleanupArrowDrawing, clearAllArrows, } from "./practice-arrow-utils.js";
 import { parseMove } from "../utils/move-parsing.js";
+import { parseFEN } from "../utils/fen-utils.js";
 import { applyMoveToFEN } from "../utils/fen-manipulation.js";
-// Server-side AI integration
+function buildEngineSummaryForCurrentPosition() {
+    // Placeholder: we could aggregate existing meta if present
+    return "";
+}
+function buildCoachPrompt(input) {
+    const ascii = buildAsciiBoard(input.fen);
+    const pieces = listPiecesFromFen(input.fen);
+    const engineTop5 = getTop5ForCurrentFEN();
+    return [
+        "You are a chess coach. Given a FEN, provide a structured analysis.",
+        "Return ONLY valid JSON matching this TypeScript interface:",
+        "{",
+        '  "summary": string,',
+        '  "generalIdea": string,',
+        '  "generalIdeaSteps"?: { text: string, actions?: Array<',
+        "    { type: 'arrow', from: string, to: string, color?: string } | ",
+        "    { type: 'setPosition', fen: string } | ",
+        "    { type: 'highlight', squares: string[], style?: 'hint' | 'select' } | ",
+        "    { type: 'wait', ms: number }",
+        "  > }[],",
+        '  "ideasWhite": string,',
+        '  "ideasWhiteSteps"?: CoachStep[],',
+        '  "ideasBlack": string,',
+        '  "ideasBlackSteps"?: CoachStep[],',
+        '  "terminology": string[],',
+        '  "study": string[],',
+        '  "knownPositions": string[],',
+        '  "pitfalls": string[],',
+        '  "themes": string[]',
+        "}",
+        "Guidelines:",
+        "- Be accurate and concise; avoid speculation.",
+        "- Use plain language; short paragraphs.",
+        "- terminology: 5-10 key terms relevant to the position/opening.",
+        "- study: books/chapters/keywords to research.",
+        "- knownPositions: list of named lines/positions if applicable.",
+        "- pitfalls: common traps or mistakes to avoid.",
+        "- themes: high-level motifs (pawn structure, typical maneuvers).",
+        "- For *Steps arrays*, include succinct steps for animating the idea; annotate with actions to draw arrows, set positions, highlight squares, and waits.",
+        "- Keep actions conservative and valid from the given FEN.",
+        `FEN: ${input.fen}`,
+        input.openingHint ? `Opening context: ${input.openingHint}` : "",
+        "",
+        "Pieces (side@square):",
+        pieces,
+        "",
+        "ASCII Board:",
+        ascii,
+        "",
+        "Engine top-5 (long, cp):",
+        engineTop5.length ? engineTop5.join("\n") : "(none)",
+    ]
+        .filter(Boolean)
+        .join("\n");
+}
+function parseCoachResponse(text) {
+    try {
+        return JSON.parse(text);
+    }
+    catch {
+        return {
+            summary: "",
+            generalIdea: "",
+            ideasWhite: "",
+            ideasBlack: "",
+            terminology: [],
+            study: [],
+            knownPositions: [],
+            pitfalls: [],
+            themes: [],
+        };
+    }
+}
+function renderCoachSections(data, summaryEl, sectionsEl) {
+    summaryEl.textContent = data.summary || "";
+    const section = (title, body) => {
+        const content = Array.isArray(body) ? body.join("\n") : body;
+        return `\n<div class="ai-card"><h4>${title}</h4><div>${(content || "").replace(/\n/g, "<br/>")}</div></div>`;
+    };
+    const ideaControl = data.generalIdeaSteps && data.generalIdeaSteps.length
+        ? `\n<div style="margin-top:6px;text-align:right"><button class=\"practice-button\" id=\"practice-ai-show-idea\">Show Idea</button></div>`
+        : "";
+    sectionsEl.innerHTML = [
+        `\n<div class="ai-card"><h4>General Idea</h4><div>${(data.generalIdea || "").replace(/\n/g, "<br/>")}</div>${ideaControl}</div>`,
+        section("Ideas for White", data.ideasWhite),
+        section("Ideas for Black", data.ideasBlack),
+        section("Terminology", data.terminology),
+        section("Themes", data.themes),
+        section("Pitfalls", data.pitfalls),
+        section("Known Positions", data.knownPositions),
+        section("Study Next", data.study),
+    ].join("");
+    // Wire Show Idea button
+    const btn = document.getElementById("practice-ai-show-idea");
+    if (btn && data.generalIdeaSteps && data.generalIdeaSteps.length) {
+        btn.onclick = () => openCoachPlayer(data.generalIdeaSteps);
+    }
+}
+function buildMockCoachResponse(kind) {
+    if (kind === "nf3") {
+        return {
+            summary: "1. Nf3 is a flexible Reti start that develops safely, pressures e5/d4, and keeps multiple central plans (d4/c4) and kingside fianchetto available.",
+            generalIdea: "White develops the g1‑knight to f3 (guards e5/d4), then can aim for g3/Bg2 and flexible central breaks with d4 or c4 depending on Black’s setup.",
+            generalIdeaSteps: [
+                {
+                    text: "Develop Nf3 to control e5/d4.",
+                    actions: [{ type: "arrow", from: "g1", to: "f3" }],
+                },
+                {
+                    text: "Prepare kingside fianchetto.",
+                    actions: [{ type: "highlight", squares: ["g2"], style: "hint" }],
+                },
+                {
+                    text: "Keep options for d4 or c4 depending on Black.",
+                    actions: [
+                        { type: "arrow", from: "d2", to: "d4", color: "rgba(0,150,0,0.9)" },
+                        { type: "arrow", from: "c2", to: "c4", color: "rgba(0,150,0,0.9)" },
+                    ],
+                },
+            ],
+            ideasWhite: "Develop Nf3, g3, Bg2, 0-0; decide between d4 or c4 based on Black’s center; later support e4 with c3/d3 or piece coordination.",
+            ideasBlack: "Equalize with …d5/…c5 or …e5. Develop …Nf6, …Be7/…Bb4, and castle; aim for timely …e5 or …c5 breaks against a fianchetto.",
+            terminology: [
+                "Reti",
+                "Hypermodern",
+                "Fianchetto",
+                "Central break",
+                "Flexible move order",
+                "Transposition",
+            ],
+            study: [
+                "Reti: Nunn/Emms chapters",
+                "Hypermodern principles",
+                "English/Reti transpositions",
+                "Fianchetto structures vs …d5/…c5",
+            ],
+            knownPositions: [
+                "Reti vs …d5 (Slav-like)",
+                "Reti vs …c5 (Symmetrical English)",
+                "Reti → Catalan-like if d4 inserted",
+            ],
+            pitfalls: [
+                "Premature e4 without support",
+                "Allowing easy …d5–…c5 equality",
+                "Ignoring …Bb4 pins after Nc3",
+            ],
+            themes: [
+                "Control of e4/d4",
+                "Fianchetto long-diagonal pressure",
+                "Gradual central expansion",
+                "Transposition safety",
+            ],
+        };
+    }
+    return {
+        summary: "1. Nf3 e6 2. g3 leads to a Reti/English hybrid; White fianchettos and retains d4/c4 flexibility while Black holds …d5/…c5 options.",
+        generalIdea: "White prepares Bg2 and 0-0, then chooses c4 or d4 based on Black’s central setup; Black can play …d5 (French-like) or …c5 (English) while developing …Nf6 and castling.",
+        generalIdeaSteps: [
+            {
+                text: "Kingside fianchetto plan: g3 → Bg2 → 0-0.",
+                actions: [{ type: "highlight", squares: ["g2"], style: "hint" }],
+            },
+            {
+                text: "Choose c4 or d4 depending on …d5/…c5.",
+                actions: [
+                    { type: "arrow", from: "c2", to: "c4", color: "rgba(0,150,0,0.9)" },
+                    { type: "arrow", from: "d2", to: "d4", color: "rgba(0,150,0,0.9)" },
+                ],
+            },
+        ],
+        ideasWhite: "Bg2, 0-0, then c4 or d4; pressure light squares and the long diagonal. Prepare e4 later with support.",
+        ideasBlack: "…d5 for French-like structures or …c5 for English ideas; develop …Nf6, …Be7/…Bb4, castle; prepare …e5 or …c5 breaks against White’s fianchetto.",
+        terminology: [
+            "Reti",
+            "English transposition",
+            "French-like center",
+            "Fianchetto",
+            "Central break timing",
+            "Symmetrical English",
+        ],
+        study: [
+            "Reti vs …e6 structures",
+            "English with …e6 setups",
+            "Catalan motifs from Reti move orders",
+        ],
+        knownPositions: [
+            "Reti vs …e6 with …d5",
+            "English with …e6/…c5",
+            "Catalan-like with d4 + Bg2",
+        ],
+        pitfalls: [
+            "Premature d4 vs …c5 equalization",
+            "Neglecting development vs …Bb4+ motifs",
+        ],
+        themes: [
+            "Fianchetto long-diagonal pressure",
+            "Central breaks timing",
+            "Transpositional nuance",
+        ],
+    };
+}
+// Helpers for prompt enrichment
+function buildAsciiBoard(fen) {
+    const pos = parseFEN(fen);
+    const rows = [];
+    rows.push("  +------------------------+");
+    for (let r = 0; r < 8; r++) {
+        const rank = 8 - r;
+        const cells = [];
+        for (let f = 0; f < 8; f++) {
+            const piece = pos.board[r][f] || ".";
+            cells.push(piece);
+        }
+        rows.push(`${rank} | ${cells.join(" ")} |`);
+    }
+    rows.push("  +------------------------+");
+    rows.push("    a b c d e f g h");
+    return rows.join("\n");
+}
+function listPiecesFromFen(fen) {
+    const pos = parseFEN(fen);
+    const white = [];
+    const black = [];
+    const files = "abcdefgh";
+    for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+            const p = pos.board[r][f];
+            if (!p)
+                continue;
+            const sq = `${files[f]}${8 - r}`;
+            if (p === p.toUpperCase())
+                white.push(`${p}@${sq}`);
+            else
+                black.push(`${p}@${sq}`);
+        }
+    }
+    return `White: ${white.join(", ") || "(none)"}\nBlack: ${black.join(", ") || "(none)"}`;
+}
+function getTop5ForCurrentFEN() {
+    try {
+        const list = (gameState.positionTopMoves?.get(gameState.currentFEN) || []).slice(0, 5);
+        return list.map((m) => `${m.move} (${m.score})`);
+    }
+    catch {
+        return [];
+    }
+}
 // Helper function to get element by ID or throw
 function getElementByIdOrThrow(id) {
     const element = document.getElementById(id);
@@ -18,7 +266,9 @@ function getElementByIdOrThrow(id) {
 // Function to analyze maximum depth in opening lines
 function analyzeMaxDepth(openingLines) {
     let maxDepth = 0;
-    let longestLine = null;
+    // Track the longest line to signal UI if needed later
+    // (not used currently)
+    // let _longestLine: OpeningLine | null = null;
     for (const line of openingLines) {
         // Count the number of full moves in this line
         // Each numbered move (1., 2., 3., etc.) represents one full move
@@ -26,7 +276,7 @@ function analyzeMaxDepth(openingLines) {
         const fullMoveCount = Math.ceil(line.moves.length / 2);
         if (fullMoveCount > maxDepth) {
             maxDepth = fullMoveCount;
-            longestLine = line;
+            // _longestLine = line;
         }
     }
     // Return the actual maximum number of human moves
@@ -120,7 +370,10 @@ function initializeDOMElements() {
     const askBtn = getElementByIdOrThrow("practice-ai-ask-btn");
     const modelEl = getElementByIdOrThrow("practice-ai-model");
     const levelEl = getElementByIdOrThrow("practice-ai-level");
-    const questionEl = getElementByIdOrThrow("practice-ai-question");
+    // Follow-up removed; retain a stub element to avoid null references
+    const questionEl = {
+        value: "",
+    };
     const answerEl = getElementByIdOrThrow("practice-ai-answer");
     const apiKeyEl = getElementByIdOrThrow("practice-ai-api-key");
     askBtn.addEventListener("click", async () => {
@@ -128,11 +381,15 @@ function initializeDOMElements() {
             askBtn.setAttribute("aria-busy", "true");
             answerEl.textContent = "Asking AI...";
             const includePrompt = true;
-            const engineSummary = ""; // Optionally provide client-side summary later
+            const engineSummary = buildEngineSummaryForCurrentPosition();
+            const prompt = buildCoachPrompt({
+                fen: gameState.currentFEN,
+                openingHint: undefined,
+            });
             const payload = {
                 fen: gameState.currentFEN,
                 level: levelEl.value || "intermediate",
-                question: questionEl.value,
+                question: prompt,
                 model: modelEl.value.trim() || "gpt-4o-mini",
                 engineSummary,
                 includePrompt,
@@ -161,75 +418,8 @@ function initializeDOMElements() {
             const summary = document.getElementById("practice-ai-summary");
             const sections = document.getElementById("practice-ai-sections");
             if (summary && sections) {
-                let parsed = null;
-                try {
-                    parsed = JSON.parse(rawAnswer);
-                }
-                catch { }
-                if (parsed && typeof parsed === "object") {
-                    // Render structured
-                    summary.textContent = parsed.summary || "";
-                    const cards = [];
-                    if (parsed.background)
-                        cards.push({ title: "Background", body: parsed.background });
-                    if (parsed.themes)
-                        cards.push({ title: "Themes", body: parsed.themes });
-                    if (parsed.plans) {
-                        const pb = [
-                            parsed.plans.white ? `White: ${parsed.plans.white}` : "",
-                            parsed.plans.black ? `Black: ${parsed.plans.black}` : "",
-                        ]
-                            .filter(Boolean)
-                            .join("\n\n");
-                        if (pb)
-                            cards.push({ title: "Plans", body: pb });
-                    }
-                    if (parsed.alternatives)
-                        cards.push({ title: "Alternatives", body: parsed.alternatives });
-                    if (parsed.traps)
-                        cards.push({ title: "Traps & Pitfalls", body: parsed.traps });
-                    if (parsed.study)
-                        cards.push({ title: "Study Next", body: parsed.study });
-                    sections.innerHTML = cards
-                        .map((c) => `\n<div class="ai-card"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`)
-                        .join("");
-                }
-                else {
-                    // Fallback to heuristic parsing
-                    const text = rawAnswer;
-                    const first = text.split(/\n\n+/)[0] || text.substring(0, 240);
-                    summary.textContent = first;
-                    const cards = [];
-                    const add = (title, body) => {
-                        if (!body.trim())
-                            return;
-                        cards.push({ title, body });
-                    };
-                    const blocks = text.split(/\n\s*(?=Ideas:|Background:|Themes:|Alternatives:|Lines:|Games:)/);
-                    if (blocks.length > 1) {
-                        blocks.forEach((b) => {
-                            const m = b.match(/^(Ideas|Background|Themes|Alternatives|Lines|Games):\s*[\r\n]?([\s\S]*)$/);
-                            if (m)
-                                add(m[1], m[2].trim());
-                        });
-                    }
-                    else {
-                        const paras = text.split(/\n\n+/).filter(Boolean);
-                        const chunk = (arr, title) => add(title, arr.join("\n\n"));
-                        if (paras.length >= 4) {
-                            chunk(paras.slice(1, 2), "Background");
-                            chunk(paras.slice(2, 3), "Ideas");
-                            chunk(paras.slice(3, 4), "Alternatives");
-                            chunk(paras.slice(4), "Other notes");
-                        }
-                        else if (paras.length >= 2) {
-                            chunk(paras.slice(1), "Details");
-                        }
-                    }
-                    sections.innerHTML = cards
-                        .map((c) => `\n<div class=\"ai-card\"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`)
-                        .join("");
-                }
+                const parsed = parseCoachResponse(rawAnswer);
+                renderCoachSections(parsed, summary, sections);
             }
         }
         catch (e) {
@@ -241,6 +431,138 @@ function initializeDOMElements() {
             askBtn.setAttribute("aria-busy", "false");
         }
     });
+    // Show Prompt button
+    const showPromptBtn = document.getElementById("practice-ai-show-prompt");
+    if (showPromptBtn) {
+        showPromptBtn.addEventListener("click", () => {
+            const prompt = buildCoachPrompt({ fen: gameState.currentFEN });
+            const answerEl = document.getElementById("practice-ai-answer");
+            if (answerEl) {
+                answerEl.classList.remove("visually-hidden");
+                answerEl.textContent = prompt;
+            }
+            showInfoToast("Prompt shown below");
+        });
+    }
+    // Preview buttons
+    const previewNf3Btn = document.getElementById("practice-ai-preview-nf3");
+    const previewNf3g3Btn = document.getElementById("practice-ai-preview-nf3-g3");
+    if (previewNf3Btn) {
+        previewNf3Btn.addEventListener("click", () => {
+            const mock = buildMockCoachResponse("nf3");
+            const summary = document.getElementById("practice-ai-summary");
+            const sections = document.getElementById("practice-ai-sections");
+            if (summary && sections)
+                renderCoachSections(mock, summary, sections);
+        });
+    }
+    if (previewNf3g3Btn) {
+        previewNf3g3Btn.addEventListener("click", () => {
+            const mock = buildMockCoachResponse("nf3_g3");
+            const summary = document.getElementById("practice-ai-summary");
+            const sections = document.getElementById("practice-ai-sections");
+            if (summary && sections)
+                renderCoachSections(mock, summary, sections);
+        });
+    }
+    // Play back DSL-like steps by executing actions with small delays
+    async function playCoachSteps(steps) {
+        const board = document.querySelector(".practice-board");
+        if (!board)
+            return;
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (const step of steps) {
+            showInfoToast(step.text);
+            if (step.actions) {
+                for (const a of step.actions) {
+                    if (a.type === "wait") {
+                        await sleep(a.ms);
+                    }
+                    else if (a.type === "setPosition") {
+                        gameState.currentFEN = a.fen;
+                        renderBoard(gameState.currentFEN);
+                    }
+                    else if (a.type === "highlight") {
+                        a.squares.forEach((sq) => {
+                            const el = document.querySelector(`[data-square="${sq}"]`);
+                            if (el)
+                                el.classList.add(a.style === "select" ? "selected" : "hint-piece");
+                        });
+                    }
+                    else if (a.type === "arrow") {
+                        const fromEl = document.querySelector(`[data-square="${a.from}"]`);
+                        const toEl = document.querySelector(`[data-square="${a.to}"]`);
+                        if (fromEl && toEl && board) {
+                            const br = board.getBoundingClientRect();
+                            const fr = fromEl.getBoundingClientRect();
+                            const tr = toEl.getBoundingClientRect();
+                            const fx = fr.left + fr.width / 2 - br.left;
+                            const fy = fr.top + fr.height / 2 - br.top;
+                            const tx = tr.left + tr.width / 2 - br.left;
+                            const ty = tr.top + tr.height / 2 - br.top;
+                            const angle = Math.atan2(ty - fy, tx - fx);
+                            const dist = Math.hypot(tx - fx, ty - fy);
+                            const arrow = document.createElement("div");
+                            arrow.className = "practice-arrow";
+                            arrow.style.left = `${fx}px`;
+                            arrow.style.top = `${fy}px`;
+                            arrow.style.width = `${Math.max(0, dist - 20)}px`;
+                            arrow.style.transform = `rotate(${angle}rad)`;
+                            arrow.style.transformOrigin = "0 50%";
+                            arrow.style.setProperty("--arrow-color", a.color || "rgba(0, 123, 255, 0.95)");
+                            board.appendChild(arrow);
+                        }
+                    }
+                }
+            }
+            await sleep(350);
+        }
+    }
+    // expose for inline handler wiring above
+    // expose for debugging
+    window.__playCoachSteps = playCoachSteps;
+    // Coach player state
+    let coachSteps = [];
+    let coachIndex = 0;
+    function openCoachPlayer(steps) {
+        coachSteps = steps.slice(0);
+        coachIndex = 0;
+        const panel = document.getElementById("practice-coach-player");
+        const text = document.getElementById("practice-coach-text");
+        const prev = document.getElementById("practice-coach-prev");
+        const next = document.getElementById("practice-coach-next");
+        const close = document.getElementById("practice-coach-close");
+        if (!panel || !text || !prev || !next || !close)
+            return;
+        panel.style.display = "block";
+        const render = async (idx) => {
+            if (!coachSteps[idx])
+                return;
+            text.textContent = coachSteps[idx].text || "";
+            // Clear arrows/highlights between steps for clarity
+            clearAllArrows();
+            document
+                .querySelectorAll(".practice-square.selected,.practice-square.hint-piece")
+                .forEach((el) => {
+                el.classList.remove("selected", "hint-piece");
+            });
+            await playCoachSteps([coachSteps[idx]]);
+        };
+        prev.onclick = async () => {
+            coachIndex = Math.max(0, coachIndex - 1);
+            await render(coachIndex);
+        };
+        next.onclick = async () => {
+            coachIndex = Math.min(coachSteps.length - 1, coachIndex + 1);
+            await render(coachIndex);
+        };
+        close.onclick = () => {
+            panel.style.display = "none";
+            clearAllArrows();
+        };
+        // start at first step
+        void render(coachIndex);
+    }
     // Quick prompt chips
     const quick = document.getElementById("practice-ai-quick");
     if (quick) {
@@ -252,9 +574,7 @@ function initializeDOMElements() {
             const txt = btn.getAttribute("data-text") || "";
             if (!txt)
                 return;
-            const existing = questionEl.value.trim();
-            questionEl.value = existing ? existing + "\n" + txt : txt;
-            questionEl.focus();
+            // No-op since follow-up field is removed
         });
     }
 }
@@ -396,28 +716,40 @@ function goBackOneMove() {
         showWarningToast("No moves to go back from");
         return;
     }
-    // Remove the last move from history
-    const lastMove = gameState.moveHistory.pop();
-    gameState.positionHistory.pop(); // Remove the last position
+    // Remove last two plies when possible (engine + human) to land at previous human move
+    const removed = [];
+    for (let i = 0; i < 2 && gameState.moveHistory.length > 0; i++) {
+        removed.push(gameState.moveHistory.pop());
+        gameState.positionHistory.pop();
+    }
     // Restore the previous position
     gameState.currentFEN =
         gameState.positionHistory[gameState.positionHistory.length - 1];
-    // Decrement depth
+    // Decrement depth by one human move
     gameState.currentDepth = Math.max(0, gameState.currentDepth - 1);
-    // Update statistics (remove the last correct move)
-    if (lastMove && lastMove.isCorrect) {
+    // Update statistics (remove last human correct move among removed)
+    const lastHuman = removed.find((m) => m.isWhite === (gameState.moveHistory.length % 2 === 0));
+    if (lastHuman && lastHuman.isCorrect) {
         gameState.statistics.correctMoves = Math.max(0, gameState.statistics.correctMoves - 1);
-        gameState.statistics.totalMoves = Math.max(0, gameState.statistics.totalMoves - 1);
     }
+    gameState.statistics.totalMoves = Math.max(0, gameState.statistics.totalMoves - 1);
     // Make it human's turn
     gameState.isHumanTurn = true;
     gameState.isPracticeActive = true;
-    // Clear selections and arrows
-    clearLastMoveHighlight();
+    // Clear selections and arrows (keep last-move indicator; we'll re-apply it)
     clearBoardSelectionWithoutLastMove();
     clearAllArrows();
     // Re-render board and update UI
     renderBoard(gameState.currentFEN);
+    // Re-apply last-move highlight unless we are at the starting position
+    if (gameState.moveHistory.length > 0 &&
+        gameState.positionHistory.length >= 2) {
+        const lastMoveRemain = gameState.moveHistory[gameState.moveHistory.length - 1];
+        const prevFenForLast = gameState.positionHistory[gameState.positionHistory.length - 2];
+        const parsed = parseMove(lastMoveRemain.notation, prevFenForLast);
+        if (parsed)
+            highlightLastMove(parsed.from, parsed.to);
+    }
     reAddDragAndDropListeners(gameState, dom);
     updateStatus(dom, gameState);
     updateStatistics(dom, gameState);
@@ -432,28 +764,39 @@ function goBackOneMoveRandom() {
         showWarningToast("No moves to go back from");
         return;
     }
-    // Remove the last move from history
-    const lastMove = gameState.moveHistory.pop();
-    gameState.positionHistory.pop(); // Remove the last position
+    // Remove last two plies (engine + human) to land at previous human move
+    const removed = [];
+    for (let i = 0; i < 2 && gameState.moveHistory.length > 0; i++) {
+        removed.push(gameState.moveHistory.pop());
+        gameState.positionHistory.pop();
+    }
     // Restore the previous position
     gameState.currentFEN =
         gameState.positionHistory[gameState.positionHistory.length - 1];
-    // Decrement depth
+    // Decrement depth by one human move
     gameState.currentDepth = Math.max(0, gameState.currentDepth - 1);
-    // Update statistics (remove the last correct move)
-    if (lastMove && lastMove.isCorrect) {
+    const lastHuman = removed.find((m) => m.isWhite === (gameState.moveHistory.length % 2 === 0));
+    if (lastHuman && lastHuman.isCorrect) {
         gameState.statistics.correctMoves = Math.max(0, gameState.statistics.correctMoves - 1);
-        gameState.statistics.totalMoves = Math.max(0, gameState.statistics.totalMoves - 1);
     }
+    gameState.statistics.totalMoves = Math.max(0, gameState.statistics.totalMoves - 1);
     // Make it human's turn
     gameState.isHumanTurn = true;
     gameState.isPracticeActive = true;
-    // Clear selections and arrows
-    clearLastMoveHighlight();
+    // Clear selections and arrows (keep last-move indicator; we'll re-apply it)
     clearBoardSelectionWithoutLastMove();
     clearAllArrows();
     // Re-render board and update UI
     renderBoard(gameState.currentFEN);
+    // Re-apply last-move highlight unless we are at the starting position
+    if (gameState.moveHistory.length > 0 &&
+        gameState.positionHistory.length >= 2) {
+        const lastMoveRemain2 = gameState.moveHistory[gameState.moveHistory.length - 1];
+        const prevFenForLast2 = gameState.positionHistory[gameState.positionHistory.length - 2];
+        const parsed2 = parseMove(lastMoveRemain2.notation, prevFenForLast2);
+        if (parsed2)
+            highlightLastMove(parsed2.from, parsed2.to);
+    }
     reAddDragAndDropListeners(gameState, dom);
     updateStatus(dom, gameState);
     updateStatistics(dom, gameState);
@@ -463,7 +806,12 @@ function goBackOneMoveRandom() {
     // Trigger a random computer move after a short delay
     setTimeout(() => {
         if (gameState.isPracticeActive && !gameState.isHumanTurn) {
-            makeComputerMove(gameState, dom);
+            // Re-evaluate availability for next moves using current map
+            const availableMoves = gameState.positionMap.get(gameState.currentFEN);
+            if (availableMoves && availableMoves.length > 0) {
+                // Hand control to computer by toggling turn; actual move selection happens in practice-game makeComputerMove
+                gameState.isHumanTurn = false;
+            }
         }
     }, 500);
     showInfoToast("Went back one move - computer will make a different move");
@@ -514,6 +862,7 @@ function restartFromPinnedPosition() {
     showSuccessToast(`Restarted from pinned position at depth ${gameState.pinnedDepth}`);
 }
 // Fisher copy functionality
+// Keep for future export options
 async function copyLinesAsSAN() {
     try {
         const linesText = dom.openingLines.value;
@@ -530,6 +879,7 @@ async function copyLinesAsSAN() {
         showErrorToast("Failed to copy lines");
     }
 }
+// Keep for future export options
 async function copyLinesAsLongNotation() {
     try {
         const linesText = dom.openingLines.value;
@@ -677,6 +1027,86 @@ function initializeEventListeners() {
     dom.loadLinesBtn.addEventListener("click", () => {
         loadLinesFromFile();
     });
+    // Optional clipboard helpers (expose for UI buttons if added later)
+    window.copyPracticeLinesAsSAN = copyLinesAsSAN;
+    window.copyPracticeLinesAsLong = copyLinesAsLongNotation;
+    // Print current line button
+    const printLineBtn = document.getElementById("practice-print-line-btn");
+    if (printLineBtn) {
+        printLineBtn.addEventListener("click", () => {
+            try {
+                const obj = {
+                    fen: gameState.currentFEN,
+                    depth: gameState.currentDepth,
+                    history: [...gameState.moveHistory],
+                    positionHistory: [...gameState.positionHistory],
+                    pinned: {
+                        fen: gameState.pinnedPosition,
+                        depth: gameState.pinnedDepth,
+                    },
+                    topMoves: gameState.positionTopMoves?.get(gameState.currentFEN) || [],
+                };
+                console.log("Practice current line:", obj);
+                showInfoToast("Printed current line to console");
+            }
+            catch (e) {
+                console.error(e);
+                showErrorToast("Failed to print current line");
+            }
+        });
+    }
+    // Show Top-5 arrows button
+    const showTop5Btn = document.getElementById("practice-show-top5-arrows-btn");
+    if (showTop5Btn) {
+        showTop5Btn.addEventListener("click", () => {
+            try {
+                const meta = gameState.positionTopMoves?.get(gameState.currentFEN) || [];
+                if (!meta.length) {
+                    showWarningToast("No top-5 moves available");
+                    return;
+                }
+                // Draw arrows for up to 5 human moves in current position
+                const board = document.querySelector(".practice-board");
+                if (!board)
+                    return;
+                meta.slice(0, 5).forEach((m) => {
+                    const move = m.move; // long like e2e4
+                    if (/^[a-h][1-8][a-h][1-8]$/.test(move)) {
+                        const from = move.substring(0, 2);
+                        const to = move.substring(2, 4);
+                        // Reuse preview arrow style for consistency, but fully opaque
+                        const fromEl = document.querySelector(`[data-square="${from}"]`);
+                        const toEl = document.querySelector(`[data-square="${to}"]`);
+                        if (!fromEl || !toEl)
+                            return;
+                        const br = board.getBoundingClientRect();
+                        const fr = fromEl.getBoundingClientRect();
+                        const tr = toEl.getBoundingClientRect();
+                        const fx = fr.left + fr.width / 2 - br.left;
+                        const fy = fr.top + fr.height / 2 - br.top;
+                        const tx = tr.left + tr.width / 2 - br.left;
+                        const ty = tr.top + tr.height / 2 - br.top;
+                        const angle = Math.atan2(ty - fy, tx - fx);
+                        const dist = Math.hypot(tx - fx, ty - fy);
+                        const arrow = document.createElement("div");
+                        arrow.className = "practice-arrow";
+                        arrow.style.left = `${fx}px`;
+                        arrow.style.top = `${fy}px`;
+                        arrow.style.width = `${Math.max(0, dist - 20)}px`;
+                        arrow.style.transform = `rotate(${angle}rad)`;
+                        arrow.style.transformOrigin = "0 50%";
+                        arrow.style.setProperty("--arrow-color", "rgba(0, 123, 255, 0.95)");
+                        board.appendChild(arrow);
+                    }
+                });
+                showInfoToast("Top-5 arrows shown");
+            }
+            catch (e) {
+                console.error(e);
+                showErrorToast("Failed to draw top-5 arrows");
+            }
+        });
+    }
 }
 // Initialize the application
 export function initializePractice() {
@@ -684,6 +1114,11 @@ export function initializePractice() {
     initializeBoardWithEventListeners();
     initializeEventListeners();
     resetPractice();
+    // Bridge arrow-utils recent-complete flag to board using window function
+    import("./practice-arrow-utils.js").then((mod) => {
+        window.practiceConsumeRecentArrowCompleted = mod.consumeRecentArrowCompleted;
+        window.practiceIsArrowDrawing = mod.isArrowDrawing;
+    });
     // Analyze initial opening lines content
     const linesText = dom.openingLines.value;
     const lines = parseOpeningLines(linesText);

@@ -53,6 +53,26 @@ body {
   gap: 20px;
 }
 
+.practice-coach-player {
+  width: 100%;
+  max-width: 640px;
+  background: #ffffff;
+  border: 1px solid #e6ecf3;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+.practice-coach-text {
+  min-height: 48px;
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+.practice-coach-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 /* Main-column AI Coach */
 .practice-ai-main {
   width: 100%;
@@ -451,6 +471,18 @@ body {
   background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
   color: white;
 }
+.practice-square.hint-piece {
+  outline: 4px solid #6a5acd; /* stronger */
+  outline-offset: -2px;
+  box-shadow:
+    0 0 0 3px rgba(106, 90, 205, 0.35),
+    0 0 12px 4px rgba(106, 90, 205, 0.35);
+  background-image: linear-gradient(
+    0deg,
+    rgba(106, 90, 205, 0.18),
+    rgba(106, 90, 205, 0.18)
+  );
+}
 
 .practice-button.warning:hover {
   transform: translateY(-2px);
@@ -510,6 +542,10 @@ body {
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-size: 12px;
+}
+.practice-score-chip.mistake-highlight {
+  background: tomato;
+  color: white;
 }
 
 .practice-replies-list {
@@ -586,11 +622,15 @@ body {
 }
 
 .practice-ai-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: block;
   margin-bottom: 8px;
+}
+
+.practice-ai-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .practice-ai-subtitle {
@@ -613,6 +653,11 @@ body {
   border: 1px solid #e6ecf3;
   background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+  white-space: pre; /* Preserve prompt formatting */
+  overflow: auto;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 
 .practice-ai-panel .practice-input,

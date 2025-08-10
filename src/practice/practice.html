@@ -54,15 +54,38 @@
                   class="practice-button primary practice-start-btn"
                   id="practice-start-overlay-btn"
                 >
-                  Reload
+                  Start Practice
                 </button>
               </div>
             </div>
           </div>
 
+          <!-- Coach step player (shown during DSL playback) -->
+          <div
+            id="practice-coach-player"
+            class="practice-coach-player"
+            style="display: none"
+          >
+            <div id="practice-coach-text" class="practice-coach-text"></div>
+            <div class="practice-coach-controls">
+              <button class="practice-button" id="practice-coach-prev">
+                Prev
+              </button>
+              <button class="practice-button" id="practice-coach-next">
+                Next
+              </button>
+              <button
+                class="practice-button secondary"
+                id="practice-coach-close"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
           <div class="practice-controls">
             <button class="practice-button primary" id="practice-start-btn">
-              Reload
+              Start
             </button>
             <button class="practice-button secondary" id="practice-reset-btn">
               Reset
@@ -73,36 +96,7 @@
             <button class="practice-button success" id="practice-next-btn">
               Next Line
             </button>
-            <button
-              class="practice-button"
-              id="practice-confetti-btn"
-              style="
-                background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
-                color: white;
-              "
-            >
-              Test Confetti
-            </button>
-            <button
-              class="practice-button"
-              id="practice-clear-selections-btn"
-              style="
-                background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-                color: white;
-              "
-            >
-              Clear Selections
-            </button>
-            <button
-              class="practice-button"
-              id="practice-clear-arrows-btn"
-              style="
-                background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-                color: white;
-              "
-            >
-              Clear Arrows
-            </button>
+
             <button
               class="practice-button"
               id="practice-go-back-btn"
@@ -148,7 +142,7 @@
           <!-- AI Coach (Main Column) -->
           <div class="practice-ai-main" id="practice-ai-coach">
             <div class="practice-ai-header">
-              <div class="left">
+              <div class="practice-ai-title-row">
                 <h3
                   class="practice-panel-title"
                   style="
@@ -162,69 +156,50 @@
                 </h3>
                 <div class="practice-ai-subtitle">From Blunder to Wunder</div>
               </div>
-              <div class="right">
-                <div class="practice-ai-controls">
-                  <div class="left">
-                    <div class="practice-input-group" style="min-width: 220px">
-                      <label class="practice-label" for="practice-ai-api-key"
-                        >API Key (optional)</label
-                      >
-                      <input
-                        type="password"
-                        class="practice-input"
-                        id="practice-ai-api-key"
-                        placeholder="sk-..."
-                      />
-                    </div>
-                    <div class="practice-input-group" style="min-width: 140px">
-                      <label class="practice-label" for="practice-ai-level"
-                        >Level</label
-                      >
-                      <select class="practice-select" id="practice-ai-level">
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                        <option value="expert">Expert</option>
-                        <option value="gm">GM</option>
-                      </select>
-                    </div>
-                    <div class="practice-input-group" style="min-width: 160px">
-                      <label class="practice-label" for="practice-ai-model"
-                        >Model</label
-                      >
-                      <input
-                        type="text"
-                        class="practice-input"
-                        id="practice-ai-model"
-                        value="gpt-4o-mini"
-                      />
-                    </div>
-                  </div>
-                  <div class="right">
-                    <button
-                      class="practice-button practice-ai-ask-button"
-                      id="practice-ai-ask-btn"
-                      aria-busy="false"
-                    >
-                      Analyze Position
-                    </button>
-                  </div>
+            </div>
+
+            <div class="practice-ai-controls">
+              <div class="left">
+                <div class="practice-input-group" style="min-width: 220px">
+                  <label class="practice-label" for="practice-ai-api-key"
+                    >API Key (optional)</label
+                  >
+                  <input
+                    type="password"
+                    class="practice-input"
+                    id="practice-ai-api-key"
+                    placeholder="sk-..."
+                  />
+                </div>
+                <div class="practice-input-group" style="min-width: 140px">
+                  <label class="practice-label" for="practice-ai-level"
+                    >Level</label
+                  >
+                  <select class="practice-select" id="practice-ai-level">
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="expert">Expert</option>
+                    <option value="gm">GM</option>
+                  </select>
+                </div>
+                <div class="practice-input-group" style="min-width: 160px">
+                  <label class="practice-label" for="practice-ai-model"
+                    >Model</label
+                  >
+                  <input
+                    type="text"
+                    class="practice-input"
+                    id="practice-ai-model"
+                    value="gpt-4o-mini"
+                  />
                 </div>
               </div>
             </div>
 
             <!-- Optional quick chip row removed to encourage single structured analysis -->
 
-            <div class="practice-input-group">
-              <label class="practice-label" for="practice-ai-question"
-                >Follow-up (optional)</label
-              >
-              <textarea
-                class="practice-input practice-textarea"
-                id="practice-ai-question"
-                placeholder="Ask a brief follow-up; the main analysis will still be structured."
-              ></textarea>
-            </div>
+            <!-- Follow-up removed per request -->
 
             <div class="ai-summary" id="practice-ai-summary" aria-live="polite">
               <em>Ask AI to populate a concise summary here…</em>
@@ -236,6 +211,45 @@
 
             <!-- Raw answer fallback (hidden from view but kept for accessibility/inspection) -->
             <div class="visually-hidden" id="practice-ai-answer"></div>
+
+            <div
+              style="
+                display: flex;
+                justify-content: flex-end;
+                margin-top: 10px;
+                gap: 8px;
+                flex-wrap: wrap;
+              "
+            >
+              <button
+                class="practice-button"
+                id="practice-ai-show-prompt"
+                title="Show the constructed prompt"
+              >
+                Show Prompt
+              </button>
+              <button
+                class="practice-button"
+                id="practice-ai-preview-nf3"
+                title="Preview response for 1. Nf3"
+              >
+                Preview 1. Nf3
+              </button>
+              <button
+                class="practice-button"
+                id="practice-ai-preview-nf3-g3"
+                title="Preview response for 1. Nf3 e6 2. g3"
+              >
+                Preview 1. Nf3 e6 2. g3
+              </button>
+              <button
+                class="practice-button practice-ai-ask-button"
+                id="practice-ai-ask-btn"
+                aria-busy="false"
+              >
+                Analyze Position
+              </button>
+            </div>
           </div>
         </div>
 
@@ -416,6 +430,50 @@
                   Load from practice-lines.ts
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div class="practice-panel" style="text-align: center">
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+                flex-wrap: wrap;
+              "
+            >
+              <button
+                class="practice-button"
+                id="practice-confetti-btn"
+                style="
+                  background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+                  color: white;
+                "
+              >
+                Test Confetti
+              </button>
+              <button
+                class="practice-button"
+                id="practice-print-line-btn"
+                style="
+                  background: linear-gradient(135deg, #607d8b 0%, #455a64 100%);
+                  color: white;
+                "
+                title="Print current line object to console"
+              >
+                Print Line
+              </button>
+              <button
+                class="practice-button"
+                id="practice-show-top5-arrows-btn"
+                style="
+                  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+                  color: white;
+                "
+                title="Show arrows for top-5 human moves"
+              >
+                Show Top5 Arrows
+              </button>
             </div>
           </div>
         </div>

@@ -21,6 +21,9 @@ let arrowDrawingState: ArrowDrawingState = {
   startElement: null,
 };
 
+// Track arrow completion between event handlers
+let recentArrowCompleted = false;
+
 /**
  * Initialize arrow drawing functionality
  */
@@ -45,6 +48,9 @@ export function initializeArrowDrawing(): void {
  */
 function handleRightClick(event: MouseEvent): void {
   event.preventDefault();
+
+  // Require Alt key to draw arrows to avoid conflicting with right-click toggling
+  if (!event.altKey) return;
 
   // Find the square element, even if clicking on a piece
   const target = event.target as HTMLElement;
@@ -172,6 +178,7 @@ function finishArrowDrawing(toSquare: string): void {
   }
 
   // Clean up drawing state
+  recentArrowCompleted = true;
   cancelArrowDrawing();
 }
 
@@ -315,6 +322,12 @@ export function clearAllArrows(): void {
     arrow.remove();
   });
   userArrowElements.clear();
+  // Also remove any stray arrows not tracked (e.g., Top-5 arrows)
+  document
+    .querySelectorAll(".practice-arrow, .practice-arrow-preview")
+    .forEach((el) => {
+      el.remove();
+    });
 }
 
 /**
@@ -354,7 +367,18 @@ export function isArrowDrawingActive(): boolean {
  * This prevents square selection when starting arrow drawing
  */
 export function shouldHandleArrowRightClick(event: MouseEvent): boolean {
-  const target = event.target as HTMLElement;
-  const squareEl = target.closest(".practice-square") as HTMLElement;
-  return squareEl !== null;
+  // Only claim the right-click if we are actively drawing an arrow.
+  return arrowDrawingState.isDrawing;
+}
+
+// Expose current drawing state read-only to external code
+export function isArrowDrawing(): boolean {
+  return arrowDrawingState.isDrawing;
+}
+
+// Expose a one-shot flag for consumers to detect an arrow completion
+export function consumeRecentArrowCompleted(): boolean {
+  const v = recentArrowCompleted;
+  recentArrowCompleted = false;
+  return v;
 }

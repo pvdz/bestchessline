@@ -7,7 +7,7 @@ import {
 } from "../line/types.js";
 import { showErrorToast } from "./ui-utils.js";
 import { compareAnalysisMoves } from "../line/best/bestmove-utils.js";
-import { parseFEN, squareToCoords } from "./fen-utils.js";
+import { parseFEN } from "./fen-utils.js";
 import { log, logError } from "./logging.js";
 import {
   querySelectorHTMLElement,
@@ -17,7 +17,6 @@ import {
   isSharedArrayBufferSupported,
   getStockfishWorkerUrlThreaded,
   getStockfishWorkerUrlFallback,
-  emphasizeFishTickerWithPause,
 } from "./stockfish-utils.js";
 import { parseLongMove } from "./move-parser.js";
 
@@ -402,7 +401,7 @@ async function handleUciMessageFromStockfish(message: string): Promise<void> {
       }),
     );
   } else if (message === "readyok") {
-    console.log("Stockfish readyok!");
+    // console.log("Stockfish readyok!");
     window.dispatchEvent(new CustomEvent("stockfish-ready"));
     stockfishState.engineStatus.engineReady = true;
     if (stockfishState.pendingAnalysis) {
@@ -410,12 +409,10 @@ async function handleUciMessageFromStockfish(message: string): Promise<void> {
       updateStockfishState({ pendingAnalysis: null });
       cb();
     }
-    console.log("Go!", stockfishState.go);
+    // console.log("Go!", stockfishState.go);
     uciCmd(stockfishState.go);
   } else if (message.startsWith("bestmove")) {
     // Okay, treat as finish. Assume we've collected all lines (pv's) reported so far
-    const parts = message.split(" ");
-    console.log("Best move (depth mode experiment):", parts[1]);
     await handleStockfishBestMoveMessage();
   } else if (message.startsWith("info")) {
     parseInfoMessage(message);
@@ -461,6 +458,7 @@ function parseInfoMessage(message: string): void {
   let score = 0;
   let pv: string[] = [];
   let nodes = 0;
+  let nps = 0;
   let time = 0;
   let multipv = 1; // Default to first principal variation
   let mateIn = 0;
@@ -505,7 +503,10 @@ function parseInfoMessage(message: string): void {
         mateIn = parseInt(parts[++i]);
         break;
       }
-      case "nps":
+      case "nps": {
+        nps = parseInt(parts[++i]);
+        break;
+      }
       case "seldepth":
       case "multipv":
       case "hashfull":
@@ -572,6 +573,15 @@ function parseInfoMessage(message: string): void {
     `Adding new move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}, isBlack=${isBlack}, moves=${stockfishState.currentAnalysis.moves.map((m) => m.move.from + m.move.to).join(", ")}`,
   );
   stockfishState.currentAnalysis.moves.push(analysisMove);
+
+  // Broadcast live stats for interested UIs (e.g., Fisher)
+  try {
+    window.dispatchEvent(
+      new CustomEvent("stockfish-stats", {
+        detail: { nps, depth, nodes, time },
+      }),
+    );
+  } catch {}
 
   // Determine direction based on whose turn it is
   const direction = isBlack ? "asc" : "desc";
@@ -691,7 +701,7 @@ async function analyzePositionMono(
     .filter(Boolean)
     .join(" ");
 
-  console.log("Sending isready...", options);
+  // console.log("Sending isready...", options);
   uciCmd("isready");
 }
 

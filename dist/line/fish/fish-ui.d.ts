@@ -15,11 +15,7 @@ export declare function updateFishStatus(message: string): void;
  * Non-blocking UI update with error handling
  */
 export declare function updateFishProgress(state: FishState): void;
-export declare function updateFishPvTickerThrottled(
-  moves: AnalysisMove[],
-  fen: string,
-  force?: boolean,
-): void;
+export declare function updateFishPvTickerThrottled(moves: AnalysisMove[], fen: string, force?: boolean): void;
 export declare function updateLiveLinesPreview(): void;
 /**
  * Update fish root score display
@@ -29,16 +25,10 @@ export declare function updateFishRootScore(score: number): void;
 /**
  * Update an existing line element's content without re-rendering
  */
-export declare const updateLineElement: (
-  lineElement: HTMLElement,
-  line: FishLine,
-) => void;
+export declare const updateLineElement: (lineElement: HTMLElement, line: FishLine) => void;
 /**
  * Update Line Fisher button states
  * Enable/disable buttons based on analysis state, update visual feedback,
  * and handle button state transitions
  */
-export declare const updateLineFisherButtonStates: (
-  isAnalyzing: boolean,
-  isFishing: boolean,
-) => void;
+export declare const updateLineFisherButtonStates: (isAnalyzing: boolean, isFishing: boolean) => void;

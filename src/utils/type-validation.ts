@@ -2,8 +2,6 @@ import type {
   PieceNotation,
   PieceTypeNotation,
   ColorNotation,
-  WhitePieceNotation,
-  BlackPieceNotation,
 } from "../line/types.js";
 import {
   createPieceNotation,

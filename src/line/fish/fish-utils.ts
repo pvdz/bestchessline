@@ -15,7 +15,7 @@ export function getRandomProofString(): string {
 export function sortPvMoves(
   moves: AnalysisMove[],
   firstMoveTurn: "w" | "b",
-  maxDepth: number = 20,
+  _maxDepth: number = 20,
 ): AnalysisMove[] {
   const direction =
     (firstMoveTurn === "w") === (moves.length % 2 === 0) ? "desc" : "asc";

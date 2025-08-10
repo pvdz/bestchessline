@@ -1,8 +1,5 @@
-import { FishLine, LineFisherConfig, LineMetadata } from "./types.js";
-import {
-  formatPCNLineWithMoveNumbers,
-  computeSanGameFromPCN,
-} from "../../utils/pcn-utils.js";
+import { LineFisherConfig, LineMetadata } from "./types.js";
+// import { formatPCNLineWithMoveNumbers } from "../../utils/pcn-utils.js";
 import { getElementByIdOrThrow } from "../../utils/dom-helpers.js";
 import { showToast } from "../../utils/ui-utils.js";
 import { initFishing, initInitialMove, keepFishing } from "./fishing.js";
@@ -13,10 +10,9 @@ import {
   updateFishStatus,
   updateFishProgress,
   updateFishRootScore,
-  updateLineElement,
   updateLineFisherButtonStates,
 } from "./fish-ui.js";
-import { getRandomProofString, generateLineId } from "./fish-utils.js";
+// import { getRandomProofString, generateLineId } from "./fish-utils.js";
 
 const lineAppState: {
   isFishAnalysisRunning: boolean;
@@ -268,10 +264,12 @@ export const copyFishStateToClipboard = async (): Promise<void> => {
         return pcn;
       });
 
-      // Re-use formatter to add move numbers, but with long moves
-      const formattedLine = formatPCNLineWithMoveNumbers(
-        longMoves as unknown as string[],
-      );
+      // Create move numbers manually for long moves
+      const formattedLine = longMoves
+        .map((m, idx) =>
+          idx % 2 === 0 ? `${Math.floor(idx / 2) + 1}. ${m}` : m,
+        )
+        .join(" ");
 
       // Include top-5 best moves (responders) and their scores if available
       const metadata: LineMetadata = {
@@ -309,68 +307,7 @@ export const copyFishStateToClipboard = async (): Promise<void> => {
   }
 };
 
-/**
- * Create a new line element and add it to the DOM
- */
-const createLineElement = (line: FishLine): HTMLElement => {
-  const resultsElement = getElementByIdOrThrow("fish-results");
-
-  if (resultsElement.childElementCount === 1) {
-    // Add a random proof string as the first child if this is the first line
-    const randomProofString = getRandomProofString();
-    const proofElement = document.createElement("div");
-    proofElement.className = "random-proof-string";
-    proofElement.style.color = "#ff0000";
-    proofElement.style.fontWeight = "bold";
-    proofElement.textContent = randomProofString;
-    resultsElement.appendChild(proofElement);
-  }
-
-  line.nodeId = generateLineId(line.pcns);
-
-  const lineElement = document.createElement("div");
-  lineElement.id = line.nodeId;
-  lineElement.className = "fish-result-compact";
-  lineElement.style.cursor = "pointer";
-  lineElement.setAttribute("data-line-index", line.lineIndex.toString());
-
-  resultsElement.appendChild(lineElement);
-  return lineElement;
-};
-
-/**
- * Create the initial HTML structure for a line element
- */
-const createLineHTMLStructure = (line: FishLine): string => {
-  const scoreInPawns = line.score / 100;
-
-  const scoreText =
-    scoreInPawns > 0 ? `+${scoreInPawns.toFixed(1)}` : scoreInPawns.toFixed(1);
-
-  let lineNumberStyle = "";
-  let lineNumberPrefix = "";
-
-  if (!line.isDone) {
-    lineNumberStyle =
-      "background-color: #ffeb3b; color: #000; padding: 1px 3px; border-radius: 3px;";
-  } else if (line.isFull) {
-    lineNumberStyle =
-      "border: 1px solid #666; padding: 1px 3px; border-radius: 3px;";
-  }
-
-  // Add end-of-line indicator
-  const endIndicator = line.isFull ? " 🏁" : "";
-
-  // <span class="random-proof-string">${Math.random().toString(36).substring(2, 8)}</span>
-  // <span class="random-proof-string">${line.nodeId.split('_').pop()}</span>
-  return `
-    <span class="fish-line-number" style="${lineNumberStyle}">${lineNumberPrefix}${line.lineIndex + 1}.</span>
-    <span class="fish-line-score">${scoreText}</span>
-    <span class="fish-line-notation">${line.sanGame}${endIndicator}</span>
-    <span class="fish-line-complete">Complete: ${line.isFull}</span>
-    <span class="fish-line-done">Done: ${line.isDone}</span>
-  `;
-};
+// Removed unused helpers createLineElement and createLineHTMLStructure
 
 /**
  * Initialize Line Fisher (placeholder for compatibility)

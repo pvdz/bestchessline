@@ -78,10 +78,6 @@ export async function startBestmove() {
     updateButtonStates();
   }
 }
-function clearEnginePvTicker() {
-  const el = document.getElementById("bestmove-pv-ticker");
-  if (el) el.textContent = "";
-}
 function updateEnginePvTickerThrottled(force = false) {
   const now = Date.now();
   if (!force && now - lastPvTickerUpdateMs < PV_TICKER_INTERVAL_MS) return;

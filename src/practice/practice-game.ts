@@ -12,7 +12,6 @@ import {
   updateStatus,
   updateStatistics,
   addMoveToHistory,
-  removeLastMove,
   showSuccessToast,
   showErrorToast,
   showInfoToast,
@@ -20,15 +19,9 @@ import {
 } from "./practice-ui.js";
 import { GameState, DOMElements } from "./practice-types.js";
 import { ChessMove } from "../utils/types.js";
-import {
-  triggerConfetti,
-  triggerRainbowBurst,
-} from "../utils/confetti-utils.js";
-import {
-  initializeArrowDrawing,
-  clearAllArrows,
-  cleanupArrowDrawing,
-} from "./practice-arrow-utils.js";
+import { triggerRainbowBurst } from "../utils/confetti-utils.js";
+import { clearAllArrows } from "./practice-arrow-utils.js";
+import { getElementByIdOrThrow } from "../utils/dom-helpers.js";
 
 // Handle square click for move selection
 export function handleSquareClick(
@@ -341,6 +334,15 @@ export function makeMove(
       showErrorToast(
         `Incorrect move. It was a top-5 choice, but ${sign}${deltaStr} vs best (${best.move}).`,
       );
+      // Highlight the matching score chip in tomato
+      const panel = getElementByIdOrThrow("practice-top-moves");
+      const chip = panel.querySelector(
+        `.practice-score-chip[data-move="${attemptedLong}"]`,
+      ) as HTMLElement | null;
+      if (chip) {
+        chip.classList.add("mistake-highlight");
+        // setTimeout(() => chip.classList.remove("mistake-highlight"), 1500);
+      }
     } else {
       showErrorToast("Incorrect move! Try again.");
     }
@@ -464,7 +466,8 @@ function makeCastlingMoveDirect(
   updateStatistics(dom, gameState);
 }
 
-function makeCastlingMove(
+// Keep for future UI modes where SAN castling entry is used
+export function makeCastlingMove(
   castlingNotation: string,
   gameState: GameState,
   dom: DOMElements,
@@ -472,7 +475,7 @@ function makeCastlingMove(
   console.log("🎯 Castling triggered:", castlingNotation);
   console.log("🎯 Current FEN:", gameState.currentFEN);
 
-  const previousFEN = gameState.currentFEN;
+  // previous FEN is not needed for correctness feedback here
   const parsedMove = parseMove(castlingNotation, gameState.currentFEN);
 
   console.log("🎯 Parsed move:", parsedMove);
@@ -768,8 +771,7 @@ function updateTopMovesPanelIfPresent(
   _fenOverride?: string,
   _scoresOnly?: boolean,
 ) {
-  const panel = document.getElementById("practice-top-moves");
-  if (!panel) return;
+  const panel = getElementByIdOrThrow("practice-top-moves");
   const meta = gameState.positionTopMoves;
   if (!meta) {
     panel.innerHTML = "<em>No engine metadata loaded</em>";
@@ -799,7 +801,7 @@ function updateTopMovesPanelIfPresent(
            .slice(0, 5)
            .map(
              (m) =>
-               `<span class=\"practice-score-chip\">${scoreToStr(m.score)}</span>`,
+               `<span class=\"practice-score-chip\" data-move=\"${m.move}\">${scoreToStr(m.score)}</span>`,
            )
            .join("")}</div>
        </div>`
@@ -933,9 +935,40 @@ export function showHintForCurrentPosition(gameState: GameState): void {
   const availableMoves = gameState.positionMap.get(gameState.currentFEN);
 
   if (availableMoves && availableMoves.length > 0) {
-    // Show the first available move as a hint
-    const hintMove = availableMoves[0];
-    showWarningToast(`Hint: Try ${hintMove}`);
+    // Show a hint by highlighting the piece to move instead of the move
+    const raw = availableMoves[0];
+    // If move number present, extract first token after number
+    const hintMove = raw.includes(".")
+      ? raw.split(/\s+/).slice(1)[0] || raw
+      : raw;
+    let fromSquare = "";
+    if (hintMove === "O-O" || hintMove === "O-O-O") {
+      const isWhite = gameState.currentFEN.includes(" w ");
+      fromSquare = isWhite ? "e1" : "e8";
+    } else {
+      // Try robust parsing to compute source square
+      const parsed = parseMove(hintMove, gameState.currentFEN);
+      if (parsed) {
+        fromSquare = parsed.from;
+      } else {
+        // Fallback: normalize to long if needed and derive
+        const long = hintMove.match(/^[NBRQKP][a-h][1-8][a-h][1-8]$/)
+          ? hintMove.substring(1)
+          : hintMove;
+        if (/^[a-h][1-8][a-h][1-8]$/.test(long)) {
+          fromSquare = long.substring(0, 2);
+        }
+      }
+    }
+    const fromEl = document.querySelector(
+      `[data-square="${fromSquare}"]`,
+    ) as HTMLElement | null;
+    if (fromEl) {
+      fromEl.classList.add("hint-piece");
+      setTimeout(() => fromEl.classList.remove("hint-piece"), 1500);
+    }
+    // Do not reveal any coordinates in the hint toast
+    showWarningToast("Hint shown");
   } else {
     showWarningToast("No moves available for this position");
   }

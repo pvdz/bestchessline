@@ -1,6 +1,6 @@
 import { parseOpeningLines, buildPositionMap } from "./practice-parser.js";
-import { parseMove } from "../utils/move-parsing.js";
-import { applyMoveToFEN } from "../utils/fen-manipulation.js";
+// import { parseMove } from "../utils/move-parsing.js";
+// import { applyMoveToFEN } from "../utils/fen-manipulation.js";
 
 // Test the parseOpeningLines function
 function runParseOpeningLinesTest(): void {

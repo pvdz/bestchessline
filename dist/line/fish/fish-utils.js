@@ -8,7 +8,7 @@ export function generateLineId(sans) {
 export function getRandomProofString() {
   return `R_${Math.random().toString(36).substring(2, 8)}`;
 }
-export function sortPvMoves(moves, firstMoveTurn, maxDepth = 20) {
+export function sortPvMoves(moves, firstMoveTurn, _maxDepth = 20) {
   const direction =
     (firstMoveTurn === "w") === (moves.length % 2 === 0) ? "desc" : "asc";
   moves.sort((a, b) =>
