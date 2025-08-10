@@ -9,9 +9,9 @@ import { getElementByIdOrThrow } from "./dom-helpers.js";
  * Show Line Fisher-specific status messages with Stockfish event tracking
  */
 export const updateLineFisherStatus = (message) => {
-    // Route Stockfish status updates to the engine status panel,
-    // not the Line Fisher status, to avoid overriding Fish progress.
-    const statusElement = getElementByIdOrThrow("engine-status");
-    statusElement.textContent = message;
+  // Route Stockfish status updates to the engine status panel,
+  // not the Line Fisher status, to avoid overriding Fish progress.
+  const statusElement = getElementByIdOrThrow("bestmove-status");
+  statusElement.textContent = message;
 };
 //# sourceMappingURL=status-management.js.map

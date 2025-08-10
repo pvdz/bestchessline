@@ -11,6 +11,7 @@ INSTRUCTIONS IN THIS FILE ARE EXTREMELY IMPORTANT TO FOLLOW
 **ALWAYS provide a short summary of what was implemented.**
 **NEVER attempt to build or test code without explicit user permission.**
 **NEVER start servers or run applications without explicit user permission.**
+**NEVER change git. Reading is okay, writing is never ok.**
 **When debugging, prefer to analyze code and logs and targeted test files.**
 
 ## Development Workflow
@@ -30,7 +31,7 @@ You can use it with `--noUnusedParameters --noEmit` or `--noUnusedLocals --noEmi
 - Use `console.log` when debugging. REMOVE LOGGING when you have what you needed from it and moving on to next step of debuggging. Logs are very expensive so be mindful of that.
 - Before adding more logging, consider whether you need it, or if you can just fix the problem without more logging. Logging is expensive.
 - Do NOT use `log()`. That is for the human.
-- When using try/catch, always _at least_ log a warning for the catch. Don't squash errors.
+- When using try/catch, always _at least_ log a warning for the catch. Don't squash errors!
 - Be very explicit in naming things. Make them greppable. Namespace CSS classes and element IDs such that it's unambiguous and easy to search for.
 - Prefer to find elements by ID's over classes and only use querySelector when it makes sense to do so.
 

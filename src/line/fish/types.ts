@@ -41,17 +41,24 @@ export interface LineMetadata {
   transpositionTarget?: string;
   targetResponderCount?: number;
   currentResponderCount?: number;
+  // Top 5 moves for the last initiator move in this line (top5 of "parent" FishLine)
+  alts: { move: string; score: number }[];
+  // Top 5 reply moves to the actual move made by the intiator last in this line (top5 of FishLine)
+  replies: { move: string; score: number }[];
 }
 
 /**
- * Represents a line being analyzed
+ * Represents a line being analyzed.
+ * Note: The last move of a (finished) FishLine should have an initiator move last.
+ * Note: All FishLines except the first of a search tree will have at least a responder and initiator move.
  */
 export interface FishLine {
   lineIndex: number; // Unique line identifier
   nodeId: string; // Optional node ID for DOM element reference. Empty string when not yet created.
   sanGame: string; // Computed SAN game string (computed on demand to display only)
   pcns: string[]; // PCN notation moves in this line
-  best5: { move: string; score: number }[]; // Best five moves from Stockfish
+  best5Replies: { move: string; score: number }[]; // Top5 replies to last initiator move in the line ("child" lines should continue with these moves)
+  best5Alts: { move: string; score: number }[]; // Top5 moves the initiator could have made in place of the last move intiiator actually made (lines should end with best of these moves unless predefined)
   score: number; // Score of the last move in this line (for backward compatibility)
   position: string; // Current position FEN
   isDone: boolean; // Whether this line is complete

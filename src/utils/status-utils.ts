@@ -11,7 +11,7 @@ import { getElementByIdOrThrow } from "./dom-helpers.js";
  * @param message The status message to display
  */
 export function updateStatus(message: string): void {
-  const statusElement = getElementByIdOrThrow("engine-status");
+  const statusElement = getElementByIdOrThrow("bestmove-status");
   if (statusElement) {
     statusElement.textContent = message;
   }

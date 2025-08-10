@@ -1,5 +1,8 @@
 import { FishState, FishLine, LineFisherConfig } from "./types.js";
-import { computeSanGameFromPCN, formatPCNLineWithMoveNumbers } from "../../utils/pcn-utils.js";
+import {
+  computeSanGameFromPCN,
+  formatPCNLineWithMoveNumbers,
+} from "../../utils/pcn-utils.js";
 import {
   getElementByIdOrThrow,
   querySelectorOrThrow,
@@ -11,7 +14,7 @@ import {
 } from "./fish-calculations.js";
 import { getCurrentFishState } from "./fish-state.js";
 import { getCurrentAnalysisSnapshot } from "../../utils/stockfish-client.js";
-import { compareAnalysisMoves } from "../best/analysis-utils.js";
+import { compareAnalysisMoves } from "../best/bestmove-utils.js";
 import { parseFEN } from "../../utils/fen-utils.js";
 import { PLAYER_COLORS, AnalysisMove, ChessMove } from "../types.js";
 import { formatScoreWithMateIn } from "../../utils/formatting-utils.js";
@@ -20,6 +23,7 @@ import {
   getPieceAtSquareFromFEN,
 } from "../../utils/fen-utils.js";
 import { importGame } from "../board/game-navigation.js";
+import { log } from "../../utils/logging.js";
 
 /**
  * Live lines preview: render last few WIP and Done lines at an interval-gated cadence.
@@ -190,9 +194,9 @@ export function updateFishProgress(state: FishState): void {
 
     updateLiveLinesPreview();
 
-    // Also update PV ticker (throttled internally)
-    updateFishPvTickerThrottled();
-
+    // Also update PV ticker (throttled internally) using last snapshot
+    if (lastFishPvMoves)
+      updateFishPvTickerThrottled(lastFishPvMoves, lastFishPvFen);
   } catch (error) {
     console.error("Failed to update fish progress:", error);
   }
@@ -201,11 +205,10 @@ export function updateFishProgress(state: FishState): void {
 // ---------------------------------------------------------
 // PV ticker below fish-status (throttled) - explicit updates only
 // ---------------------------------------------------------
-let fishPvLastUpdate = 0;
 const FISH_PV_MIN_INTERVAL_MS = 1000;
-let lastFishPvKeys: string[] = [];
-let lastFishPvMoves: AnalysisMove[] = [];
+let lastFishPvMoves: null | AnalysisMove[] = [];
 let lastFishPvFen: string = "";
+let fishPvTickerTimer: any;
 
 export function updateFishPvTickerThrottled(
   moves: AnalysisMove[],
@@ -217,43 +220,53 @@ export function updateFishPvTickerThrottled(
   lastFishPvFen = fen || "";
 
   const now = Date.now();
-  if (!force && now - fishPvLastUpdate < FISH_PV_MIN_INTERVAL_MS) return;
-  fishPvLastUpdate = now;
+  if (!force && fishPvTickerTimer) {
+    if (!lastFishPvMoves) lastFishPvMoves = moves;
+    return;
+    log("updateFishPvTickerThrottled() nope: throttled");
+    return;
+  }
+  fishPvTickerTimer = setTimeout(() => {
+    if (lastFishPvMoves)
+      updateFishPvTickerThrottled(lastMoves, lastFishPvFen, true);
+    fishPvTickerTimer = null;
+  }, FISH_PV_MIN_INTERVAL_MS);
+
+  const lastMoves = lastFishPvMoves;
+  lastFishPvMoves = null;
 
   if (!getCurrentFishState().isFishing) return;
 
-  const el = document.getElementById("fish-pv-ticker");
-  if (!el) return;
+  const el = getElementByIdOrThrow("fish-pv-ticker");
 
-  if (!lastFishPvMoves.length) {
+  if (!lastMoves.length) {
     el.textContent = ["", "", "", "", ""].join("\n");
     return;
   }
 
-  const dir = parseFEN(lastFishPvFen).turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
-  const sorted = [...lastFishPvMoves]
+  log("updateFishPvTickerThrottled() for", lastMoves);
+  const dir =
+    parseFEN(lastFishPvFen).turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
+  const sortedAll = lastMoves
+    .slice(0)
     .sort((a: AnalysisMove, b: AnalysisMove) => {
       const cmp = compareAnalysisMoves(a, b, dir as any);
       if (cmp !== 0) return cmp;
       const aKey = `${a.move.from}${a.move.to}`;
       const bKey = `${b.move.from}${b.move.to}`;
       return aKey.localeCompare(bKey);
-    })
-    .slice(0, 5);
+    });
+  const have = new Set();
+  const sorted: AnalysisMove[] = [];
+  for (const move of sortedAll) {
+    if (!have.has(move.move.from + move.move.to)) {
+      sorted.push(move);
+      if (sorted.length >= 5) break;
+      have.add(move.move.from + move.move.to);
+    }
+  }
 
-  const newKeys = sorted.map((m) => `${m.move.from}${m.move.to}`);
-  const sameSet =
-    lastFishPvKeys.length === newKeys.length &&
-    new Set(lastFishPvKeys).size === new Set(newKeys).size &&
-    lastFishPvKeys.every((k) => newKeys.includes(k));
-  const display = sameSet
-    ? lastFishPvKeys
-        .map((k) => sorted.find((m) => `${m.move.from}${m.move.to}` === k)!)
-        .filter(Boolean)
-    : sorted;
-  lastFishPvKeys = newKeys;
-
-  const linesArr = display.map((m: AnalysisMove, i: number) => {
+  const linesArr = sorted.map((m: AnalysisMove, i: number) => {
     const d = `d${m.depth}`;
     const s = formatScoreWithMateIn(m.score, m.mateIn);
     const pv = m.pv.map((mv: ChessMove) => mv.from + mv.to).join(" ");
@@ -262,6 +275,11 @@ export function updateFishPvTickerThrottled(
   while (linesArr.length < 5) linesArr.push("");
   el.textContent = linesArr.join("\n");
 }
+
+// Emphasize the fish PV ticker briefly after finalization
+window.addEventListener("stockfish-ready", async () => {
+  // noop
+});
 
 function isLiveLinesEnabled(): boolean {
   const checkbox = document.getElementById(

@@ -32,7 +32,12 @@
               <button id="fish-export">Export</button>
               <button id="fish-import">Import</button>
               <button id="fish-continue">Continue</button>
-                <button id="fish-preset-quick" title="Set responder=2, overrides empty, depth=4">Preset 2/4</button>
+              <button
+                id="fish-preset-quick"
+                title="Set responder=2, overrides empty, depth=4"
+              >
+                Preset 2/4
+              </button>
               <div class="thread-controls">
                 <label for="fish-threads">Threads:</label>
                 <input
@@ -102,7 +107,7 @@
             </div>
           </div>
           <div id="fish-status">Ready</div>
-          <div class="pv-ticker" id="fish-pv-ticker"></div>
+          <div class="any-pv-ticker" id="fish-pv-ticker"></div>
 
           <div id="fish-config-root" class="fish-panel">
             <h3>Configuration</h3>
@@ -370,9 +375,9 @@
             <input type="number" id="threads" min="1" max="8" value="1" />
           </div>
 
-          <div class="analysis-controls">
-            <button id="start-analysis">Start</button>
-            <button id="stop-analysis" disabled>Stop</button>
+          <div class="bestmove-controls">
+            <button id="start-bestmove">Start</button>
+            <button id="stop-bestmove" disabled>Stop</button>
             <button
               id="recover-from-crash"
               style="display: inline-block"
@@ -426,15 +431,18 @@
           </div>
         </div>
 
-        <!-- Engine Moves -->
+        <!-- Next Best Moves -->
         <div class="results-section">
-          <h2>Engine Moves</h2>
+          <h2>Next Best Moves</h2>
           <div class="status">
             <div class="status-title">Stockfish</div>
-            <p id="engine-status">Ready</p>
+            <p id="bestmove-status">Ready</p>
           </div>
-            <div class="pv-ticker" id="engine-pv-ticker"></div>
-          <div id="analysis-results" class="results-panel"></div>
+          <div class="any-pv-ticker" id="bestmove-pv-ticker"></div>
+          <div class="debug-controls">
+            <button id="sf-debug-continue">Continue</button>
+          </div>
+          <div id="bestmove-results" class="results-panel"></div>
         </div>
       </div>
     </div>

@@ -13,6 +13,6 @@ import { getElementByIdOrThrow } from "./dom-helpers.js";
 export const updateLineFisherStatus = (message: string): void => {
   // Route Stockfish status updates to the engine status panel,
   // not the Line Fisher status, to avoid overriding Fish progress.
-  const statusElement = getElementByIdOrThrow("engine-status");
+  const statusElement = getElementByIdOrThrow("bestmove-status");
   statusElement.textContent = message;
 };

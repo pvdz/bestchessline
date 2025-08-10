@@ -2,22 +2,23 @@ import { AnalysisResult, StockfishOptions } from "../line/types.js";
 /**
  * Check if running in fallback mode
  */
-export declare const isFallbackMode: () => boolean;
-/**
- * Initialize Stockfish with fallback support
- */
-export declare const initializeStockfish: () => void;
+export declare function isFallbackMode(): boolean;
+export declare function initializeStockfish(): void;
 /**
  * Analyze position with Stockfish
  */
-export declare const analyzePosition: (fen: string, options?: StockfishOptions, onUpdate?: (result: AnalysisResult) => void) => Promise<AnalysisResult>;
-export declare const stopAnalysis: () => void;
-export declare const getCurrentAnalysisSnapshot: () => AnalysisResult | null;
+export declare function analyzePosition(
+  fen: string,
+  options: StockfishOptions | undefined,
+  onUpdate: (result: AnalysisResult) => void,
+): Promise<AnalysisResult>;
+export declare function stopAnalysis(): void;
+export declare function getCurrentAnalysisSnapshot(): AnalysisResult | null;
 /**
  * Handle Stockfish crash and reset UI state
  */
-export declare const handleStockfishCrash: () => void;
+export declare function handleStockfishCrash(): void;
 /**
  * Check if currently analyzing
  */
-export declare const isAnalyzingPosition: () => boolean;
+export declare function isAnalyzingPosition(): boolean;

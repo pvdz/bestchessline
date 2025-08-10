@@ -116,7 +116,7 @@ export async function fish(config: LineFisherConfig): Promise<void> {
 
   try {
     updateFishConfigDisplay(state.config);
-    updateFishStatus("Starting root analysis...");
+    updateFishStatus("Starting root score analysis...");
     updateFishProgress(getCurrentFishState());
 
     await initFishing();
@@ -134,7 +134,11 @@ export async function fish(config: LineFisherConfig): Promise<void> {
       updateFishStatus(msg);
       // Only do expensive updates when structure changed or phase completed
       // Keep progress and live-lines in sync: update both together on any progress bump
-      if (msg === "Progress updated" || msg.startsWith("Expanded") || msg.endsWith("complete")) {
+      if (
+        msg === "Progress updated" ||
+        msg.startsWith("Expanded") ||
+        msg.endsWith("complete")
+      ) {
         const state = getCurrentFishState();
         updateFishProgress(state);
       }
@@ -276,12 +280,11 @@ export const copyFishStateToClipboard = async (): Promise<void> => {
         isStalemate: line.isStalemate,
         isTransposition: line.isTransposition,
         transpositionTarget: line.transpositionTarget,
+        replies: line.best5Replies,
+        alts: line.best5Alts,
       };
 
-      return `${formattedLine} // ${JSON.stringify({
-        ...metadata,
-        best5: line.best5?.slice(0, 5) ?? [],
-      })}`;
+      return `${formattedLine} // ${JSON.stringify(metadata)}`;
     });
 
     // Create plain text format - one line per opening line in PCN notation

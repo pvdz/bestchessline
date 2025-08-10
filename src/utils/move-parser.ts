@@ -242,6 +242,27 @@ export function parseSimpleMove(
 }
 
 /**
+ * Parse from-to move string from Stockfish, like `g2g3` (no piece info or anything else)
+ */
+export function parseLongMove(moveStr: string, fen: string): ChessMove | null {
+  if (moveStr.length !== 4) return null;
+
+  const from = moveStr.substring(0, 2);
+  const to = moveStr.substring(2, 4);
+
+  const board = parseFEN(fen).board;
+  const [fromRank, fromFile] = squareToCoords(from);
+
+  if (fromRank < 0 || fromRank >= 8 || fromFile < 0 || fromFile >= 8)
+    return null;
+
+  const piece = board[fromRank][fromFile];
+  if (!piece) return null;
+
+  return { from, to, piece };
+}
+
+/**
  * Parse a move string purely from notation without position validation
  * This is useful for the Line Fisher where we want to parse user input moves
  * without checking if they're actually legal in the current position

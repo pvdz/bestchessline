@@ -7,7 +7,7 @@ import {
 import { setGlobalCurrentMoveIndex } from "../utils/utils.js";
 import { showToast } from "../utils/ui-utils.js";
 import { formatScoreWithMateIn } from "../utils/formatting-utils.js";
-import { compareAnalysisMoves } from "./best/analysis-utils.js";
+import { compareAnalysisMoves } from "./best/bestmove-utils.js";
 import { applyMoveToFEN } from "../utils/fen-manipulation.js";
 import { moveToNotation } from "../utils/notation-utils.js";
 import { parseFEN } from "../utils/fen-utils.js";
@@ -19,7 +19,10 @@ import {
   getElementByIdOrThrow,
   querySelectorOrThrow,
 } from "../utils/dom-helpers.js";
-import { formatPVWithEffects, updateResultsPanel } from "./best/pv-utils.js";
+import {
+  formatPVWithEffects,
+  updateResultsPanel,
+} from "./best/bestmove-pv-utils.js";
 import {
   updateFENInput,
   updateControlsFromPosition,
@@ -29,7 +32,7 @@ import {
 } from "./board/position-controls.js";
 import { updateNavigationButtons } from "../utils/button-utils.js";
 import { updateThreadsInputForFallbackMode } from "../utils/thread-utils.js";
-import { getAnalysisOptions } from "./best/analysis-config.js";
+import { getAnalysisOptions } from "./best/bestmove-config.js";
 import { updateLineFisherStatus } from "../utils/status-management.js";
 import {
   addMove,
@@ -39,11 +42,11 @@ import {
   updateMoveList,
 } from "./board/game-navigation.js";
 import {
-  startAnalysis,
-  stopAnalysis,
-  addPVClickListeners,
-  handleMakeEngineMove,
-} from "./best/analysis-manager.js";
+  startBestmove,
+  stopBestmove,
+  addBestmovePVClickListeners,
+  handleMakeBestmove,
+} from "./best/bestmove-manager.js";
 import * as Board from "../utils/chess-board.js";
 import * as Stockfish from "../utils/stockfish-client.js";
 import { validateMove } from "../utils/move-validator.js";
@@ -289,11 +292,11 @@ const initializeEventListeners = (): void => {
     },
   );
   // Analysis controls
-  const startBtn = getElementByIdOrThrow("start-analysis");
-  const stopBtn = getElementByIdOrThrow("stop-analysis");
+  const startBtn = getElementByIdOrThrow("start-bestmove");
+  const stopBtn = getElementByIdOrThrow("stop-bestmove");
 
-  startBtn.addEventListener("click", () => startAnalysis());
-  stopBtn.addEventListener("click", () => stopAnalysis());
+  startBtn.addEventListener("click", () => startBestmove());
+  stopBtn.addEventListener("click", () => stopBestmove());
 
   // Line Fisher analysis controls
   const stopLineFisherBtn = getElementByIdOrThrow("fish-stop");
@@ -356,9 +359,7 @@ const initializeEventListeners = (): void => {
       const defaultResponder = getInputElement("fish-default-responder-count");
       if (defaultResponder) {
         defaultResponder.value = "2";
-        const val = getElementByIdOrThrow(
-          "fish-default-responder-count-value",
-        );
+        const val = getElementByIdOrThrow("fish-default-responder-count-value");
         val.textContent = "2";
       }
 
@@ -459,9 +460,6 @@ const initializeEventListeners = (): void => {
     // Show recovery button
     const recoveryBtn = getElementByIdOrThrow("recover-from-crash");
     recoveryBtn.style.display = "inline-block";
-
-    log("UI state reset after Stockfish crash");
-    clearEnginePvTicker();
   }) as EventListener);
 
   // Position controls
@@ -508,65 +506,17 @@ const initializeEventListeners = (): void => {
 
   // Update threads input based on fallback mode
   updateThreadsInputForFallbackMode();
-};
 
-// =========================================================================
-// Engine PV ticker under Stockfish status (throttled)
-// =========================================================================
-
-let lastPvTickerUpdateMs = 0;
-const PV_TICKER_INTERVAL_MS = 1000;
-
-function clearEnginePvTicker(): void {
-  const el = document.getElementById("engine-pv-ticker");
-  if (el) el.textContent = "";
-}
-
-function updateEnginePvTickerThrottled(force: boolean = false): void {
-  const now = Date.now();
-  if (!force && now - lastPvTickerUpdateMs < PV_TICKER_INTERVAL_MS) return;
-  lastPvTickerUpdateMs = now;
-
-  const el = document.getElementById("engine-pv-ticker");
-  if (!el) return;
-
-  const snapshot = Stockfish.getCurrentAnalysisSnapshot?.()
-    || (getAppState().currentResults as any);
-  if (!snapshot || !snapshot.moves || snapshot.moves.length === 0) {
-    el.textContent = "";
-    return;
+  // Debug Continue button wiring for Stockfish pause gate
+  const sfDebugBtn = document.getElementById(
+    "sf-debug-continue",
+  ) as HTMLButtonElement | null;
+  if (sfDebugBtn) {
+    sfDebugBtn.addEventListener("click", () => {
+      (window as any).__SF_DEBUG_CONTINUE__ = true;
+    });
   }
-
-  const position = parseFEN(snapshot.position);
-  const direction = position.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
-
-  // Sort: mate first, then depth, then score
-  const moves = [...snapshot.moves].sort((a: AnalysisMove, b: AnalysisMove) =>
-    compareAnalysisMoves(a, b, direction as any),
-  );
-
-  const lines = moves.map((m: AnalysisMove, idx: number) => {
-    const depthStr = `d${m.depth}`;
-    const scoreStr = formatScoreWithMateIn(m.score, m.mateIn);
-    const pvStr = m.pv.map((mv: ChessMove) => `${mv.from}${mv.to}`).join(" ");
-    return `${idx + 1}. ${depthStr} ${scoreStr}  ${pvStr}`;
-  });
-
-  el.textContent = lines.join("\n");
-}
-
-// Live updates from Stockfish info stream
-window.addEventListener("stockfish-info-update", (() => {
-  updateEnginePvTickerThrottled();
-}) as EventListener);
-
-// Keep it fresh when engine (re)loads
-window.addEventListener("stockfish-ready", (() => {
-  updateEnginePvTickerThrottled(true);
-}) as EventListener);
-window.addEventListener("stockfish-loading", (() => {
-  clearEnginePvTicker();
-}) as EventListener);
+};
 
 /**
  * Initialize position controls
@@ -608,7 +558,7 @@ const initializePositionControls = (): void => {
 // ============================================================================
 
 export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
-  const resultsPanel = getElementByIdOrThrow("analysis-results");
+  const resultsPanel = getElementByIdOrThrow("bestmove-results");
 
   // Clear existing arrows
   hideMoveArrow();
@@ -668,14 +618,14 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
   const resultsSection = querySelectorOrThrow(document, ".results-section");
   if (resultsSection) {
     // Remove any existing status indicator
-    const existingStatus = resultsSection.querySelector(".analysis-status");
+    const existingStatus = resultsSection.querySelector(".bestmove-status");
     if (existingStatus) {
       existingStatus.remove();
     }
 
     // Create new status indicator
     const statusIndicator = document.createElement("div");
-    statusIndicator.className = "analysis-status";
+    statusIndicator.className = "bestmove-status";
 
     // Calculate lowest depth of visible non-mating moves, or mating moves if that's all we have
     const visibleNonMatingMoves = filteredMoves.filter(
@@ -713,7 +663,7 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
 
     // Insert after the status div but before the results-panel
     const statusDiv = resultsSection.querySelector(".status");
-    const resultsPanel = getElementByIdOrThrow("analysis-results");
+    const resultsPanel = getElementByIdOrThrow("bestmove-results");
 
     if (statusDiv && resultsPanel) {
       resultsSection.insertBefore(statusIndicator, resultsPanel);
@@ -782,13 +732,13 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
     `;
 
     moveItem.querySelector(".move-header")?.addEventListener("click", () => {
-      handleMakeEngineMove(move);
+      handleMakeBestmove(move);
     });
 
     resultsPanel.appendChild(moveItem);
   });
 
-  // Add arrows for each displayed analysis result
+  // Add arrows for each displayed bestmove result
   filteredMoves.forEach((move: AnalysisMove, index: number) => {
     if (move.move.from && move.move.to && move.move.piece) {
       // Create a unique arrow ID for this specific analysis result
@@ -807,7 +757,7 @@ export const actuallyUpdateResultsPanel = (moves: AnalysisMove[]): void => {
     }
   });
 
-  addPVClickListeners();
+  addBestmovePVClickListeners();
 };
 
 // ============================================================================

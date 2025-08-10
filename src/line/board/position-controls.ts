@@ -7,7 +7,7 @@ import { getFENWithCorrectMoveCounter } from "../../utils/utils.js";
 import { clearInitiatorMoveInputs } from "../../utils/ui-utils.js";
 import * as Board from "../../utils/chess-board.js";
 import { getAppState, updateAppState } from "../../line/main.js";
-import { updateButtonStates } from "../best/analysis-config.js";
+import { updateButtonStates } from "../best/bestmove-config.js";
 import { log, logError } from "../../utils/logging.js";
 import { formatScoreWithMateIn } from "../../utils/formatting-utils.js";
 import * as Stockfish from "../../utils/stockfish-client.js";

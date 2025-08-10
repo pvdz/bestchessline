@@ -248,8 +248,10 @@ function initializeDOMElements(): void {
           // Render structured
           summary.textContent = parsed.summary || "";
           const cards: Array<{ title: string; body: string }> = [];
-          if (parsed.background) cards.push({ title: "Background", body: parsed.background });
-          if (parsed.themes) cards.push({ title: "Themes", body: parsed.themes });
+          if (parsed.background)
+            cards.push({ title: "Background", body: parsed.background });
+          if (parsed.themes)
+            cards.push({ title: "Themes", body: parsed.themes });
           if (parsed.plans) {
             const pb = [
               parsed.plans.white ? `White: ${parsed.plans.white}` : "",
@@ -259,12 +261,16 @@ function initializeDOMElements(): void {
               .join("\n\n");
             if (pb) cards.push({ title: "Plans", body: pb });
           }
-          if (parsed.alternatives) cards.push({ title: "Alternatives", body: parsed.alternatives });
-          if (parsed.traps) cards.push({ title: "Traps & Pitfalls", body: parsed.traps });
-          if (parsed.study) cards.push({ title: "Study Next", body: parsed.study });
+          if (parsed.alternatives)
+            cards.push({ title: "Alternatives", body: parsed.alternatives });
+          if (parsed.traps)
+            cards.push({ title: "Traps & Pitfalls", body: parsed.traps });
+          if (parsed.study)
+            cards.push({ title: "Study Next", body: parsed.study });
           sections.innerHTML = cards
             .map(
-              (c) => `\n<div class="ai-card"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`,
+              (c) =>
+                `\n<div class="ai-card"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`,
             )
             .join("");
         } else {
@@ -277,15 +283,20 @@ function initializeDOMElements(): void {
             if (!body.trim()) return;
             cards.push({ title, body });
           };
-          const blocks = text.split(/\n\s*(?=Ideas:|Background:|Themes:|Alternatives:|Lines:|Games:)/);
+          const blocks = text.split(
+            /\n\s*(?=Ideas:|Background:|Themes:|Alternatives:|Lines:|Games:)/,
+          );
           if (blocks.length > 1) {
             blocks.forEach((b) => {
-              const m = b.match(/^(Ideas|Background|Themes|Alternatives|Lines|Games):\s*[\r\n]?([\s\S]*)$/);
+              const m = b.match(
+                /^(Ideas|Background|Themes|Alternatives|Lines|Games):\s*[\r\n]?([\s\S]*)$/,
+              );
               if (m) add(m[1], m[2].trim());
             });
           } else {
             const paras = text.split(/\n\n+/).filter(Boolean);
-            const chunk = (arr: string[], title: string) => add(title, arr.join("\n\n"));
+            const chunk = (arr: string[], title: string) =>
+              add(title, arr.join("\n\n"));
             if (paras.length >= 4) {
               chunk(paras.slice(1, 2), "Background");
               chunk(paras.slice(2, 3), "Ideas");
@@ -297,7 +308,8 @@ function initializeDOMElements(): void {
           }
           sections.innerHTML = cards
             .map(
-              (c) => `\n<div class=\"ai-card\"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`,
+              (c) =>
+                `\n<div class=\"ai-card\"><h4>${c.title}</h4><div>${c.body.replace(/\n/g, "<br/>")}</div></div>`,
             )
             .join("");
         }
@@ -306,8 +318,7 @@ function initializeDOMElements(): void {
       console.error(e);
       answerEl.textContent = "AI request failed. Check console.";
       showErrorToast("AI request failed");
-    }
-    finally {
+    } finally {
       askBtn.setAttribute("aria-busy", "false");
     }
   });
@@ -317,9 +328,9 @@ function initializeDOMElements(): void {
   if (quick) {
     quick.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
-      const btn = target.closest(".practice-ai-chip-btn") as
-        | HTMLButtonElement
-        | null;
+      const btn = target.closest(
+        ".practice-ai-chip-btn",
+      ) as HTMLButtonElement | null;
       if (!btn) return;
       const txt = btn.getAttribute("data-text") || "";
       if (!txt) return;
@@ -928,17 +939,27 @@ function tryParseFishJson(text: string): any | null {
 }
 
 // Build a map from FEN -> top moves [{move, score}] using fish state
-function buildTopMovesMapFromFish(state: any): Map<string, { move: string; score: number }[]> {
+function buildTopMovesMapFromFish(
+  state: any,
+): Map<string, { move: string; score: number }[]> {
   const map = new Map<string, { move: string; score: number }[]>();
   if (!state || !state.done) return map;
   for (const line of state.done as Array<any>) {
-    if (line && typeof line.position === "string" && Array.isArray(line.best5)) {
+    if (
+      line &&
+      typeof line.position === "string" &&
+      Array.isArray(line.best5)
+    ) {
       // best5 is array of { move: string; score: number }
       map.set(line.position, line.best5.slice(0, 5));
     }
   }
   // Also include root cached baseline moves if present
-  if (state.config && Array.isArray(state.config.baselineMoves) && typeof state.config.rootFEN === "string") {
+  if (
+    state.config &&
+    Array.isArray(state.config.baselineMoves) &&
+    typeof state.config.rootFEN === "string"
+  ) {
     map.set(state.config.rootFEN, state.config.baselineMoves.slice(0, 5));
   }
   return map;
@@ -959,7 +980,12 @@ function updateTopMovesPanel(dom: DOMElements, gameState: GameState): void {
   }
   const items = list
     .map((m, i) => {
-      const scoreStr = Math.abs(m.score) >= 10000 ? (m.score > 0 ? "#" : "-#") : (m.score / 100).toFixed(2);
+      const scoreStr =
+        Math.abs(m.score) >= 10000
+          ? m.score > 0
+            ? "#"
+            : "-#"
+          : (m.score / 100).toFixed(2);
       return `${i + 1}. ${m.move}  (score ${scoreStr})`;
     })
     .join("<br/>");

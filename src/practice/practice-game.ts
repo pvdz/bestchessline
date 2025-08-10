@@ -775,7 +775,12 @@ function updateTopMovesPanelIfPresent(gameState: GameState, _dom: DOMElements) {
   }
   const items = list
     .map((m, i) => {
-      const scoreStr = Math.abs(m.score) >= 10000 ? (m.score > 0 ? "#" : "-#") : (m.score / 100).toFixed(2);
+      const scoreStr =
+        Math.abs(m.score) >= 10000
+          ? m.score > 0
+            ? "#"
+            : "-#"
+          : (m.score / 100).toFixed(2);
       return `${i + 1}. ${m.move}  (score ${scoreStr})`;
     })
     .join("<br/>");

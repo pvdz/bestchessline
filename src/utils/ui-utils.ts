@@ -36,6 +36,13 @@ export function showToast(
 }
 
 /**
+ * Show error toast notification
+ */
+export function showErrorToast(message: string): void {
+  showToast(message, "#f44336", 4000);
+}
+
+/**
  * Create a debounced function that delays invoking the provided function
  * until after the specified wait time has elapsed since the last time it was invoked.
  * @param func The function to debounce

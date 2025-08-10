@@ -104,7 +104,15 @@ export function buildPositionMap(
         if (parsedMove) {
           fromToSquares = parsedMove.from + parsedMove.to;
         } else {
-          console.warn(`buildPositionMap: Failed to parse move: ${move}`, 'starting at', [startingFEN], 'step', i,' while applying this line:',line);
+          console.warn(
+            `buildPositionMap: Failed to parse move: ${move}`,
+            "starting at",
+            [startingFEN],
+            "step",
+            i,
+            " while applying this line:",
+            line,
+          );
           break;
         }
       }

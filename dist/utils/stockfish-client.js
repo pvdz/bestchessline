@@ -1,256 +1,238 @@
-import { PLAYER_COLORS, } from "../line/types.js";
-import { showToast } from "./ui-utils.js";
-import { compareAnalysisMoves } from "../line/best/analysis-utils.js";
-import { parseFEN, squareToCoords } from "./fen-utils.js";
+import { PLAYER_COLORS } from "../line/types.js";
+import { showErrorToast } from "./ui-utils.js";
+import { compareAnalysisMoves } from "../line/best/bestmove-utils.js";
+import { parseFEN } from "./fen-utils.js";
 import { log, logError } from "./logging.js";
-import { querySelectorHTMLElement, querySelectorButton, } from "./dom-helpers.js";
-/**
- * Show error toast notification
- */
-const showErrorToast = (message) => {
-    showToast(message, "#f44336", 4000);
-};
-// ============================================================================
-// SHAREDARRAYBUFFER DETECTION
-// ============================================================================
-/**
- * Check if SharedArrayBuffer is available and supported
- */
-const isSharedArrayBufferSupported = () => {
-    try {
-        // Check if SharedArrayBuffer exists
-        if (typeof SharedArrayBuffer === "undefined") {
-            return false;
-        }
-        // Check if WebAssembly threads are supported
-        if (typeof WebAssembly === "undefined" || !WebAssembly.Memory) {
-            return false;
-        }
-        // Try to create a shared memory instance
-        const memory = new WebAssembly.Memory({
-            initial: 1,
-            maximum: 1,
-            shared: true,
-        });
-        // Check if the buffer is actually a SharedArrayBuffer
-        return memory.buffer instanceof SharedArrayBuffer;
-    }
-    catch (error) {
-        logError("SharedArrayBuffer not supported:", error);
-        return false;
-    }
-};
-/**
- * Get the appropriate Stockfish worker URL based on environment
- */
-const getStockfishWorkerUrl = () => {
-    if (isSharedArrayBufferSupported()) {
-        return "/dist/stockfish.js";
-    }
-    else {
-        // For GitHub Pages, we'll need to use a different approach
-        // This will be handled by the fallback mechanism
-        return "/dist/stockfish-single.js";
-    }
-};
+import {
+  querySelectorHTMLElement,
+  querySelectorButton,
+} from "./dom-helpers.js";
+import {
+  isSharedArrayBufferSupported,
+  getStockfishWorkerUrlThreaded,
+  getStockfishWorkerUrlFallback,
+} from "./stockfish-utils.js";
+import { parseLongMove } from "./move-parser.js";
 /**
  * Stockfish state instance
  */
 let stockfishState = {
-    worker: null,
-    isReady: false,
-    isAnalyzing: false,
-    currentAnalysis: null,
-    analysisCallbacks: [],
-    analysisResolve: null,
-    engineStatus: {
-        engineLoaded: false,
-        engineReady: false,
-    },
-    waitingForReady: false,
-    pendingAnalysis: null,
-    sharedArrayBufferSupported: isSharedArrayBufferSupported(),
-    fallbackMode: false,
+  worker: null,
+  isOk: false,
+  isAnalyzing: false,
+  currentAnalysis: null,
+  resolve: Promise.resolve,
+  reject: Promise.reject,
+  onUpdate: () => {},
+  engineStatus: {
+    engineLoaded: false,
+    engineReady: false,
+  },
+  waitingForReady: false,
+  pendingAnalysis: null,
+  sharedArrayBufferSupported: isSharedArrayBufferSupported(),
+  fallbackMode: false,
+  go: "",
+  fen: "",
 };
+// ============================================================================
+// STOCKFISH STATE MANAGEMENT
+// ============================================================================
 /**
  * Update Stockfish state
  */
-const updateStockfishState = (updates) => {
-    stockfishState = { ...stockfishState, ...updates };
-};
+function updateStockfishState(updates) {
+  stockfishState = { ...stockfishState, ...updates };
+}
 /**
  * Check if running in fallback mode
  */
-export const isFallbackMode = () => stockfishState.fallbackMode;
-// ============================================================================
-// GLOBAL ERROR HANDLING
-// ============================================================================
-/**
- * Set up global error handlers for crash detection
- */
-const setupGlobalErrorHandlers = () => {
-    // Handle unhandled promise rejections
-    window.addEventListener("unhandledrejection", (event) => {
-        const error = event.reason;
-        const errorMessage = error?.message || String(error);
-        // Check for Stockfish-related crashes
-        if (errorMessage.includes("Maximum call stack size exceeded") ||
-            errorMessage.includes("stockfish") ||
-            errorMessage.includes("Stockfish")) {
-            logError("Unhandled promise rejection (Stockfish crash):", error);
-            event.preventDefault(); // Prevent default handling
-            handleStockfishCrash();
-        }
-    });
-    // Handle global errors
-    window.addEventListener("error", (event) => {
-        const error = event.error;
-        const errorMessage = error?.message || event.message || String(error);
-        // Check for Stockfish-related crashes
-        if (errorMessage.includes("Maximum call stack size exceeded") ||
-            errorMessage.includes("stockfish") ||
-            errorMessage.includes("Stockfish")) {
-            logError("Global error (Stockfish crash):", error);
-            event.preventDefault(); // Prevent default handling
-            handleStockfishCrash();
-        }
-    });
-};
+export function isFallbackMode() {
+  // TODO: eliminate function in favor of isSharedArrayBufferSupported()
+  return !isSharedArrayBufferSupported();
+}
 // ============================================================================
 // STOCKFISH INITIALIZATION
 // ============================================================================
+export function initializeStockfish() {
+  try {
+    // Set up global error handlers for crash detection
+    setupGlobalErrorHandlers();
+    // Dispatch loading event
+    window.dispatchEvent(
+      new CustomEvent("stockfish-loading", {
+        detail: { message: "Initializing Stockfish engine..." },
+      }),
+    );
+    if (isSharedArrayBufferSupported()) {
+      stockfishState.sharedArrayBufferSupported = true;
+      stockfishState.fallbackMode = false;
+      console.log(`Initializing Stockfish with multi-threaded mode...`);
+    } else {
+      stockfishState.sharedArrayBufferSupported = false;
+      stockfishState.fallbackMode = true;
+      log("SharedArrayBuffer not supported - using fallback mode");
+      log("Note: Analysis performance may be reduced");
+      console.log(`Initializing Stockfish with single-threaded mode...`);
+      // Show user notification about fallback mode
+      showFallbackNotification();
+    }
+    stockfishState.worker = createStockfishThreadedWorker();
+    // Initialize with UCI protocol
+    log("Starting UCI protocol...");
+    window.dispatchEvent(
+      new CustomEvent("stockfish-loading", {
+        detail: { message: "Starting UCI protocol..." },
+      }),
+    );
+    uciCmd("uci");
+  } catch (error) {
+    logError("Failed to initialize Stockfish:", error);
+    showErrorToast("Failed to initialize Stockfish engine: " + error?.message);
+    // Try fallback if main initialization fails
+    if (!stockfishState.fallbackMode) {
+      log("Trying fallback mode...");
+      updateStockfishState({ fallbackMode: true });
+      createStockfishFallbackWorker();
+    }
+  }
+}
 /**
- * Initialize Stockfish with fallback support
+ * Set up global error handlers for crash detection
  */
-export const initializeStockfish = () => {
-    try {
-        // Set up global error handlers for crash detection
-        setupGlobalErrorHandlers();
-        // Dispatch loading event
-        window.dispatchEvent(new CustomEvent("stockfish-loading", {
-            detail: { message: "Initializing Stockfish engine..." },
-        }));
-        const sharedArrayBufferSupported = isSharedArrayBufferSupported();
-        updateStockfishState({
-            sharedArrayBufferSupported,
-            fallbackMode: !sharedArrayBufferSupported,
-        });
-        if (!sharedArrayBufferSupported) {
-            log("SharedArrayBuffer not supported - using fallback mode");
-            log("Note: Analysis performance may be reduced");
-            // Show user notification about fallback mode
-            showFallbackNotification();
-        }
-        log(`Initializing Stockfish with ${sharedArrayBufferSupported ? "multi-threaded" : "single-threaded"} mode...`);
-        // Create Web Worker for Stockfish
-        const workerUrl = getStockfishWorkerUrl();
-        const worker = new Worker(workerUrl);
-        // Set up message handler
-        worker.onmessage = (event) => {
-            const message = event.data;
-            log("Received message from Stockfish:", message);
-            handleMessage(message);
-        };
-        // Set up error handler
-        worker.onerror = (error) => {
-            logError("Stockfish worker error:", error);
-            // Check for specific crash conditions
-            const errorMessage = error?.message || "";
-            const isStackOverflow = errorMessage.includes("Maximum call stack size exceeded");
-            const isMemoryError = errorMessage.includes("out of memory") ||
-                errorMessage.includes("memory");
-            if (isStackOverflow || isMemoryError) {
-                logError("Stockfish crash detected:", errorMessage);
-                handleStockfishCrash();
-                return;
-            }
-            // Only switch to fallback mode if we're not already in fallback mode
-            // and this is an initialization error (not a runtime analysis error)
-            if (!stockfishState.fallbackMode && !stockfishState.isReady) {
-                log("Initialization error - trying fallback mode...");
-                showErrorToast("Stockfish engine initialization failed. Trying fallback mode...");
-                updateStockfishState({ fallbackMode: true });
-                initializeStockfishFallback();
-            }
-            else if (stockfishState.isReady) {
-                // If engine is ready but we get a runtime error, log it but don't switch modes
-                logError("Runtime error during analysis:", error);
-                showErrorToast("Stockfish engine encountered an error during analysis: " +
-                    (error?.message ?? error));
-                // Handle crash by resetting UI state
-                if (stockfishState.isAnalyzing) {
-                    log("Analysis error occurred - resetting UI state");
-                    handleStockfishCrash();
-                }
-            }
-        };
-        updateStockfishState({ worker });
-        // Initialize with UCI protocol
-        log("Starting UCI protocol...");
-        window.dispatchEvent(new CustomEvent("stockfish-loading", {
-            detail: { message: "Starting UCI protocol..." },
-        }));
-        uciCmd("uci");
+function setupGlobalErrorHandlers() {
+  // Handle unhandled promise rejections
+  window.addEventListener("unhandledrejection", (event) => {
+    const error = event.reason;
+    const errorMessage = error?.message || String(error);
+    // Check for Stockfish-related crashes
+    if (
+      errorMessage.includes("Maximum call stack size exceeded") ||
+      errorMessage.includes("stockfish") ||
+      errorMessage.includes("Stockfish")
+    ) {
+      logError("Unhandled promise rejection (Stockfish crash):", error);
+      event.preventDefault(); // Prevent default handling
+      handleStockfishCrash();
     }
-    catch (error) {
-        logError("Failed to initialize Stockfish:", error);
-        showErrorToast("Failed to initialize Stockfish engine: " + error?.message);
-        // Try fallback if main initialization fails
-        if (!stockfishState.fallbackMode) {
-            log("Trying fallback mode...");
-            updateStockfishState({ fallbackMode: true });
-            initializeStockfishFallback();
-        }
+  });
+  // Handle global errors
+  window.addEventListener("error", (event) => {
+    const error = event.error;
+    const errorMessage = error?.message || event.message || String(error);
+    // Check for Stockfish-related crashes
+    if (
+      errorMessage.includes("Maximum call stack size exceeded") ||
+      errorMessage.includes("stockfish") ||
+      errorMessage.includes("Stockfish")
+    ) {
+      logError("Global error (Stockfish crash):", error);
+      event.preventDefault(); // Prevent default handling
+      handleStockfishCrash();
     }
-};
+  });
+}
+function createStockfishThreadedWorker() {
+  // Create Web Worker for Stockfish
+  const workerUrl = getStockfishWorkerUrlThreaded();
+  const worker = new Worker(workerUrl);
+  // Set up message handler
+  worker.onmessage = async (event) => {
+    const message = event.data;
+    log("Received message from Stockfish:", message);
+    await handleUciMessageFromStockfish(message);
+  };
+  // Set up error handler
+  worker.onerror = (error) => {
+    logError("Stockfish worker error:", error);
+    // Check for specific crash conditions
+    const errorMessage = error?.message || "";
+    const isStackOverflow = errorMessage.includes(
+      "Maximum call stack size exceeded",
+    );
+    const isMemoryError =
+      errorMessage.includes("out of memory") || errorMessage.includes("memory");
+    if (isStackOverflow || isMemoryError) {
+      logError("Stockfish crash detected:", errorMessage);
+      handleStockfishCrash();
+      return;
+    }
+    // Only switch to fallback mode if we're not already in fallback mode
+    // and this is an initialization error (not a runtime analysis error)
+    if (!stockfishState.fallbackMode && !stockfishState.isOk) {
+      log("Initialization error - trying fallback mode...");
+      showErrorToast(
+        "Stockfish engine initialization failed. Trying fallback mode...",
+      );
+      stockfishState.fallbackMode = true;
+      createStockfishFallbackWorker();
+    } else if (stockfishState.isOk) {
+      // If engine is ready but we get a runtime error, log it but don't switch modes
+      logError("Runtime error during analysis:", error);
+      showErrorToast(
+        "Stockfish engine encountered an error during analysis: " +
+          (error?.message ?? error),
+      );
+      // Handle crash by resetting UI state
+      if (stockfishState.isAnalyzing) {
+        log("Analysis error occurred - resetting UI state");
+        handleStockfishCrash();
+      }
+    }
+  };
+  return worker;
+}
 /**
  * Initialize Stockfish in fallback mode (single-threaded)
  */
-const initializeStockfishFallback = () => {
-    try {
-        log("Initializing Stockfish in fallback mode...");
-        // Create Web Worker for single-threaded Stockfish
-        const worker = new Worker("/dist/stockfish-single.js");
-        // Set up message handler
-        worker.onmessage = (event) => {
-            const message = event.data;
-            log("Received message from Stockfish fallback:", message);
-            handleMessage(message);
-        };
-        // Set up error handler
-        worker.onerror = (error) => {
-            logError("Stockfish fallback worker error:", error);
-            // For fallback mode, just log the error but don't try to switch modes again
-            if (stockfishState.isAnalyzing) {
-                log("Fallback analysis error occurred - continuing with current results");
-            }
-            showErrorToast("Stockfish fallback engine encountered an error: " +
-                (error?.message ?? error));
-        };
-        updateStockfishState({
-            worker,
-            fallbackMode: true,
-        });
-        // Initialize with UCI protocol
-        log("Starting UCI protocol for fallback mode...");
-        uciCmd("uci");
-        // Notify user about fallback mode
-        showFallbackNotification();
-    }
-    catch (error) {
-        logError("Failed to initialize Stockfish fallback:", error);
-        showErrorToast("Failed to initialize Stockfish fallback engine: " +
-            error?.message);
-    }
-};
+function createStockfishFallbackWorker() {
+  try {
+    console.log("Initializing Stockfish in fallback mode...");
+    // Create Web Worker for single-threaded Stockfish
+    const worker = new Worker(getStockfishWorkerUrlFallback());
+    // Set up message handler
+    worker.onmessage = async (event) => {
+      const message = event.data;
+      log("Received message from Stockfish fallback:", message);
+      await handleUciMessageFromStockfish(message);
+    };
+    // Set up error handler
+    worker.onerror = (error) => {
+      logError("Stockfish fallback worker error:", error);
+      // For fallback mode, just log the error but don't try to switch modes again
+      if (stockfishState.isAnalyzing) {
+        log(
+          "Fallback analysis error occurred - continuing with current results",
+        );
+      }
+      showErrorToast(
+        "Stockfish fallback engine encountered an error: " +
+          (error?.message ?? error),
+      );
+    };
+    stockfishState.worker = worker;
+    stockfishState.fallbackMode = true;
+    // Initialize with UCI protocol
+    log("Starting UCI protocol for fallback mode...");
+    uciCmd("uci");
+    // Notify user about fallback mode
+    showFallbackNotification();
+  } catch (error) {
+    logError("Failed to initialize Stockfish fallback:", error);
+    showErrorToast(
+      "Failed to initialize Stockfish fallback engine: " + error?.message,
+    );
+  }
+}
 /**
  * Show notification about fallback mode
  */
-const showFallbackNotification = () => {
-    // Create notification element
-    const notification = document.createElement("div");
-    notification.className = "fallback-notification";
-    notification.innerHTML = `
+function showFallbackNotification() {
+  // Create notification element
+  const notification = document.createElement("div");
+  notification.className = "fallback-notification";
+  // FIXME: move in html, hidden by default
+  notification.innerHTML = `
     <div class="notification-content">
       <strong>Single-Threaded Analysis Mode</strong><br>
       Note: Using fallback mode for compatibility.<br>
@@ -258,8 +240,8 @@ const showFallbackNotification = () => {
       <button onclick="this.parentElement.parentElement.remove()">×</button>
     </div>
   `;
-    // Add styles
-    notification.style.cssText = `
+  // FIXME: just use CSS
+  notification.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
@@ -271,15 +253,21 @@ const showFallbackNotification = () => {
     max-width: 300px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   `;
-    const contentElement = querySelectorHTMLElement(notification, ".notification-content");
-    if (contentElement) {
-        contentElement.style.cssText = `
+  const contentElement = querySelectorHTMLElement(
+    // FIXME: just use CSS
+    notification,
+    ".notification-content",
+  );
+  if (contentElement) {
+    // FIXME: just use CSS
+    contentElement.style.cssText = `
       position: relative;
     `;
-    }
-    const buttonElement = querySelectorButton(notification, "button");
-    if (buttonElement) {
-        buttonElement.style.cssText = `
+  }
+  // FIXME: just use CSS
+  const buttonElement = querySelectorButton(notification, "button");
+  if (buttonElement) {
+    buttonElement.style.cssText = `
       position: absolute;
       top: -10px;
       right: -10px;
@@ -292,422 +280,350 @@ const showFallbackNotification = () => {
       cursor: pointer;
       font-size: 14px;
     `;
+  }
+  document.body.appendChild(notification);
+  // Auto-remove after 10 seconds
+  setTimeout(() => {
+    if (notification.parentElement) {
+      notification.remove();
     }
-    document.body.appendChild(notification);
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 10000);
-};
+  }, 10000);
+}
 /**
  * Send UCI command to Stockfish
  */
-const uciCmd = (cmd) => {
-    log("UCI Command:", cmd);
-    if (stockfishState.worker) {
-        stockfishState.worker.postMessage(cmd);
-    }
-};
+function uciCmd(cmd) {
+  log("UCI Command:", cmd);
+  if (stockfishState.worker) {
+    stockfishState.worker.postMessage(cmd);
+  } else {
+    console.error(
+      "uciCmd: Wanted to talk to Stockfish but its worker is not initialized",
+    );
+  }
+}
 // ============================================================================
 // MESSAGE HANDLING
 // ============================================================================
 /**
  * Handle messages from Stockfish
  */
-const handleMessage = (message) => {
-    if (message === "uciok") {
-        log("UCI protocol ready, engine loaded");
-        window.dispatchEvent(new CustomEvent("stockfish-loading", {
-            detail: { message: "UCI protocol ready, configuring engine..." },
-        }));
-        updateStockfishState({
-            engineStatus: { ...stockfishState.engineStatus, engineLoaded: true },
-        });
-        uciCmd("isready");
+async function handleUciMessageFromStockfish(message) {
+  // console.log('handleUciMessageFromStockfish:', message);
+  if (message === "uciok") {
+    stockfishState.isOk = true;
+    log("UCI protocol ready, engine loaded");
+    window.dispatchEvent(
+      new CustomEvent("stockfish-loading", {
+        detail: { message: "UCI protocol ready, configuring engine..." },
+      }),
+    );
+    window.dispatchEvent(
+      new CustomEvent("stockfish-analyzing", {
+        detail: { message: "Analyzing...", position: stockfishState.fen },
+      }),
+    );
+  } else if (message === "readyok") {
+    console.log("Stockfish readyok!");
+    window.dispatchEvent(new CustomEvent("stockfish-ready"));
+    stockfishState.engineStatus.engineReady = true;
+    if (stockfishState.pendingAnalysis) {
+      const cb = stockfishState.pendingAnalysis;
+      updateStockfishState({ pendingAnalysis: null });
+      cb();
     }
-    else if (message === "readyok") {
-        log("Stockfish is ready!");
-        window.dispatchEvent(new CustomEvent("stockfish-ready"));
-        updateStockfishState({
-            engineStatus: { ...stockfishState.engineStatus, engineReady: true },
-            isReady: true,
-        });
-        if (stockfishState.pendingAnalysis) {
-            stockfishState.pendingAnalysis();
-            updateStockfishState({ pendingAnalysis: null });
-        }
-    }
-    else if (message.startsWith("bestmove")) {
-        handleBestMove(message);
-    }
-    else if (message.startsWith("info")) {
-        parseInfoMessage(message);
-    }
-    else if (message.startsWith("Stockfish")) {
-        log("Received Stockfish version info");
-    }
-    else if (message.includes("Threads")) {
-        log(`Thread setting response: ${message}`);
-    }
-};
+    console.log("Go!", stockfishState.go);
+    uciCmd(stockfishState.go);
+  } else if (message.startsWith("bestmove")) {
+    // Okay, treat as finish. Assume we've collected all lines (pv's) reported so far
+    const parts = message.split(" ");
+    console.log("Best move (depth mode experiment):", parts[1]);
+    await handleStockfishBestMoveMessage();
+  } else if (message.startsWith("info")) {
+    parseInfoMessage(message);
+  } else if (message.startsWith("Stockfish")) {
+    log("Received Stockfish version info");
+  } else if (message.includes("Threads")) {
+    log(`Thread setting response: ${message}`);
+  } else if (
+    !message ||
+    message.startsWith("id name ") ||
+    message.startsWith("id author ") ||
+    message.startsWith("option name Debug ") ||
+    message.startsWith("option name Hash ") ||
+    message.startsWith("option name Clear Hash ") ||
+    message.startsWith("option name Ponder ") ||
+    message.startsWith("option name MultiPV ") ||
+    message.startsWith("option name Skill ") ||
+    message.startsWith("option name Move Overhead ") ||
+    message.startsWith("option name Slow Mover ") ||
+    message.startsWith("option name nodestime ") ||
+    message.startsWith("option name UCI_Chess960 ") ||
+    message.startsWith("option name UCI_AnalyseMode ") ||
+    message.startsWith("option name UCI_LimitStrength ") ||
+    message.startsWith("option name UCI_Elo ") ||
+    message.startsWith("option name UCI_ShowWDL ") ||
+    message.startsWith("option name Use NNUE ") ||
+    message.startsWith("option name EvalFile ")
+  ) {
+    // ignore
+  } else {
+    console.log("Unexpected stockfish uci message:", message);
+  }
+}
 /**
  * Parse info message from Stockfish
  */
-const parseInfoMessage = (message) => {
-    if (!stockfishState.currentAnalysis || !stockfishState.isAnalyzing)
-        return;
-    const parts = message.split(" ");
-    let depth = 0;
-    let score = 0;
-    let pv = [];
-    let nodes = 0;
-    let time = 0;
-    let multipv = 1; // Default to first principal variation
-    for (let i = 1; i < parts.length; i++) {
-        const part = parts[i];
-        switch (part) {
-            case "depth":
-                depth = parseInt(parts[++i]);
-                break;
-            case "multipv":
-                multipv = parseInt(parts[++i]);
-                break;
-            case "score":
-                const scoreType = parts[++i];
-                if (scoreType === "cp") {
-                    score = parseInt(parts[++i]);
-                }
-                else if (scoreType === "mate") {
-                    const mateScore = parseInt(parts[++i]);
-                    score = mateScore > 0 ? 10000 : -10000;
-                }
-                break;
-            case "nodes":
-                nodes = parseInt(parts[++i]);
-                break;
-            case "time":
-                time = parseInt(parts[++i]);
-                break;
-            case "pv":
-                // Collect all remaining parts as PV moves
-                pv = parts.slice(++i);
-                break;
+function parseInfoMessage(message) {
+  if (!stockfishState.currentAnalysis || !stockfishState.isAnalyzing) return;
+  const parts = message.split(" ");
+  let depth = 0;
+  let score = 0;
+  let pv = [];
+  let nodes = 0;
+  let time = 0;
+  let multipv = 1; // Default to first principal variation
+  let mateIn = 0;
+  for (let i = 1; i < parts.length; i++) {
+    const part = parts[i];
+    switch (part) {
+      case "depth": {
+        depth = parseInt(parts[++i]);
+        break;
+      }
+      case "multipv": {
+        // Sort of a line identifier but not reliable/consistent throughout a search so effectively meaningless for us
+        multipv = parseInt(parts[++i]);
+        break;
+      }
+      case "score": {
+        const scoreType = parts[++i];
+        if (scoreType === "cp") {
+          score = parseInt(parts[++i]);
+        } else if (scoreType === "mate") {
+          const mateScore = parseInt(parts[++i]);
+          score = mateScore > 0 ? 10000 : -10000;
         }
+        break;
+      }
+      case "nodes": {
+        nodes = parseInt(parts[++i]);
+        break;
+      }
+      case "time": {
+        time = parseInt(parts[++i]);
+        break;
+      }
+      case "pv": {
+        // Collect all remaining parts as PV moves
+        pv = parts.slice(++i);
+        i = parts.length; // break out of the loop
+        break;
+      }
+      case "mate": {
+        mateIn = parseInt(parts[++i]);
+        break;
+      }
+      case "nps":
+      case "seldepth":
+      case "multipv":
+      case "hashfull":
+      case "currmovenumber":
+      case "currmove": {
+        ++i; // skip
+        break;
+      }
+      case "string": {
+        // skip remainder
+        i = parts.length;
+        break;
+      }
+      case "lowerbound":
+      case "upperbound": {
+        break;
+      }
+      default: {
+        console.log("Unexpected stockfish info message part:", part, [message]);
+      }
     }
-    // Normalize score to always be from white's perspective
-    // When it's black's turn, Stockfish returns scores from black's perspective
-    const fen = stockfishState.currentAnalysis?.position || "";
-    const position = fen && parseFEN(fen);
-    if (position) {
-        if (position.turn === PLAYER_COLORS.BLACK) {
-            // Invert the score when it's black's turn
-            score = -score;
-        }
+  }
+  // Okay, we basically only care about infos with a pv
+  if (pv.length === 0) {
+    // console.log('No pv in info message, skipping...');
+    return;
+  }
+  // Normalize score to always be from white's perspective
+  // When it's black's turn, Stockfish returns scores from black's perspective
+  const fen = stockfishState.currentAnalysis?.position || "";
+  // TOFIX: which fen is this getting? is this even getting a fen at all?
+  const position = fen && parseFEN(fen);
+  let isBlack = !!(position && position.turn === PLAYER_COLORS.BLACK);
+  if (isBlack) {
+    score = -score;
+  }
+  // Convert PV moves to ChessMove objects
+  const pvMoves = [];
+  for (const moveStr of pv) {
+    const move = parseLongMove(moveStr, fen);
+    if (move) {
+      pvMoves.push(move);
     }
-    // Dispatch comprehensive update event for all info messages
-    window.dispatchEvent(new CustomEvent("stockfish-info-update", {
-        detail: {
-            depth,
-            multipv,
-            score,
-            nodes,
-            time,
-            pvMoves: pv.length,
-            hasPV: pv.length > 0,
-        },
-    }));
-    // Dispatch PV line update event for tree digger tracking (for backward compatibility)
-    if (pv.length > 0) {
-        window.dispatchEvent(new CustomEvent("stockfish-pv-line", {
-            detail: {
-                depth,
-                multipv,
-                score,
-                pvMoves: pv.length,
-            },
-        }));
-    }
-    // Convert PV moves to ChessMove objects
-    const pvMoves = [];
-    for (const moveStr of pv) {
-        const move = parseRawMove(moveStr);
-        if (move) {
-            pvMoves.push(move);
-        }
-    }
-    // Update analysis result
-    if (stockfishState.currentAnalysis && pvMoves.length > 0) {
-        const firstMove = pvMoves[0];
-        // Find existing move by move coordinates (from and to squares)
-        // This is more reliable than multipv in single-threaded mode
-        const existingMoveIndex = stockfishState.currentAnalysis.moves.findIndex((move) => move.move.from === firstMove.from &&
-            move.move.to === firstMove.to &&
-            move.move.piece === firstMove.piece);
-        // Calculate mateIn for mate moves (actual moves required, not depth). THIS IS MOVE LENGTH RELATED LEAVE ALONE.
-        const mateIn = Math.abs(score) >= 10000 ? Math.ceil(pv.length / 2) : 0;
-        const analysisMove = {
-            move: firstMove,
-            score,
-            depth,
-            pv: pvMoves,
-            nodes,
-            time,
-            multipv, // Add multipv to track which variation this is
-            mateIn, // Actual number of moves required for mate
-        };
-        if (existingMoveIndex >= 0) {
-            // Update existing move with new depth and score
-            // Only update if this result is better (higher depth or better score)
-            const existingMove = stockfishState.currentAnalysis.moves[existingMoveIndex];
-            const shouldUpdate = depth > existingMove.depth ||
-                (depth === existingMove.depth && score > existingMove.score);
-            if (shouldUpdate) {
-                log(`Updating existing move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}`);
-                stockfishState.currentAnalysis.moves[existingMoveIndex] = analysisMove;
-            }
-            else {
-                log(`Skipping update for ${firstMove.from}${firstMove.to} - existing result is better (depth: ${existingMove.depth} vs ${depth})`);
-                return; // Don't trigger callback if we didn't update
-            }
-        }
-        else {
-            // Add new variation
-            log(`Adding new move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}`);
-            stockfishState.currentAnalysis.moves.push(analysisMove);
-        }
-        // Determine direction based on whose turn it is
-        const direction = position && position.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
-        // Sort moves based on direction
-        stockfishState.currentAnalysis.moves.sort((a, b) => {
-            return compareAnalysisMoves(a, b, direction);
-        });
-        // Notify callbacks
-        stockfishState.analysisCallbacks.forEach((callback) => {
-            callback(stockfishState.currentAnalysis);
-        });
-    }
-};
+  }
+  const firstMove = pvMoves[0];
+  const analysisMove = {
+    move: firstMove,
+    score,
+    depth,
+    pv: pvMoves,
+    nodes,
+    time,
+    multipv, // Add multipv to track which variation this is
+    mateIn, // Actual number of moves required for mate
+  };
+  // Add new variation
+  log(
+    `Adding new move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}, isBlack=${isBlack}, moves=${stockfishState.currentAnalysis.moves.map((m) => m.move.from + m.move.to).join(", ")}`,
+  );
+  stockfishState.currentAnalysis.moves.push(analysisMove);
+  // Determine direction based on whose turn it is
+  const direction = isBlack ? "asc" : "desc";
+  // Sort moves based on direction
+  stockfishState.currentAnalysis.moves.sort((a, b) => {
+    return compareAnalysisMoves(a, b, direction);
+  });
+  stockfishState.onUpdate(stockfishState.currentAnalysis);
+}
 /**
  * Handle best move message
  */
-const handleBestMove = (message) => {
-    const parts = message.split(" ");
-    if (parts.length >= 2) {
-        const bestMove = parts[1];
-        log("Best move:", bestMove);
-        // Stop analysis
-        updateStockfishState({ isAnalyzing: false });
-        if (stockfishState.currentAnalysis) {
-            stockfishState.currentAnalysis.completed = true;
-            // Notify callbacks of final result
-            stockfishState.analysisCallbacks.forEach((callback) => {
-                callback(stockfishState.currentAnalysis);
-            });
-            // Resolve any awaiting analyzePosition promise
-            const resolver = stockfishState.analysisResolve;
-            if (resolver) {
-                try {
-                    resolver(stockfishState.currentAnalysis);
-                }
-                finally {
-                    updateStockfishState({ analysisResolve: null });
-                }
-            }
-        }
-    }
-};
-/**
- * Parse raw move string from Stockfish
- */
-const parseRawMove = (moveStr) => {
-    if (moveStr.length !== 4)
-        return null;
-    const from = moveStr.substring(0, 2);
-    const to = moveStr.substring(2, 4);
-    // Determine piece type from current board position
-    const currentFEN = stockfishState.currentAnalysis?.position || "";
-    if (!currentFEN)
-        return null;
-    const board = parseFEN(currentFEN).board;
-    const [fromRank, fromFile] = squareToCoords(from);
-    if (fromRank < 0 || fromRank >= 8 || fromFile < 0 || fromFile >= 8)
-        return null;
-    const piece = board[fromRank][fromFile];
-    if (!piece)
-        return null;
-    return { from, to, piece };
-};
+async function handleStockfishBestMoveMessage() {
+  stockfishState.isAnalyzing = false;
+  if (stockfishState.currentAnalysis) {
+    stockfishState.currentAnalysis.completed = true;
+    stockfishState.onUpdate(stockfishState.currentAnalysis);
+    // TOFIX: which fen is this getting? is this even getting a fen at all?
+    // const fen = stockfishState.currentAnalysis?.position || "";
+    // const position = fen && parseFEN(fen);
+    // let isBlack = !!(position && position.turn === PLAYER_COLORS.BLACK);
+    // console.log('Final score of this pass: isblack=', isBlack, ', moves=', stockfishState.currentAnalysis.moves);
+    // await emphasizeFishTickerWithPause();
+    stockfishState.resolve(stockfishState.currentAnalysis);
+  } else {
+    throw new Error("No current analysis to resolve");
+  }
+}
 // ============================================================================
 // ANALYSIS FUNCTIONS
 // ============================================================================
-let concurrencyCheck = false;
 /**
  * Analyze position with Stockfish
  */
-export const analyzePosition = async (fen, options = {}, onUpdate) => {
-    if (concurrencyCheck) {
-        throw new Error("Stockfish analyzePosition() called while already analyzing");
-    }
-    concurrencyCheck = true;
-    return analyzePositionMono(fen, options, onUpdate).finally(() => (concurrencyCheck = false));
-};
-const analyzePositionMono = async (fen, options = {}, onUpdate) => {
-    // console.log("Starting stockfish analyze()", options);
-    const promise = new Promise((resolve, reject) => {
-        // Validate input parameters
-        if (!fen || typeof fen !== "string") {
-            console.warn("Stockfish analyzePosition: Invalid FEN parameter:", fen, options);
-            reject(new Error("Invalid FEN parameter"));
-            return;
-        }
-        if (!stockfishState.isReady) {
-            // console.log("Stockfish not ready, queuing analysis...");
-            updateStockfishState({
-                pendingAnalysis: () => analyzePosition(fen, options, onUpdate).then(resolve).catch(reject),
-            });
-            return;
-        }
-        // Validate FEN format
-        const fenParts = fen.split(" ");
-        if (fenParts.length < 4) {
-            console.warn("Stockfish analyzePosition: Invalid FEN format:", fen);
-            reject(new Error("Invalid FEN format"));
-            return;
-        }
-        // Create new analysis result
-        const analysisResult = {
-            moves: [],
-            position: fen,
-            depth: options.depth || 20,
-            completed: false,
-        };
-        // Clear any previous analysis results
-        log("Starting new analysis, clearing previous results");
-        updateStockfishState({
-            currentAnalysis: analysisResult,
-            isAnalyzing: true,
-            analysisResolve: resolve,
-        });
-        if (onUpdate) {
-            updateStockfishState({
-                analysisCallbacks: [...stockfishState.analysisCallbacks, onUpdate],
-            });
-        }
-        // MultiPV completion gate: wait until we have N PVs at target depth (or mate), then stop
-        const targetDepth = analysisResult.depth;
-        const requiredPV = Math.max(1, options.multiPV || 1);
-        const gateCallback = (result) => {
-            try {
-                const okCount = (result.moves || []).filter((m) => {
-                    const isMate = Math.abs(m.score) >= 10000;
-                    return isMate || m.depth >= targetDepth;
-                }).length;
-                if (okCount >= requiredPV) {
-                    // Stop engine and resolve once final callback runs
-                    uciCmd("stop");
-                }
-            }
-            catch { }
-        };
-        updateStockfishState({
-            analysisCallbacks: [...stockfishState.analysisCallbacks, gateCallback],
-        });
-        // Configure Stockfish
-        uciCmd("position fen " + fen);
-        // Ensure Stockfish is ready before setting options
-        uciCmd("isready");
-        // Set options
-        if (options.threads) {
-            log(`Setting Stockfish threads to ${options.threads}`);
-            uciCmd(`setoption name Threads value ${options.threads}`);
-            // Query current thread setting
-            uciCmd("setoption name Threads");
-        }
-        if (options.multiPV) {
-            log(`Setting Stockfish MultiPV to ${options.multiPV}`);
-            uciCmd(`setoption name MultiPV value ${options.multiPV}`);
-        }
-        else {
-            // Reset MultiPV to 1 if not specified
-            log("Resetting Stockfish MultiPV to 1");
-            uciCmd("setoption name MultiPV value 1");
-        }
-        // Start analysis
-        const goCommand = [
-            "go",
-            options.depth ? `depth ${options.depth}` : "",
-            // Do we want to stop when a mate is found? Will it be the best mate or might there be a shorter mate?
-            // options.depth ? `mate ${options.depth}` : "",
-            options.searchMoves ? `searchmoves ${options.searchMoves.join(" ")}` : "", // only search these moves (long notation)
-        ]
-            .filter(Boolean)
-            .join(" ");
-        uciCmd(goCommand);
-        // Announce analyzing state
-        try {
-            window.dispatchEvent(new CustomEvent("stockfish-analyzing", {
-                detail: { message: "Analyzing...", position: fen },
-            }));
-        }
-        catch { }
-    });
-    return promise;
-};
-export const stopAnalysis = () => {
-    if (stockfishState.isAnalyzing) {
-        uciCmd("stop");
-        updateStockfishState({ isAnalyzing: false });
-    }
-};
+export async function analyzePosition(fen, options = {}, onUpdate) {
+  if (stockfishState.isAnalyzing) {
+    throw new Error(
+      "Stockfish analyzePosition() called while already analyzing",
+    );
+  }
+  const promise = new Promise((resolve, reject) => {
+    stockfishState.resolve = resolve;
+    stockfishState.reject = reject;
+  });
+  stockfishState.onUpdate = onUpdate;
+  stockfishState.fen = fen;
+  stockfishState.isAnalyzing = true;
+  await analyzePositionMono(fen, options);
+  return promise;
+}
+async function analyzePositionMono(fen, options = {}) {
+  // Validate input parameters
+  if (!fen || typeof fen !== "string") {
+    console.warn(
+      "Stockfish analyzePosition: Invalid FEN parameter:",
+      fen,
+      options,
+    );
+    throw new Error("Invalid FEN parameter");
+  }
+  if (!stockfishState.isOk) {
+    console.log("Waiting 1s for Stockfish to isOk...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return await analyzePositionMono(fen, options);
+  }
+  // Validate FEN format
+  const fenParts = fen.split(" ");
+  if (fenParts.length < 4) {
+    console.warn("Stockfish analyzePosition: Invalid FEN format:", fen);
+    throw new Error("Invalid FEN format");
+  }
+  // Create new analysis result
+  const analysisResult = {
+    moves: [],
+    position: fen,
+    depth: options.depth || 20,
+    completed: false,
+  };
+  stockfishState.currentAnalysis = analysisResult;
+  // Setup Stockfish internal state
+  uciCmd("ucinewgame");
+  uciCmd("position fen " + fen);
+  uciCmd(`setoption name Threads value ${options.threads || 1}`);
+  uciCmd(`setoption name MultiPV value ${options.multiPV || 1}`);
+  stockfishState.go = [
+    "go",
+    options.depth ? `depth ${options.depth}` : "",
+    options.searchMoves ? `searchmoves ${options.searchMoves.join(" ")}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  console.log("Sending isready...", options);
+  uciCmd("isready");
+}
+export function stopAnalysis() {
+  if (stockfishState.isAnalyzing) {
+    uciCmd("stop");
+    updateStockfishState({ isAnalyzing: false });
+  }
+}
 // Expose a snapshot of the current analysis (for UI rendering)
-export const getCurrentAnalysisSnapshot = () => {
-    const cur = stockfishState.currentAnalysis;
-    if (!cur)
-        return null;
-    return {
-        position: cur.position,
-        depth: cur.depth,
-        completed: cur.completed,
-        moves: [...cur.moves],
-    };
-};
+export function getCurrentAnalysisSnapshot() {
+  const cur = stockfishState.currentAnalysis;
+  if (!cur) return null;
+  return {
+    position: cur.position,
+    depth: cur.depth,
+    completed: cur.completed,
+    moves: [...cur.moves],
+  };
+}
 /**
  * Handle Stockfish crash and reset UI state
  */
-export const handleStockfishCrash = () => {
-    logError("Stockfish crash detected, resetting UI state...");
-    // Reset Stockfish state
-    updateStockfishState({
-        isReady: false,
-        isAnalyzing: false,
-        currentAnalysis: null,
-        analysisCallbacks: [],
-        engineStatus: {
-            engineLoaded: false,
-            engineReady: false,
-        },
-        waitingForReady: false,
-        pendingAnalysis: null,
-    });
-    // Terminate existing worker if it exists
-    if (stockfishState.worker) {
-        try {
-            stockfishState.worker.terminate();
-        }
-        catch (error) {
-            logError("Error terminating Stockfish worker:", error);
-        }
-        updateStockfishState({ worker: null });
+export function handleStockfishCrash() {
+  logError("Stockfish crash detected, resetting UI state...");
+  // Reset Stockfish state
+  stockfishState.isOk = false;
+  stockfishState.isAnalyzing = false;
+  stockfishState.currentAnalysis = null;
+  stockfishState.resolve = Promise.resolve;
+  stockfishState.reject = Promise.reject;
+  // Terminate existing worker if it exists
+  if (stockfishState.worker) {
+    try {
+      stockfishState.worker.terminate();
+    } catch (error) {
+      logError("Error terminating Stockfish worker:", error);
     }
-    // Show error notification
-    showErrorToast("Stockfish crashed. Please refresh the page to restart.");
-    // Dispatch crash event for UI components to handle
-    window.dispatchEvent(new CustomEvent("stockfish-crash"));
-};
+    updateStockfishState({ worker: null });
+  }
+  // Show error notification
+  showErrorToast("Stockfish crashed. Please refresh the page to restart.");
+  // Dispatch crash event for UI components to handle
+  window.dispatchEvent(new CustomEvent("stockfish-crash"));
+}
 /**
  * Check if currently analyzing
  */
-export const isAnalyzingPosition = () => stockfishState.isAnalyzing;
+export function isAnalyzingPosition() {
+  return stockfishState.isAnalyzing;
+}
 //# sourceMappingURL=stockfish-client.js.map

@@ -52,8 +52,6 @@ export interface StockfishOptions {
   depth?: number;
   threads?: number;
   multiPV?: number;
-  /** Require at least this many PVs to reach target depth (or mate) before stopping */
-  requiredPV?: number;
   searchMoves?: string[]; // long notation to only consider
 }
 

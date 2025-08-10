@@ -101,7 +101,8 @@ export const importFishState = (importedState: any): boolean => {
         sanGame: streamlinedLine.sanGame, // Use sanGame for reconstruction
         pcns: streamlinedLine.pcns,
         score: streamlinedLine.score,
-        best5: streamlinedLine.best5,
+        best5Alts: streamlinedLine.best5Alts,
+        best5Replies: streamlinedLine.best5Replies,
         position: currentFEN, // Reconstructed position
         isDone: isFromDoneArray, // Done lines are marked as done
         isFull: isFromDoneArray, // Done lines are also marked as full
