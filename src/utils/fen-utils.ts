@@ -11,45 +11,130 @@ import { ChessPosition, Square, PlayerColor } from "./types.js";
  * Parse a FEN string into a ChessPosition object
  */
 export function parseFEN(fen: string): ChessPosition {
-  const parts = fen.split(" ");
+  if (typeof fen !== "string" || fen.trim() === "") {
+    throw new Error("parseFEN(): FEN must be a non-empty string");
+  }
+  const parts = fen.trim().split(/\s+/);
+  if (parts.length !== 6) {
+    throw new Error(`parseFEN(): FEN must have exactly 6 fields: ${fen}`);
+  }
+
   const boardPart = parts[0];
-  if (parts[1] !== "w" && parts[1] !== "b")
-    console.warn(
-      "Warning: parseFEN() received a FEN where the current turn character was not as expected",
-      parts,
-      [fen],
-    );
-  const turn = parts[1] as PlayerColor;
-  const castling = parts[2];
-  const enPassant = parts[3] === "-" ? null : parts[3];
-  const halfMoveClock = parseInt(parts[4]);
-  const fullMoveNumber = parseInt(parts[5]);
+  const turnPart = parts[1];
+  const castlingPart = parts[2];
+  const enPassantPart = parts[3];
+  const halfMovePart = parts[4];
+  const fullMovePart = parts[5];
 
-  const board: string[][] = Array(8)
-    .fill(null)
-    .map(() => Array(8).fill(""));
-  const ranks = boardPart.split("/");
+  if (turnPart !== "w" && turnPart !== "b") {
+    throw new Error(`parseFEN(): active color must be 'w' or 'b': ${turnPart}`);
+  }
+  const turn = turnPart as PlayerColor;
 
-  for (let rank = 0; rank < 8; rank++) {
-    let file = 0;
-    for (const char of ranks[rank]) {
-      if (char >= "1" && char <= "8") {
-        file += parseInt(char);
-      } else {
-        board[rank][file] = char;
-        file++;
-      }
+  // Validate castling availability: '-' or combination of KQkq without duplicates
+  let castling = castlingPart;
+  if (castling !== "-") {
+    if (!/^[KQkq]+$/.test(castling)) {
+      throw new Error(`parseFEN(): invalid castling availability: ${castling}`);
+    }
+    const set = new Set(castling.split(""));
+    if (set.size !== castling.length) {
+      throw new Error(`parseFEN(): duplicate castling flags: ${castling}`);
     }
   }
 
-  return {
-    board,
-    turn,
-    castling,
-    enPassant,
-    halfMoveClock,
-    fullMoveNumber,
-  };
+  // Validate en passant target square: '-' or a valid square on rank 3 (for black to move) or 6 (for white to move)
+  let enPassant: string | null = null;
+  if (enPassantPart !== "-") {
+    if (!isValidSquare(enPassantPart)) {
+      throw new Error(
+        `parseFEN(): invalid en passant square: ${enPassantPart}`,
+      );
+    }
+    const rank = enPassantPart[1];
+    if (turn === "w" && rank !== "6") {
+      throw new Error(
+        `parseFEN(): en passant square must be on rank 6 when white to move: ${enPassantPart}`,
+      );
+    }
+    if (turn === "b" && rank !== "3") {
+      throw new Error(
+        `parseFEN(): en passant square must be on rank 3 when black to move: ${enPassantPart}`,
+      );
+    }
+    enPassant = enPassantPart;
+  }
+
+  // Validate half-move clock and full move number
+  const halfMoveClock = Number(halfMovePart);
+  const fullMoveNumber = Number(fullMovePart);
+  if (!Number.isInteger(halfMoveClock) || halfMoveClock < 0) {
+    throw new Error(
+      `parseFEN(): halfmove clock must be a non-negative integer: ${halfMovePart}`,
+    );
+  }
+  if (!Number.isInteger(fullMoveNumber) || fullMoveNumber < 1) {
+    throw new Error(
+      `parseFEN(): fullmove number must be a positive integer: ${fullMovePart}`,
+    );
+  }
+
+  // Parse board
+  const ranks = boardPart.split("/");
+  if (ranks.length !== 8) {
+    throw new Error(`parseFEN(): board must have 8 ranks: ${boardPart}`);
+  }
+  const board: string[][] = Array.from({ length: 8 }, () => Array(8).fill(""));
+  const allowedPieces = new Set([
+    "p",
+    "n",
+    "b",
+    "r",
+    "q",
+    "k",
+    "P",
+    "N",
+    "B",
+    "R",
+    "Q",
+    "K",
+  ]);
+  let whiteKing = 0;
+  let blackKing = 0;
+  for (let r = 0; r < 8; r++) {
+    const row = ranks[r];
+    let file = 0;
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch >= "1" && ch <= "8") {
+        file += Number(ch);
+        if (file > 8) {
+          throw new Error(`parseFEN(): rank ${r + 1} overflows 8 files`);
+        }
+      } else {
+        if (!allowedPieces.has(ch)) {
+          throw new Error(`parseFEN(): invalid piece '${ch}' in board`);
+        }
+        if (file >= 8) {
+          throw new Error(`parseFEN(): too many files in rank ${r + 1}`);
+        }
+        board[r][file] = ch;
+        if (ch === "K") whiteKing++;
+        else if (ch === "k") blackKing++;
+        file++;
+      }
+    }
+    if (file !== 8) {
+      throw new Error(`parseFEN(): rank ${r + 1} does not fill 8 files`);
+    }
+  }
+  if (whiteKing !== 1 || blackKing !== 1) {
+    throw new Error(
+      `parseFEN(): expected exactly one white king and one black king (found K=${whiteKing}, k=${blackKing})`,
+    );
+  }
+
+  return { board, turn, castling, enPassant, halfMoveClock, fullMoveNumber };
 }
 
 /**

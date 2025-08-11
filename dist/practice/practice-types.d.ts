@@ -31,6 +31,18 @@ export interface GameState {
     lineAttempts: Record<string, number>;
   };
   lastEngineMoveLong?: string | null;
+  lastBest?: {
+    bestMove: string;
+    bestScore: number;
+    baseFEN: string;
+  } | null;
+  lastMistake?: {
+    attempted: string;
+    score: number;
+    bestMove: string;
+    bestScore: number;
+    baseFEN: string;
+  } | null;
 }
 export interface ChessMove {
   from: string;
@@ -43,10 +55,11 @@ export interface OpeningLine {
 }
 export interface DOMElements {
   boardGrid: HTMLElement;
-  startBtn: HTMLButtonElement;
   resetBtn: HTMLButtonElement;
   hintBtn: HTMLButtonElement;
   nextBtn: HTMLButtonElement;
+  textAbove: HTMLElement;
+  textBelow: HTMLElement;
   startingFEN: HTMLInputElement;
   moveSelection: HTMLSelectElement;
   openingLines: HTMLTextAreaElement;

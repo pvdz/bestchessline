@@ -1,4 +1,4 @@
-export const practiceLines = `
+export const PRACTICE_LINES = `
 1. Ng1f3
 1. Ng1f3  Ph7h5 2. Pg2g3
 1. Ng1f3  Ph7h6 2. Pg2g3

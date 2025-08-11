@@ -8,21 +8,33 @@ const { parse, pathToFileURL } = require("node:url");
 const fs = require("node:fs");
 const path = require("node:path");
 
+const {
+  parseFEN,
+  getPieceAtSquareFromFEN,
+} = require("./dist/utils/fen-utils.js");
+const { applyMoveToFEN } = require("./dist/utils/fen-manipulation.js");
+const {
+  processExplain,
+  convertFenToCacheFileName,
+} = require("./dist/server/ai-explain.js");
+const { health } = require("./dist/server/health.js");
+
 const argv = process.argv.slice(2);
 const DISABLE_SAB = argv.includes("--no-shared-array-buffer");
 const DEFAULT_PORT = 9876;
 const PORT = Number(
   argv.find((a) => /^\d+$/.test(a)) || process.env.PORT || DEFAULT_PORT,
 );
+const CACHE_DIR = path.join(process.cwd(), "prompt_cache");
 
 const MIME = new Map([
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
-  [".mjs", "text/javascript; charset=utf-8"],
+  // [".mjs", "text/javascript; charset=utf-8"],
   [".css", "text/css; charset=utf-8"],
   [".map", "application/json; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
-  [".svg", "image/svg+xml"],
+  // [".svg", "image/svg+xml"],
   [".wasm", "application/wasm"],
 ]);
 
@@ -35,7 +47,6 @@ function setSABHeaders(res) {
 function sendJson(res, status, obj) {
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json");
-  setSABHeaders(res);
   res.end(JSON.stringify(obj));
 }
 
@@ -164,57 +175,172 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-async function handleExplain(req, res) {
+async function handleHealth(_req, res) {
   try {
-    const raw = await readBody(req);
-    const body = JSON.parse(raw);
-
-    let ai;
-    try {
-      // Use dynamic import so we can load ESM output from TypeScript
-      const abs = path.join(process.cwd(), "dist/server/ai-explain.js");
-      const mod = await import(pathToFileURL(abs).href);
-      ai = mod;
-    } catch (e) {
-      sendJson(res, 503, { error: "AI module not built. Run: npm run build" });
-      return;
-    }
-
-    const result = await ai.processExplain(body, req.headers);
-    sendJson(res, 200, result);
+    sendJson(res, 200, health());
   } catch (e) {
     sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
   }
 }
 
-async function handleHealth(_req, res) {
+async function handleExplainPut(req, res) {
   try {
-    let ai;
-    try {
-      const abs = path.join(process.cwd(), "dist/server/ai-explain.js");
-      const mod = await import(pathToFileURL(abs).href);
-      ai = mod;
-    } catch {
-      sendJson(res, 200, { ok: true, built: false });
+    const raw = await readBody(req);
+    const body = JSON.parse(raw || "{}");
+    const { fen, move, compare, payload } = body || {};
+
+    if (!payload) {
+      console.log("400: handleExplainPut missing payload");
+      sendJson(res, 400, { error: "Missing payload" });
       return;
     }
-    const h = ai.health();
-    sendJson(res, 200, { ...h, built: true });
+
+    const key = generateCacheKeyOrSendError(res, fen, move, compare, payload);
+    if (!key) return;
+
+    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+
+    const cacheFile = path.join(CACHE_DIR, `${key}.txt`);
+    fs.writeFileSync(cacheFile, body.payload, "utf8");
+    sendJson(res, 200, { ok: true, key });
   } catch (e) {
+    console.log("500: handleExplainPut failed:", e);
     sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
   }
+}
+
+async function handleExplainGet(req, res) {
+  try {
+    const { fen, move, compare, payload } = req.query;
+
+    const key = generateCacheKeyOrSendError(res, fen, move, compare, payload);
+    if (!key) return;
+
+    const cacheFile = path.join(CACHE_DIR, `${key}.txt`);
+    if (fs.existsSync(cacheFile)) {
+      sendJson(res, 200, {
+        ok: true,
+        file: fs.readFileSync(cacheFile, "utf8"),
+      });
+      return;
+    }
+
+    if (req.headers["x-ai-api-key"]) {
+      // Fetch from OpenAI
+      console.log("404: no cache, remote not implemented");
+      sendJson(res, 404, {
+        ok: false,
+        body: "Not cached. Remote LLM fetch not yet implemented",
+      });
+      return;
+    }
+
+    console.log("404: no cache, no api key");
+    sendJson(res, 404, { ok: false, body: "Not cached. No API key." });
+  } catch (e) {
+    console.log("500: handleExplainGet failed:", e);
+    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+  }
+}
+
+function generateCacheKeyOrSendError(res, fen, move, compare) {
+  if (!fen) {
+    console.log("400: generateCacheKeyOrSendError missing fen", [
+      fen,
+      move,
+      compare,
+    ]);
+    sendJson(res, 400, { error: "Missing fen" });
+    return;
+  }
+  try {
+    // parseFEN will throw on invalid formats
+    parseFEN(fen);
+  } catch (e) {
+    console.log("400: generateCacheKeyOrSendError invalid fen", [
+      fen,
+      move,
+      compare,
+    ]);
+    sendJson(res, 400, { error: "Invalid FEN" });
+    return;
+  }
+
+  if (move && !/^[a-h][1-8][a-h][1-8]$/.test(move)) {
+    console.log("400: generateCacheKeyOrSendError invalid move", [
+      fen,
+      move,
+      compare,
+    ]);
+    sendJson(res, 400, {
+      error: "Invalid long best move, expecting two square ids",
+    });
+    return;
+  }
+
+  if (compare && !/^[a-h][1-8][a-h][1-8]$/.test(compare)) {
+    console.log("400: generateCacheKeyOrSendError invalid compare", [
+      fen,
+      move,
+      compare,
+    ]);
+    sendJson(res, 400, {
+      error: "Invalid long compare move, expecting two square ids",
+    });
+    return;
+  }
+
+  const fenKey = convertFenToCacheFileName(fen);
+  let key;
+  if (!move && !compare) {
+    key = `${fenKey}__position`;
+  } else if (!compare) {
+    key = `${fenKey}__best_${move}`;
+  } else if (move && !compare) {
+    key = `${fenKey}__best_${move}_vs_${compare}`;
+  } else {
+    console.log("400: generateCacheKeyOrSendError invalid compare", [
+      fen,
+      move,
+      compare,
+    ]);
+    sendJson(res, 400, {
+      error: "If a compare move is given then a best move must be given",
+    });
+    return;
+  }
+
+  // If it matches this regex then it must be safe...?
+  if (!/^[a-zA-Z0-9_-]+$/.test(key)) {
+    console.log("500: generateCacheKeyOrSendError invalid key unexpected", [
+      fen,
+      move,
+      compare,
+    ]);
+    sendJson(res, 500, {
+      error: "Validation should have led to valid cache key but it didn't",
+    });
+    return;
+  }
+
+  return key;
 }
 
 const server = http.createServer(async (req, res) => {
   const url = parse(req.url || "", true);
 
-  if (req.method === "POST" && url.pathname === "/api/ai/explain") {
-    await handleExplain(req, res);
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    await handleHealth(req, res);
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/api/ai/health") {
-    await handleHealth(req, res);
+  if (req.method === "GET" && url.pathname === "/api/explain") {
+    await handleExplainGet(req, res);
+    return;
+  }
+
+  if (req.method === "PUT" && url.pathname === "/api/explain") {
+    await handleExplainPut(req, res);
     return;
   }
 

@@ -21,7 +21,16 @@ export declare function updateMoveHistoryDisplay(
 ): void;
 export declare function clearMoveHistory(movesHistoryEl: HTMLElement): void;
 export declare function removeLastMove(movesHistoryEl: HTMLElement): void;
-export declare function showSuccessToast(message: string): void;
-export declare function showErrorToast(message: string): void;
-export declare function showInfoToast(message: string): void;
-export declare function showWarningToast(message: string): void;
+export declare function showSuccessToast(
+  message: string,
+  dom?: DOMElements,
+): void;
+export declare function showErrorToast(
+  message: string,
+  dom?: DOMElements,
+): void;
+export declare function showInfoToast(message: string, dom?: DOMElements): void;
+export declare function showWarningToast(
+  message: string,
+  dom?: DOMElements,
+): void;

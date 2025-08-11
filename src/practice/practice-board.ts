@@ -2,7 +2,11 @@ import { parseFEN, coordsToSquare } from "../utils/fen-utils.js";
 import type { GameState, DOMElements } from "./practice-types";
 import { makeMove } from "./practice-game.js";
 import { getPieceAtSquareFromFEN } from "../utils/fen-utils.js";
-import { shouldHandleArrowRightClick } from "./practice-arrow-utils.js";
+import {
+  consumeRecentArrowCompleted,
+  isArrowDrawing,
+  shouldHandleArrowRightClick,
+} from "./practice-arrow-utils.js";
 import { handleSquareClick } from "./practice-game.js";
 import { clearAllArrows } from "./practice-arrow-utils.js";
 
@@ -125,14 +129,9 @@ export function addDragAndDropListeners(
       // If arrow drawing wants this, do not toggle here (defer to mouseup anyway)
 
       // Defer toggling to mouseup so it doesn't interfere with gestures
-      const squareEl = (target.closest(".practice-square") ||
-        (target
-          .closest(".practice-piece")
-          ?.closest(".practice-square") as HTMLElement)) as HTMLElement;
+      const squareEl = target.closest(".practice-square") as HTMLElement;
       pendingRightClickSquare = squareEl?.dataset.square || null;
-      console.log("[RC mousedown] square:", pendingRightClickSquare, {
-        isDrawing: (window as any).practiceIsArrowDrawing?.() || false,
-      });
+      console.log("[rmb down] square:", pendingRightClickSquare);
       return;
     }
 
@@ -141,6 +140,7 @@ export function addDragAndDropListeners(
 
     // Check if the target is a piece or a child of a piece
     const pieceElement = target.closest(".practice-piece");
+    console.log("[lmb down] pieceElement:", pieceElement);
     if (pieceElement) {
       startDrag(
         pieceElement as HTMLElement,
@@ -250,19 +250,32 @@ export function addDragAndDropListeners(
 
   const handleMouseUp = (event: MouseEvent): void => {
     // Right-click toggle occurs on mouseup if not used for arrow drawing
+    const target = event.target as HTMLElement;
+    const squareEl = target.closest(".practice-square") as HTMLElement;
+    const square = squareEl?.dataset.square || null;
     if (event.button === 2) {
       // If an arrow gesture occurred, do not toggle; otherwise toggle pending square
-      const hadArrow =
-        (window as any).practiceConsumeRecentArrowCompleted?.() || false;
-      console.log("[RC mouseup] square:", pendingRightClickSquare, {
+      const hadArrow = consumeRecentArrowCompleted();
+      console.log(
+        "[rmb up] square:",
+        square,
+        pendingRightClickSquare,
         hadArrow,
-      });
-      if (pendingRightClickSquare && !hadArrow) {
+      );
+      if (
+        !hadArrow &&
+        square &&
+        pendingRightClickSquare &&
+        square === pendingRightClickSquare
+      ) {
         toggleSquareSelection(pendingRightClickSquare);
       }
       pendingRightClickSquare = null;
       return;
     }
+
+    console.log("[lmb up] square:", square);
+
     if (dragState.isDragging) {
       endDrag(event.clientX, event.clientY, gameState, dom);
     } else if (dragState.startPosition) {
@@ -553,6 +566,8 @@ export function toggleSquareSelection(square: string): void {
     } else {
       squareEl.classList.add("right-click-selected");
     }
+  } else {
+    console.error("Should find square element but did not?", square);
   }
 }
 

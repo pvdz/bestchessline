@@ -177,21 +177,37 @@ export function removeLastMove(movesHistoryEl: HTMLElement): void {
 }
 
 // Show success toast
-export function showSuccessToast(message: string): void {
+export function showSuccessToast(message: string, dom?: DOMElements): void {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#2ecc71");
 }
 
 // Show error toast
-export function showErrorToast(message: string): void {
+export function showErrorToast(message: string, dom?: DOMElements): void {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#e74c3c");
 }
 
 // Show info toast
-export function showInfoToast(message: string): void {
+export function showInfoToast(message: string, dom?: DOMElements): void {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#3498db");
 }
 
 // Show warning toast
-export function showWarningToast(message: string): void {
+export function showWarningToast(message: string, dom?: DOMElements): void {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#f39c12");
 }

@@ -12,67 +12,63 @@ let userArrowElements: Map<string, HTMLElement> = new Map();
 interface ArrowDrawingState {
   isDrawing: boolean;
   startSquare: string | null;
-  startElement: HTMLElement | null;
 }
 
 let arrowDrawingState: ArrowDrawingState = {
   isDrawing: false,
   startSquare: null,
-  startElement: null,
 };
 
-// Track arrow completion between event handlers
-let recentArrowCompleted = false;
+// Track last hover square during a draw gesture
+let lastHoverSquare: string | null = null;
+let drewArrow = false;
 
 /**
  * Initialize arrow drawing functionality
  */
 export function initializeArrowDrawing(): void {
-  const boardGrid = document.querySelector(
-    ".practice-board-grid",
-  ) as HTMLElement;
+  const boardGrid = document.getElementById(
+    "practice-board-grid",
+  ) as HTMLElement | null;
   if (!boardGrid) return;
 
-  // Add right-click event listener to the board
-  boardGrid.addEventListener("contextmenu", handleRightClick);
+  // Suppress context menu on right-click
+  boardGrid.addEventListener("contextmenu", (ev) => ev.preventDefault());
 
-  // Add mouse move listener for drawing preview
+  // Start priming on right mouse down
+  boardGrid.addEventListener("mousedown", handleMouseDown);
+
+  // Mouse move for preview and to trigger start after leaving origin square
   boardGrid.addEventListener("mousemove", handleMouseMove);
 
-  // Add mouse up listener to finish drawing
+  // Finish on mouse up anywhere
   document.addEventListener("mouseup", handleMouseUp);
 }
 
 /**
- * Handle right-click on board squares
+ * Handle right mouse down on board squares
  */
-function handleRightClick(event: MouseEvent): void {
+function handleMouseDown(event: MouseEvent): void {
+  // Only react to right mouse button
+  if (event.button !== 2) return;
   event.preventDefault();
 
-  // Require Alt key to draw arrows to avoid conflicting with right-click toggling
-  if (!event.altKey) return;
-
-  // Find the square element, even if clicking on a piece
   const target = event.target as HTMLElement;
-  const squareEl = target.closest(".practice-square") as HTMLElement;
-  const square = squareEl?.dataset.square;
+  const squareEl = target.closest(".practice-square") as HTMLElement | null;
+  const square = squareEl?.dataset.square || null;
+  if (!square || !squareEl) return;
 
-  if (!square) return;
-
-  if (!arrowDrawingState.isDrawing) {
-    // Start drawing arrow
-    startArrowDrawing(square, squareEl);
-  } else {
-    // Finish drawing arrow
-    finishArrowDrawing(square);
-  }
+  // Prime drawing start; actual drawing begins once cursor leaves origin square
+  arrowDrawingState.startSquare = square;
+  lastHoverSquare = null;
+  drewArrow = false;
 }
 
 /**
  * Handle mouse move for arrow preview
  */
 function handleMouseMove(event: MouseEvent): void {
-  if (!arrowDrawingState.isDrawing || !arrowDrawingState.startElement) return;
+  if (!arrowDrawingState.startSquare) return;
 
   // Get the element under the mouse cursor
   const elementUnderMouse = document.elementFromPoint(
@@ -81,33 +77,38 @@ function handleMouseMove(event: MouseEvent): void {
   ) as HTMLElement;
   const squareEl = elementUnderMouse?.closest(
     ".practice-square",
-  ) as HTMLElement;
-  const square = squareEl?.dataset.square;
+  ) as HTMLElement | null;
+  const square = squareEl?.dataset.square || null;
+  lastHoverSquare = square;
 
-  if (!square || square === arrowDrawingState.startSquare) return;
+  if (!square || square === arrowDrawingState.startSquare) {
+    const existingPreview = document.querySelector(".practice-arrow-preview");
+    if (existingPreview) {
+      existingPreview.remove();
+    }
+    return;
+  }
+
+  // Start drawing if not started yet
+  if (!arrowDrawingState.isDrawing) {
+    startArrowDrawing(arrowDrawingState.startSquare);
+  }
 
   // Update preview arrow
   updateArrowPreview(square);
+  drewArrow = true;
 }
 
 /**
  * Handle mouse up to finish drawing
  */
-function handleMouseUp(event: MouseEvent): void {
-  if (!arrowDrawingState.isDrawing) return;
-
-  // Get the element under the mouse cursor
-  const elementUnderMouse = document.elementFromPoint(
-    event.clientX,
-    event.clientY,
-  ) as HTMLElement;
-  const squareEl = elementUnderMouse?.closest(
-    ".practice-square",
-  ) as HTMLElement;
-  const square = squareEl?.dataset.square;
-
-  if (square && square !== arrowDrawingState.startSquare) {
-    finishArrowDrawing(square);
+function handleMouseUp(_event: MouseEvent): void {
+  if (
+    arrowDrawingState.isDrawing &&
+    lastHoverSquare &&
+    lastHoverSquare !== arrowDrawingState.startSquare
+  ) {
+    finishArrowDrawing(lastHoverSquare);
   } else {
     // Cancel drawing if clicking same square or outside board
     cancelArrowDrawing();
@@ -117,20 +118,18 @@ function handleMouseUp(event: MouseEvent): void {
 /**
  * Start drawing an arrow from a square
  */
-function startArrowDrawing(square: string, element: HTMLElement): void {
+function startArrowDrawing(square: string): void {
   arrowDrawingState.isDrawing = true;
   arrowDrawingState.startSquare = square;
-  arrowDrawingState.startElement = element;
-
-  // Add visual feedback without toggling selection
-  element.style.boxShadow = "0 0 15px rgba(255, 215, 0, 0.9)";
 }
 
 /**
  * Update arrow preview while drawing
  */
 function updateArrowPreview(toSquare: string): void {
-  if (!arrowDrawingState.startSquare) return;
+  if (!arrowDrawingState.startSquare) {
+    return;
+  }
 
   // Don't show preview if start and end squares are the same
   if (arrowDrawingState.startSquare === toSquare) {
@@ -178,7 +177,6 @@ function finishArrowDrawing(toSquare: string): void {
   }
 
   // Clean up drawing state
-  recentArrowCompleted = true;
   cancelArrowDrawing();
 }
 
@@ -186,10 +184,6 @@ function finishArrowDrawing(toSquare: string): void {
  * Cancel arrow drawing
  */
 function cancelArrowDrawing(): void {
-  if (arrowDrawingState.startElement) {
-    arrowDrawingState.startElement.style.boxShadow = "";
-  }
-
   // Remove preview arrow
   const existingPreview = document.querySelector(".practice-arrow-preview");
   if (existingPreview) {
@@ -198,7 +192,7 @@ function cancelArrowDrawing(): void {
 
   arrowDrawingState.isDrawing = false;
   arrowDrawingState.startSquare = null;
-  arrowDrawingState.startElement = null;
+  lastHoverSquare = null;
 }
 
 /**
@@ -295,6 +289,7 @@ function createArrow(
     "--arrow-color",
     isPreview ? "rgba(255, 0, 0, 0.9)" : "rgba(255, 0, 0, 1)",
   );
+  arrow.style.pointerEvents = "none";
   boardContainer.appendChild(arrow);
 
   if (!isPreview) {
@@ -334,11 +329,13 @@ export function clearAllArrows(): void {
  * Clean up arrow drawing event listeners
  */
 export function cleanupArrowDrawing(): void {
-  const boardGrid = document.querySelector(
-    ".practice-board-grid",
-  ) as HTMLElement;
+  const boardGrid = document.getElementById(
+    "practice-board-grid",
+  ) as HTMLElement | null;
   if (boardGrid) {
-    boardGrid.removeEventListener("contextmenu", handleRightClick);
+    // These listeners may or may not be attached; removing is safe either way
+    boardGrid.removeEventListener("contextmenu", (ev) => ev.preventDefault());
+    boardGrid.removeEventListener("mousedown", handleMouseDown);
     boardGrid.removeEventListener("mousemove", handleMouseMove);
   }
 
@@ -351,7 +348,6 @@ export function cleanupArrowDrawing(): void {
   arrowDrawingState = {
     isDrawing: false,
     startSquare: null,
-    startElement: null,
   };
 }
 
@@ -367,8 +363,11 @@ export function isArrowDrawingActive(): boolean {
  * This prevents square selection when starting arrow drawing
  */
 export function shouldHandleArrowRightClick(event: MouseEvent): boolean {
-  // Only claim the right-click if we are actively drawing an arrow.
-  return arrowDrawingState.isDrawing;
+  // Claim RMB if we are drawing or have a primed start square.
+  // This suppresses other RMB handlers from acting on the same gesture.
+  if (arrowDrawingState.isDrawing) return true;
+  if (arrowDrawingState.startSquare) return true;
+  return false;
 }
 
 // Expose current drawing state read-only to external code
@@ -378,7 +377,7 @@ export function isArrowDrawing(): boolean {
 
 // Expose a one-shot flag for consumers to detect an arrow completion
 export function consumeRecentArrowCompleted(): boolean {
-  const v = recentArrowCompleted;
-  recentArrowCompleted = false;
+  const v = drewArrow;
+  drewArrow = false;
   return v;
 }

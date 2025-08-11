@@ -32,8 +32,9 @@ import {
 } from "./practice-arrow-utils.js";
 import { GameState, DOMElements, OpeningLine } from "./practice-types.js";
 import { parseMove } from "../utils/move-parsing.js";
-import { parseFEN } from "../utils/fen-utils.js";
+import { parseFEN, toFEN } from "../utils/fen-utils.js";
 import { applyMoveToFEN } from "../utils/fen-manipulation.js";
+import { PRACTICE_LINES } from "./practice-lines.js";
 // import { convertLineToLongNotation } from "../utils/notation-utils.js";
 // Server-side AI integration
 // Coach prompt helpers
@@ -50,11 +51,17 @@ interface CoachResponse {
   ideasWhiteSteps?: CoachStep[];
   ideasBlack: string;
   ideasBlackSteps?: CoachStep[];
-  terminology: string[];
-  study: string[];
-  knownPositions: string[];
-  pitfalls: string[];
-  themes: string[];
+  pitfalls: string; // narrative
+  pitfallsSteps?: CoachStep[]; // visual steps
+  terminologyItems?: { text: string; actions?: CoachAction[] }[];
+  studyItems?: { text: string; actions?: CoachAction[] }[];
+  knownPositionsItems?: { text: string; actions?: CoachAction[] }[];
+  themesItems?: { text: string; actions?: CoachAction[] }[];
+  // Back-compat
+  terminology?: string[];
+  study?: string[];
+  knownPositions?: string[];
+  themes?: string[];
 }
 
 type CoachAction =
@@ -68,47 +75,180 @@ interface CoachStep {
   actions?: CoachAction[];
 }
 
+// Play back DSL-like steps by executing actions with small delays
+async function playCoachSteps(steps: CoachStep[]): Promise<void> {
+  const board = document.querySelector(".practice-board") as HTMLElement | null;
+  if (!board) return;
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  for (const step of steps) {
+    showInfoToast(step.text);
+    if (step.actions) {
+      for (const a of step.actions) {
+        if (a.type === "wait") {
+          await sleep(a.ms);
+        } else if (a.type === "setPosition") {
+          gameState.currentFEN = a.fen;
+          renderBoard(gameState.currentFEN);
+        } else if (a.type === "highlight") {
+          a.squares.forEach((sq) => {
+            const el = document.querySelector(
+              `[data-square="${sq}"]`,
+            ) as HTMLElement | null;
+            if (el)
+              el.classList.add(
+                a.style === "select" ? "selected" : "hint-piece",
+              );
+          });
+        } else if (a.type === "arrow") {
+          const fromEl = document.querySelector(
+            `[data-square="${a.from}"]`,
+          ) as HTMLElement | null;
+          const toEl = document.querySelector(
+            `[data-square="${a.to}"]`,
+          ) as HTMLElement | null;
+          if (fromEl && toEl && board) {
+            const br = board.getBoundingClientRect();
+            const fr = fromEl.getBoundingClientRect();
+            const tr = toEl.getBoundingClientRect();
+            const fx = fr.left + fr.width / 2 - br.left;
+            const fy = fr.top + fr.height / 2 - br.top;
+            const tx = tr.left + tr.width / 2 - br.left;
+            const ty = tr.top + tr.height / 2 - br.top;
+            const angle = Math.atan2(ty - fy, tx - fx);
+            const dist = Math.hypot(tx - fx, ty - fy);
+            const arrow = document.createElement("div");
+            arrow.className = "practice-arrow";
+            arrow.style.left = `${fx}px`;
+            arrow.style.top = `${fy}px`;
+            arrow.style.width = `${Math.max(0, dist - 20)}px`;
+            arrow.style.transform = `rotate(${angle}rad)`;
+            arrow.style.transformOrigin = "0 50%";
+            arrow.style.setProperty(
+              "--arrow-color",
+              (a as any).color || "rgba(0, 123, 255, 0.95)",
+            );
+            board.appendChild(arrow);
+          }
+        }
+      }
+    }
+    await sleep(350);
+  }
+}
+
+// Coach player controller
+function openCoachPlayer(steps: CoachStep[]): void {
+  let coachSteps: CoachStep[] = steps.slice(0);
+  let coachIndex = 0;
+
+  const panel = document.getElementById(
+    "practice-coach-player",
+  ) as HTMLElement | null;
+  const text = document.getElementById(
+    "practice-coach-text",
+  ) as HTMLElement | null;
+  const prev = document.getElementById(
+    "practice-coach-prev",
+  ) as HTMLButtonElement | null;
+  const next = document.getElementById(
+    "practice-coach-next",
+  ) as HTMLButtonElement | null;
+  const close = document.getElementById(
+    "practice-coach-close",
+  ) as HTMLButtonElement | null;
+  if (!panel || !text || !prev || !next || !close) return;
+  panel.style.display = "block";
+
+  const render = async (idx: number) => {
+    if (!coachSteps[idx]) return;
+    text.textContent = coachSteps[idx].text || "";
+    // Clear arrows/highlights between steps for clarity
+    clearAllArrows();
+    document
+      .querySelectorAll(".practice-square.selected,.practice-square.hint-piece")
+      .forEach((el) => {
+        (el as HTMLElement).classList.remove("selected", "hint-piece");
+      });
+    await playCoachSteps([coachSteps[idx]]);
+  };
+
+  prev.onclick = async () => {
+    coachIndex = Math.max(0, coachIndex - 1);
+    await render(coachIndex);
+  };
+  next.onclick = async () => {
+    coachIndex = Math.min(coachSteps.length - 1, coachIndex + 1);
+    await render(coachIndex);
+  };
+  close.onclick = () => {
+    panel.style.display = "none";
+    clearAllArrows();
+  };
+  // start at first step
+  void render(coachIndex);
+}
+
 function buildEngineSummaryForCurrentPosition(): string {
   // Placeholder: we could aggregate existing meta if present
   return "";
+}
+
+function buildSanGameFromHistory(): string {
+  try {
+    const moves = gameState.moveHistory || [];
+    if (!moves.length) return "(none)";
+    const parts: string[] = [];
+    for (let i = 0; i < moves.length; i += 2) {
+      const moveNumber = Math.floor(i / 2) + 1;
+      const whiteMove = moves[i]?.notation || "";
+      const blackMove = moves[i + 1]?.notation || "";
+      parts.push(
+        `${moveNumber}. ${whiteMove}${blackMove ? ` ${blackMove}` : ""}`,
+      );
+    }
+    return parts.join(" ");
+  } catch {
+    return "(none)";
+  }
 }
 
 function buildCoachPrompt(input: CoachPromptInput): string {
   const ascii = buildAsciiBoard(input.fen);
   const pieces = listPiecesFromFen(input.fen);
   const engineTop5 = getTop5ForCurrentFEN();
+  const sanGame = buildSanGameFromHistory();
   return [
-    "You are a chess coach. Given a FEN, provide a structured analysis.",
-    "Return ONLY valid JSON matching this TypeScript interface:",
-    "{",
-    '  "summary": string,',
-    '  "generalIdea": string,',
-    '  "generalIdeaSteps"?: { text: string, actions?: Array<',
-    "    { type: 'arrow', from: string, to: string, color?: string } | ",
-    "    { type: 'setPosition', fen: string } | ",
-    "    { type: 'highlight', squares: string[], style?: 'hint' | 'select' } | ",
-    "    { type: 'wait', ms: number }",
-    "  > }[],",
-    '  "ideasWhite": string,',
-    '  "ideasWhiteSteps"?: CoachStep[],',
-    '  "ideasBlack": string,',
-    '  "ideasBlackSteps"?: CoachStep[],',
-    '  "terminology": string[],',
-    '  "study": string[],',
-    '  "knownPositions": string[],',
-    '  "pitfalls": string[],',
-    '  "themes": string[]',
+    "You are a chess coach. Given a FEN, output a structured JSON RESULT our app can display directly.",
+    "Return ONLY valid JSON. Use this shape (TypeScript-like):",
+    "type CoachAction =",
+    "  | { type: 'arrow'; from: string; to: string; color?: string }",
+    "  | { type: 'setPosition'; fen: string }",
+    "  | { type: 'highlight'; squares: string[]; style?: 'hint' | 'select' }",
+    "  | { type: 'wait'; ms: number };",
+    "interface CoachStep { text: string; actions?: CoachAction[] }",
+    "interface CoachItem { text: string; actions?: CoachAction[] }",
+    "interface CoachResponse {",
+    "  summary: string;",
+    "  generalIdea: string;",
+    "  generalIdeaSteps?: CoachStep[];",
+    "  ideasWhite: string;",
+    "  ideasWhiteSteps: CoachStep[];",
+    "  ideasBlack: string;",
+    "  ideasBlackSteps: CoachStep[];",
+    "  pitfalls: string;",
+    "  pitfallsSteps: CoachStep[];",
+    "  terminologyItems: CoachItem[];",
+    "  studyItems: CoachItem[];",
+    "  knownPositionsItems: CoachItem[];",
+    "  themesItems: CoachItem[];",
     "}",
     "Guidelines:",
     "- Be accurate and concise; avoid speculation.",
     "- Use plain language; short paragraphs.",
-    "- terminology: 5-10 key terms relevant to the position/opening.",
-    "- study: books/chapters/keywords to research.",
-    "- knownPositions: list of named lines/positions if applicable.",
-    "- pitfalls: common traps or mistakes to avoid.",
-    "- themes: high-level motifs (pawn structure, typical maneuvers).",
-    "- For *Steps arrays*, include succinct steps for animating the idea; annotate with actions to draw arrows, set positions, highlight squares, and waits.",
-    "- Keep actions conservative and valid from the given FEN.",
+    "- For ideasWhite/ideasBlack/pitfalls: write a coherent story in the string field and also provide step-wise '...Steps' where each step is a visual unit (arrows/highlights/setPosition/wait).",
+    "- Keep actions legal and conservative from the given FEN context.",
+    "- terminologyItems/studyItems/knownPositionsItems/themesItems: provide 5–10 concise items; include actions only when helpful.",
+    "- If the question is about a specific move, provide make sure the response covers the pro's and cons of that move specifically while still giving general advice about the position.",
     `FEN: ${input.fen}`,
     input.openingHint ? `Opening context: ${input.openingHint}` : "",
     "",
@@ -118,8 +258,12 @@ function buildCoachPrompt(input: CoachPromptInput): string {
     "ASCII Board:",
     ascii,
     "",
+    "Moves (SAN):",
+    sanGame,
+    "",
     "Engine top-5 (long, cp):",
     engineTop5.length ? engineTop5.join("\n") : "(none)",
+    input.openingHint ? `Specific move question: ${input.openingHint}` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -127,19 +271,51 @@ function buildCoachPrompt(input: CoachPromptInput): string {
 
 function parseCoachResponse(text: string): CoachResponse {
   try {
-    return JSON.parse(text) as CoachResponse;
+    const raw = JSON.parse(text) as Partial<CoachResponse> & {
+      terminology?: string[];
+      study?: string[];
+      knownPositions?: string[];
+      themes?: string[];
+    };
+    const asItems = (arr?: string[]) =>
+      arr ? arr.map((t) => ({ text: t })) : [];
+    return {
+      summary: raw.summary || "",
+      generalIdea: raw.generalIdea || "",
+      generalIdeaSteps: raw.generalIdeaSteps || [],
+      ideasWhite: raw.ideasWhite || "",
+      ideasWhiteSteps: raw.ideasWhiteSteps || [],
+      ideasBlack: raw.ideasBlack || "",
+      ideasBlackSteps: raw.ideasBlackSteps || [],
+      pitfalls: raw.pitfalls || "",
+      pitfallsSteps: raw.pitfallsSteps || [],
+      terminologyItems: raw.terminologyItems || asItems(raw.terminology),
+      studyItems: raw.studyItems || asItems(raw.study),
+      knownPositionsItems:
+        raw.knownPositionsItems || asItems(raw.knownPositions),
+      themesItems: raw.themesItems || asItems(raw.themes),
+      // keep the optional back-compat fields to satisfy the type
+      terminology: raw.terminology,
+      study: raw.study,
+      knownPositions: raw.knownPositions,
+      themes: raw.themes,
+    } as CoachResponse;
   } catch {
     return {
       summary: "",
       generalIdea: "",
+      generalIdeaSteps: [],
       ideasWhite: "",
+      ideasWhiteSteps: [],
       ideasBlack: "",
-      terminology: [],
-      study: [],
-      knownPositions: [],
-      pitfalls: [],
-      themes: [],
-    };
+      ideasBlackSteps: [],
+      pitfalls: "",
+      pitfallsSteps: [],
+      terminologyItems: [],
+      studyItems: [],
+      knownPositionsItems: [],
+      themesItems: [],
+    } as CoachResponse;
   }
 }
 
@@ -149,32 +325,64 @@ function renderCoachSections(
   sectionsEl: HTMLElement,
 ): void {
   summaryEl.textContent = data.summary || "";
-  const section = (title: string, body: string | string[]) => {
-    const content = Array.isArray(body) ? body.join("\n") : body;
-    return `\n<div class="ai-card"><h4>${title}</h4><div>${(content || "").replace(/\n/g, "<br/>")}</div></div>`;
+  const sectionText = (
+    title: string,
+    body: string,
+    btnId?: string,
+    steps?: CoachStep[],
+  ) => {
+    const play =
+      steps && steps.length
+        ? `\n<div style=\"margin-top:6px;text-align:right\"><button class=\"practice-button\" id=\"${btnId}\">Play Steps</button></div>`
+        : "";
+    return `\n<div class=\"ai-card\"><h4>${title}</h4><div>${(body || "").replace(/\n/g, "<br/>")}</div>${play}</div>`;
   };
-  const ideaControl =
-    data.generalIdeaSteps && data.generalIdeaSteps.length
-      ? `\n<div style="margin-top:6px;text-align:right"><button class=\"practice-button\" id=\"practice-ai-show-idea\">Show Idea</button></div>`
-      : "";
+  const list = (title: string, items?: { text: string }[]) => {
+    const lis = (items || []).map((it) => `<li>${it.text}</li>`).join("");
+    return `\n<div class=\"ai-card\"><h4>${title}</h4><ul>${lis || "<li><em>None</em></li>"}</ul></div>`;
+  };
+
   sectionsEl.innerHTML = [
-    `\n<div class="ai-card"><h4>General Idea</h4><div>${(data.generalIdea || "").replace(/\n/g, "<br/>")}</div>${ideaControl}</div>`,
-    section("Ideas for White", data.ideasWhite),
-    section("Ideas for Black", data.ideasBlack),
-    section("Terminology", data.terminology),
-    section("Themes", data.themes),
-    section("Pitfalls", data.pitfalls),
-    section("Known Positions", data.knownPositions),
-    section("Study Next", data.study),
+    sectionText(
+      "General Idea",
+      data.generalIdea,
+      "practice-ai-show-idea",
+      data.generalIdeaSteps,
+    ),
+    sectionText(
+      "Ideas for White",
+      data.ideasWhite,
+      "practice-ai-show-ideas-white",
+      data.ideasWhiteSteps,
+    ),
+    sectionText(
+      "Ideas for Black",
+      data.ideasBlack,
+      "practice-ai-show-ideas-black",
+      data.ideasBlackSteps,
+    ),
+    sectionText(
+      "Pitfalls",
+      data.pitfalls,
+      "practice-ai-show-pitfalls",
+      data.pitfallsSteps,
+    ),
+    list("Terminology", data.terminologyItems),
+    list("Themes", data.themesItems),
+    list("Known Positions", data.knownPositionsItems),
+    list("Study Next", data.studyItems),
   ].join("");
 
-  // Wire Show Idea button
-  const btn = document.getElementById(
-    "practice-ai-show-idea",
-  ) as HTMLButtonElement | null;
-  if (btn && data.generalIdeaSteps && data.generalIdeaSteps.length) {
-    btn.onclick = () => openCoachPlayer(data.generalIdeaSteps!);
-  }
+  const wire = (id: string, steps?: CoachStep[]) => {
+    const btn = document.getElementById(id) as HTMLButtonElement | null;
+    if (btn && steps && steps.length) {
+      btn.onclick = () => openCoachPlayer(steps);
+    }
+  };
+  wire("practice-ai-show-idea", data.generalIdeaSteps);
+  wire("practice-ai-show-ideas-white", data.ideasWhiteSteps);
+  wire("practice-ai-show-ideas-black", data.ideasBlackSteps);
+  wire("practice-ai-show-pitfalls", data.pitfallsSteps);
 }
 
 function buildMockCoachResponse(kind: "nf3" | "nf3_g3"): CoachResponse {
@@ -224,10 +432,19 @@ function buildMockCoachResponse(kind: "nf3" | "nf3_g3"): CoachResponse {
         "Reti vs …c5 (Symmetrical English)",
         "Reti → Catalan-like if d4 inserted",
       ],
-      pitfalls: [
-        "Premature e4 without support",
-        "Allowing easy …d5–…c5 equality",
-        "Ignoring …Bb4 pins after Nc3",
+      pitfalls:
+        "Beware rushing central breaks without development; watch for pins and counterplay on dark squares.",
+      pitfallsSteps: [
+        {
+          text: "Avoid premature e4 push",
+          actions: [{ type: "highlight", squares: ["e4"], style: "hint" }],
+        },
+        {
+          text: "Be mindful of …Bb4 pin ideas",
+          actions: [
+            { type: "arrow", from: "c5", to: "b4", color: "rgba(200,0,0,0.9)" },
+          ],
+        },
       ],
       themes: [
         "Control of e4/d4",
@@ -277,9 +494,22 @@ function buildMockCoachResponse(kind: "nf3" | "nf3_g3"): CoachResponse {
       "English with …e6/…c5",
       "Catalan-like with d4 + Bg2",
     ],
-    pitfalls: [
-      "Premature d4 vs …c5 equalization",
-      "Neglecting development vs …Bb4+ motifs",
+    pitfalls:
+      "Do not rush d4 against …c5 equalization; develop first and watch for …Bb4+ motifs pinning the knight.",
+    pitfallsSteps: [
+      {
+        text: "Do not rush d4 vs …c5",
+        actions: [
+          { type: "arrow", from: "d2", to: "d4", color: "rgba(200,0,0,0.9)" },
+          { type: "highlight", squares: ["c5"], style: "hint" },
+        ],
+      },
+      {
+        text: "Watch for …Bb4+",
+        actions: [
+          { type: "arrow", from: "c5", to: "b4", color: "rgba(200,0,0,0.9)" },
+        ],
+      },
     ],
     themes: [
       "Fianchetto long-diagonal pressure",
@@ -433,10 +663,12 @@ let dom: DOMElements;
 function initializeDOMElements(): void {
   dom = {
     boardGrid: getElementByIdOrThrow("practice-board-grid"),
-    startBtn: getElementByIdOrThrow("practice-start-btn") as HTMLButtonElement,
+    // startBtn removed
     resetBtn: getElementByIdOrThrow("practice-reset-btn") as HTMLButtonElement,
     hintBtn: getElementByIdOrThrow("practice-hint-btn") as HTMLButtonElement,
     nextBtn: getElementByIdOrThrow("practice-next-btn") as HTMLButtonElement,
+    textAbove: getElementByIdOrThrow("practice-text-above"),
+    textBelow: getElementByIdOrThrow("practice-text-below"),
     startingFEN: getElementByIdOrThrow(
       "practice-starting-fen",
     ) as HTMLInputElement,
@@ -479,10 +711,39 @@ function initializeDOMElements(): void {
     ) as HTMLButtonElement,
   } as unknown as DOMElements;
 
+  // Initialize instructional text above the board
+  if (dom.textAbove) {
+    dom.textAbove.innerHTML = "<div>Pick the best move for White</div>";
+  }
+  if (dom.textBelow) {
+    dom.textBelow.textContent = "First steps are locked as Nf3 and g3";
+  }
+
   // Extend: wire AI coach button
   const askBtn = getElementByIdOrThrow(
     "practice-ai-ask-btn",
   ) as HTMLButtonElement;
+  const cachePayloadEl = document.getElementById(
+    "practice-ai-cache-payload",
+  ) as HTMLTextAreaElement | null;
+  const cacheFenEl = document.getElementById(
+    "practice-ai-cache-fen",
+  ) as HTMLInputElement | null;
+  const cacheMoveEl = document.getElementById(
+    "practice-ai-cache-move",
+  ) as HTMLInputElement | null;
+  const cacheCompareEl = document.getElementById(
+    "practice-ai-cache-compare",
+  ) as HTMLInputElement | null;
+  const cacheStoreBtn = document.getElementById(
+    "practice-ai-store-cache",
+  ) as HTMLButtonElement | null;
+  const whyBestBtn = document.getElementById(
+    "practice-ai-why-best",
+  ) as HTMLButtonElement | null;
+  const whyMistakeBtn = document.getElementById(
+    "practice-ai-why-mistake",
+  ) as HTMLButtonElement | null;
   const modelEl = getElementByIdOrThrow(
     "practice-ai-model",
   ) as HTMLInputElement;
@@ -502,64 +763,145 @@ function initializeDOMElements(): void {
     try {
       askBtn.setAttribute("aria-busy", "true");
       answerEl.textContent = "Asking AI...";
-      const includePrompt = true;
-      const engineSummary = buildEngineSummaryForCurrentPosition();
-      const prompt = buildCoachPrompt({
-        fen: gameState.currentFEN,
-        openingHint: undefined,
-      });
-      const payload = {
-        fen: gameState.currentFEN,
-        level: (levelEl.value as any) || "intermediate",
-        question: prompt,
-        model: modelEl.value.trim() || "gpt-4o-mini",
-        engineSummary,
-        includePrompt,
-      };
-
-      const resp = await fetch("/api/ai/explain", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(apiKeyEl.value.trim()
-            ? { "X-AI-API-KEY": apiKeyEl.value.trim() }
-            : {}),
-        },
-        body: JSON.stringify(payload),
-      });
+      const fenForPrompt = (
+        showPromptFen?.value || gameState.currentFEN
+      ).trim();
+      const moveForPrompt = (showPromptMove?.value || "").trim();
+      const compareForPrompt = (showPromptCompare?.value || "").trim();
+      // Build GET /explain URL
+      const params = new URLSearchParams({ fen: fenForPrompt });
+      if (moveForPrompt) params.set("move", moveForPrompt);
+      if (compareForPrompt) params.set("compare", compareForPrompt);
+      const resp = await fetch(`/api/explain?${params.toString()}`);
       if (!resp.ok) {
         const txt = await resp.text();
-        throw new Error(txt);
+        try {
+          const j = JSON.parse(txt);
+          if (j && (j.error || j.message)) {
+            console.error("/api/explain error:", j.error || j.message, j);
+          } else {
+            console.error("/api/explain error:", txt);
+          }
+        } catch {
+          console.error("/api/explain error:", txt);
+        }
+        // Compute expected cache filename hint
+        const hint = (() => {
+          try {
+            const pos = parseFEN(fenForPrompt);
+            // normalize counters
+            const norm = { ...pos, halfMoveClock: 0, fullMoveNumber: 1 } as any;
+            const key = toFEN(norm).replace(/\s+/g, "_");
+            if (moveForPrompt && compareForPrompt)
+              return `${key}__compare_${moveForPrompt}_vs_${compareForPrompt}.json`;
+            if (moveForPrompt) return `${key}__move_${moveForPrompt}.json`;
+            return `${key}__position.json`;
+          } catch {
+            return "";
+          }
+        })();
+        const baseMsg = hint
+          ? `No cached answer (${hint}).`
+          : "No cached answer.";
+        showInfoToast(`${baseMsg} Please use the cache box to add it.`, dom);
+        throw new Error(txt || "Cache miss");
       }
-      const data = await resp.json();
-      const rawAnswer: string = data.answer || "";
+      const rawAnswer = await resp.text();
       // Render raw answer hidden for inspection
-      answerEl.textContent = data.prompt
-        ? `Prompt\n----------------\n${data.prompt}\n\nAnswer\n----------------\n${rawAnswer}`
-        : rawAnswer;
+      answerEl.classList.remove("visually-hidden");
+      answerEl.textContent = rawAnswer;
 
       // Try to parse structured JSON first
       const summary = document.getElementById("practice-ai-summary");
       const sections = document.getElementById("practice-ai-sections");
       if (summary && sections) {
-        const parsed = parseCoachResponse(rawAnswer);
-        renderCoachSections(parsed, summary, sections);
+        try {
+          const parsed = parseCoachResponse(rawAnswer);
+          renderCoachSections(parsed, summary, sections);
+        } catch {
+          // ignore if not JSON
+        }
       }
     } catch (e) {
       console.error(e);
-      answerEl.textContent = "AI request failed. Check console.";
-      showErrorToast("AI request failed");
+      answerEl.textContent = "Request failed. Check console.";
+      showErrorToast("Analyze failed");
     } finally {
       askBtn.setAttribute("aria-busy", "false");
     }
   });
+
+  // Explain why last best was best
+  if (whyBestBtn) {
+    whyBestBtn.addEventListener("click", async () => {
+      if (!gameState.lastBest) {
+        showInfoToast("No best-move context yet. Make a move.", dom);
+        return;
+      }
+      const openingHint = `Explain why the engine says ${gameState.lastBest.bestMove} is the best move (score ${gameState.lastBest.bestScore}).`;
+      const prompt = buildCoachPrompt({
+        fen: gameState.lastBest.baseFEN,
+        openingHint,
+      });
+      const answerEl = document.getElementById("practice-ai-answer");
+      if (answerEl) {
+        answerEl.classList.remove("visually-hidden");
+        answerEl.textContent = prompt;
+      }
+      // Fill cache inputs: FEN set, first move best, clear second
+      if (cacheFenEl) cacheFenEl.value = gameState.lastBest.baseFEN;
+      if (cacheMoveEl) cacheMoveEl.value = gameState.lastBest.bestMove;
+      if (cacheCompareEl) cacheCompareEl.value = "";
+      showInfoToast("Prompt prepared for 'why best'", dom);
+    });
+  }
+
+  // Explain why last mistake was not best
+  if (whyMistakeBtn) {
+    whyMistakeBtn.addEventListener("click", async () => {
+      if (!gameState.lastMistake) {
+        showInfoToast("No mistake context yet. Make a move.", dom);
+        return;
+      }
+      const m = gameState.lastMistake;
+      const openingHint = `Explain why the engine says ${m.attempted} has score ${m.score} while the best move ${m.bestMove} has score ${m.bestScore}.`;
+      const prompt = buildCoachPrompt({ fen: m.baseFEN, openingHint });
+      const answerEl = document.getElementById("practice-ai-answer");
+      if (answerEl) {
+        answerEl.classList.remove("visually-hidden");
+        answerEl.textContent = prompt;
+      }
+      // Fill cache inputs: first move best, second move attempted (worst)
+      if (cacheFenEl) cacheFenEl.value = m.baseFEN;
+      if (cacheMoveEl) cacheMoveEl.value = m.bestMove;
+      if (cacheCompareEl) cacheCompareEl.value = m.attempted;
+      showInfoToast("Prompt prepared for 'why mistake'", dom);
+    });
+  }
   // Show Prompt button
   const showPromptBtn = document.getElementById(
     "practice-ai-show-prompt",
   ) as HTMLButtonElement | null;
+  const showPromptFen = document.getElementById(
+    "practice-showprompt-fen",
+  ) as HTMLInputElement | null;
+  const showPromptMove = document.getElementById(
+    "practice-showprompt-move",
+  ) as HTMLInputElement | null;
+  const showPromptCompare = document.getElementById(
+    "practice-showprompt-compare",
+  ) as HTMLInputElement | null;
   if (showPromptBtn) {
     showPromptBtn.addEventListener("click", () => {
-      const prompt = buildCoachPrompt({ fen: gameState.currentFEN });
+      const fen = (showPromptFen?.value || gameState.currentFEN).trim();
+      const move = (showPromptMove?.value || "").trim();
+      const compare = (showPromptCompare?.value || "").trim();
+      const openingHint = move
+        ? compare
+          ? `Compare moves ${move} vs ${compare}`
+          : `Explain why ${move} is the best move`
+        : undefined;
+      const prompt = buildCoachPrompt({ fen, openingHint });
       const answerEl = document.getElementById("practice-ai-answer");
       if (answerEl) {
         answerEl.classList.remove("visually-hidden");
@@ -578,18 +920,86 @@ function initializeDOMElements(): void {
   ) as HTMLButtonElement | null;
   if (previewNf3Btn) {
     previewNf3Btn.addEventListener("click", () => {
-      const mock = buildMockCoachResponse("nf3");
-      const summary = document.getElementById("practice-ai-summary");
-      const sections = document.getElementById("practice-ai-sections");
-      if (summary && sections) renderCoachSections(mock, summary, sections);
+      // Populate Show Prompt inputs: starting FEN, best move g1f3 (long)
+      if (showPromptFen)
+        showPromptFen.value =
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+      if (showPromptMove) showPromptMove.value = "g1f3";
+      if (showPromptCompare) showPromptCompare.value = "";
+      showInfoToast("Show Prompt inputs set (start, g1f3)", dom);
     });
   }
   if (previewNf3g3Btn) {
     previewNf3g3Btn.addEventListener("click", () => {
-      const mock = buildMockCoachResponse("nf3_g3");
-      const summary = document.getElementById("practice-ai-summary");
-      const sections = document.getElementById("practice-ai-sections");
-      if (summary && sections) renderCoachSections(mock, summary, sections);
+      // Populate Show Prompt inputs: FEN after g1f3 e7e6, move g3
+      if (showPromptFen)
+        showPromptFen.value =
+          "rnbqkbnr/pppppppp/4p3/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 2"; // after 1. Nf3 e6
+      if (showPromptMove) showPromptMove.value = "g2g3";
+      if (showPromptCompare) showPromptCompare.value = "";
+      showInfoToast("Show Prompt inputs set (after Nf3 e6, g2g3)", dom);
+    });
+  }
+
+  // Store cache button handler
+  if (cacheStoreBtn && cachePayloadEl && cacheFenEl) {
+    cacheStoreBtn.addEventListener("click", async () => {
+      try {
+        const payloadText = cachePayloadEl.value.trim();
+        if (!payloadText) {
+          showErrorToast("No payload to store", dom);
+          return;
+        }
+        // Parse meta: expect "<FEN> | type: position|best|compare | move: e2e4 | compare: e2e4 vs d2d4"
+        const fen = (cacheFenEl.value || "").trim();
+        if (!fen) {
+          showErrorToast("FEN is required", dom);
+          return;
+        }
+        // Infer type by move inputs presence
+        const kind: "position" | "best" | "compare" = cacheMoveEl?.value
+          ? cacheCompareEl?.value
+            ? "compare"
+            : "best"
+          : "position";
+        const moveValue = (cacheMoveEl?.value || "").trim();
+        const compareValue = (cacheCompareEl?.value || "").trim();
+        const body: any = { fen, type: kind, payload: payloadText };
+        if (kind === "best" && moveValue) body.move = moveValue;
+        if (kind === "compare" && moveValue && compareValue) {
+          body.move = moveValue;
+          body.compare = compareValue;
+        }
+        const resp = await fetch("/api/explain", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const txt = await resp.text();
+        if (!resp.ok) {
+          let msg = txt || "Failed to store cache";
+          try {
+            const j = JSON.parse(txt);
+            if (j && j.error) msg = j.error;
+          } catch {}
+          showErrorToast(msg, dom);
+          return;
+        }
+        try {
+          const j = JSON.parse(txt);
+          showSuccessToast(
+            j && j.file
+              ? `Cached successfully (${j.file})`
+              : "Cached successfully",
+            dom,
+          );
+        } catch {
+          showSuccessToast("Cached successfully", dom);
+        }
+      } catch (e) {
+        console.error(e);
+        showErrorToast("Failed to store cache", dom);
+      }
     });
   }
 
@@ -1174,13 +1584,12 @@ async function copyLinesAsLongNotation(): Promise<void> {
 async function loadLinesFromFile(): Promise<void> {
   try {
     // Import the practice lines from the TypeScript file
-    const { practiceLines } = await import("./practice-lines.js");
 
     // Set the textarea content to the imported lines
-    dom.openingLines.value = practiceLines;
+    dom.openingLines.value = PRACTICE_LINES;
 
     // Parse and update depth control
-    const lines = parseOpeningLines(practiceLines);
+    const lines = parseOpeningLines(PRACTICE_LINES);
     const longNotationLines = convertOpeningLinesToPCN(
       lines,
       gameState.currentFEN,
@@ -1205,10 +1614,7 @@ function initializeEventListeners(): void {
     startPractice(gameState, dom);
   });
 
-  // Regular start button (hidden initially)
-  dom.startBtn.addEventListener("click", () => {
-    startPractice(gameState, dom);
-  });
+  // Regular start button removed
 
   // Reset button
   dom.resetBtn.addEventListener("click", () => {
@@ -1217,7 +1623,7 @@ function initializeEventListeners(): void {
 
   // Hint button
   dom.hintBtn.addEventListener("click", () => {
-    showHintForCurrentPosition(gameState);
+    showHintForCurrentPosition(gameState, dom);
   });
 
   // Next line button
@@ -1430,14 +1836,6 @@ export function initializePractice(): void {
   initializeBoardWithEventListeners();
   initializeEventListeners();
   resetPractice();
-
-  // Bridge arrow-utils recent-complete flag to board using window function
-  import("./practice-arrow-utils.js").then((mod) => {
-    (window as any).practiceConsumeRecentArrowCompleted = (
-      mod as any
-    ).consumeRecentArrowCompleted;
-    (window as any).practiceIsArrowDrawing = (mod as any).isArrowDrawing;
-  });
 
   // Analyze initial opening lines content
   const linesText = dom.openingLines.value;

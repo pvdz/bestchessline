@@ -29,6 +29,15 @@ export interface GameState {
   };
   // Last engine move in long notation (e.g., g8f6) for UI highlighting
   lastEngineMoveLong?: string | null;
+  // Coach context
+  lastBest?: { bestMove: string; bestScore: number; baseFEN: string } | null;
+  lastMistake?: {
+    attempted: string;
+    score: number;
+    bestMove: string;
+    bestScore: number;
+    baseFEN: string;
+  } | null;
 }
 
 export interface ChessMove {
@@ -44,10 +53,11 @@ export interface OpeningLine {
 
 export interface DOMElements {
   boardGrid: HTMLElement;
-  startBtn: HTMLButtonElement;
   resetBtn: HTMLButtonElement;
   hintBtn: HTMLButtonElement;
   nextBtn: HTMLButtonElement;
+  textAbove: HTMLElement;
+  textBelow: HTMLElement;
   startingFEN: HTMLInputElement;
   moveSelection: HTMLSelectElement;
   openingLines: HTMLTextAreaElement;

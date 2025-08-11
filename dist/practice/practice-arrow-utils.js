@@ -9,74 +9,78 @@ let userArrowElements = new Map();
 let arrowDrawingState = {
     isDrawing: false,
     startSquare: null,
-    startElement: null,
 };
-// Track arrow completion between event handlers
-let recentArrowCompleted = false;
+// Track last hover square during a draw gesture
+let lastHoverSquare = null;
+let drewArrow = false;
 /**
  * Initialize arrow drawing functionality
  */
 export function initializeArrowDrawing() {
-    const boardGrid = document.querySelector(".practice-board-grid");
+    const boardGrid = document.getElementById("practice-board-grid");
     if (!boardGrid)
         return;
-    // Add right-click event listener to the board
-    boardGrid.addEventListener("contextmenu", handleRightClick);
-    // Add mouse move listener for drawing preview
+    // Suppress context menu on right-click
+    boardGrid.addEventListener("contextmenu", (ev) => ev.preventDefault());
+    // Start priming on right mouse down
+    boardGrid.addEventListener("mousedown", handleMouseDown);
+    // Mouse move for preview and to trigger start after leaving origin square
     boardGrid.addEventListener("mousemove", handleMouseMove);
-    // Add mouse up listener to finish drawing
+    // Finish on mouse up anywhere
     document.addEventListener("mouseup", handleMouseUp);
 }
 /**
- * Handle right-click on board squares
+ * Handle right mouse down on board squares
  */
-function handleRightClick(event) {
-    event.preventDefault();
-    // Require Alt key to draw arrows to avoid conflicting with right-click toggling
-    if (!event.altKey)
+function handleMouseDown(event) {
+    // Only react to right mouse button
+    if (event.button !== 2)
         return;
-    // Find the square element, even if clicking on a piece
+    event.preventDefault();
     const target = event.target;
     const squareEl = target.closest(".practice-square");
-    const square = squareEl?.dataset.square;
-    if (!square)
+    const square = squareEl?.dataset.square || null;
+    if (!square || !squareEl)
         return;
-    if (!arrowDrawingState.isDrawing) {
-        // Start drawing arrow
-        startArrowDrawing(square, squareEl);
-    }
-    else {
-        // Finish drawing arrow
-        finishArrowDrawing(square);
-    }
+    // Prime drawing start; actual drawing begins once cursor leaves origin square
+    arrowDrawingState.startSquare = square;
+    lastHoverSquare = null;
+    drewArrow = false;
 }
 /**
  * Handle mouse move for arrow preview
  */
 function handleMouseMove(event) {
-    if (!arrowDrawingState.isDrawing || !arrowDrawingState.startElement)
+    if (!arrowDrawingState.startSquare)
         return;
     // Get the element under the mouse cursor
     const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
     const squareEl = elementUnderMouse?.closest(".practice-square");
-    const square = squareEl?.dataset.square;
-    if (!square || square === arrowDrawingState.startSquare)
+    const square = squareEl?.dataset.square || null;
+    lastHoverSquare = square;
+    if (!square || square === arrowDrawingState.startSquare) {
+        const existingPreview = document.querySelector(".practice-arrow-preview");
+        if (existingPreview) {
+            existingPreview.remove();
+        }
         return;
+    }
+    // Start drawing if not started yet
+    if (!arrowDrawingState.isDrawing) {
+        startArrowDrawing(arrowDrawingState.startSquare);
+    }
     // Update preview arrow
     updateArrowPreview(square);
+    drewArrow = true;
 }
 /**
  * Handle mouse up to finish drawing
  */
-function handleMouseUp(event) {
-    if (!arrowDrawingState.isDrawing)
-        return;
-    // Get the element under the mouse cursor
-    const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
-    const squareEl = elementUnderMouse?.closest(".practice-square");
-    const square = squareEl?.dataset.square;
-    if (square && square !== arrowDrawingState.startSquare) {
-        finishArrowDrawing(square);
+function handleMouseUp(_event) {
+    if (arrowDrawingState.isDrawing &&
+        lastHoverSquare &&
+        lastHoverSquare !== arrowDrawingState.startSquare) {
+        finishArrowDrawing(lastHoverSquare);
     }
     else {
         // Cancel drawing if clicking same square or outside board
@@ -86,19 +90,17 @@ function handleMouseUp(event) {
 /**
  * Start drawing an arrow from a square
  */
-function startArrowDrawing(square, element) {
+function startArrowDrawing(square) {
     arrowDrawingState.isDrawing = true;
     arrowDrawingState.startSquare = square;
-    arrowDrawingState.startElement = element;
-    // Add visual feedback without toggling selection
-    element.style.boxShadow = "0 0 15px rgba(255, 215, 0, 0.9)";
 }
 /**
  * Update arrow preview while drawing
  */
 function updateArrowPreview(toSquare) {
-    if (!arrowDrawingState.startSquare)
+    if (!arrowDrawingState.startSquare) {
         return;
+    }
     // Don't show preview if start and end squares are the same
     if (arrowDrawingState.startSquare === toSquare) {
         // Remove existing preview arrow
@@ -139,16 +141,12 @@ function finishArrowDrawing(toSquare) {
         createArrow(fromSquare, toSquare, false);
     }
     // Clean up drawing state
-    recentArrowCompleted = true;
     cancelArrowDrawing();
 }
 /**
  * Cancel arrow drawing
  */
 function cancelArrowDrawing() {
-    if (arrowDrawingState.startElement) {
-        arrowDrawingState.startElement.style.boxShadow = "";
-    }
     // Remove preview arrow
     const existingPreview = document.querySelector(".practice-arrow-preview");
     if (existingPreview) {
@@ -156,7 +154,7 @@ function cancelArrowDrawing() {
     }
     arrowDrawingState.isDrawing = false;
     arrowDrawingState.startSquare = null;
-    arrowDrawingState.startElement = null;
+    lastHoverSquare = null;
 }
 /**
  * Create an arrow between two squares
@@ -228,6 +226,7 @@ function createArrow(fromSquare, toSquare, isPreview = false) {
     arrow.style.transform = `rotate(${angle}rad)`;
     arrow.style.transformOrigin = "0 50%";
     arrow.style.setProperty("--arrow-color", isPreview ? "rgba(255, 0, 0, 0.9)" : "rgba(255, 0, 0, 1)");
+    arrow.style.pointerEvents = "none";
     boardContainer.appendChild(arrow);
     if (!isPreview) {
         const arrowKey = `${fromSquare}-${toSquare}`;
@@ -263,9 +262,11 @@ export function clearAllArrows() {
  * Clean up arrow drawing event listeners
  */
 export function cleanupArrowDrawing() {
-    const boardGrid = document.querySelector(".practice-board-grid");
+    const boardGrid = document.getElementById("practice-board-grid");
     if (boardGrid) {
-        boardGrid.removeEventListener("contextmenu", handleRightClick);
+        // These listeners may or may not be attached; removing is safe either way
+        boardGrid.removeEventListener("contextmenu", (ev) => ev.preventDefault());
+        boardGrid.removeEventListener("mousedown", handleMouseDown);
         boardGrid.removeEventListener("mousemove", handleMouseMove);
     }
     document.removeEventListener("mouseup", handleMouseUp);
@@ -275,7 +276,6 @@ export function cleanupArrowDrawing() {
     arrowDrawingState = {
         isDrawing: false,
         startSquare: null,
-        startElement: null,
     };
 }
 /**
@@ -289,8 +289,13 @@ export function isArrowDrawingActive() {
  * This prevents square selection when starting arrow drawing
  */
 export function shouldHandleArrowRightClick(event) {
-    // Only claim the right-click if we are actively drawing an arrow.
-    return arrowDrawingState.isDrawing;
+    // Claim RMB if we are drawing or have a primed start square.
+    // This suppresses other RMB handlers from acting on the same gesture.
+    if (arrowDrawingState.isDrawing)
+        return true;
+    if (arrowDrawingState.startSquare)
+        return true;
+    return false;
 }
 // Expose current drawing state read-only to external code
 export function isArrowDrawing() {
@@ -298,8 +303,8 @@ export function isArrowDrawing() {
 }
 // Expose a one-shot flag for consumers to detect an arrow completion
 export function consumeRecentArrowCompleted() {
-    const v = recentArrowCompleted;
-    recentArrowCompleted = false;
+    const v = drewArrow;
+    drewArrow = false;
     return v;
 }
 //# sourceMappingURL=practice-arrow-utils.js.map

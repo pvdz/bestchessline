@@ -4,4 +4,4 @@ export declare function makeMove(fromSquare: string, toSquare: string, gameState
 export declare function makeCastlingMove(castlingNotation: string, gameState: GameState, dom: DOMElements): void;
 export declare function makeComputerMove(gameState: GameState, dom: DOMElements): void;
 export declare function selectComputerMove(availableMoves: string[], gameState: GameState): string;
-export declare function showHintForCurrentPosition(gameState: GameState): void;
+export declare function showHintForCurrentPosition(gameState: GameState, dom?: DOMElements): void;

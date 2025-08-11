@@ -137,19 +137,35 @@ export function removeLastMove(movesHistoryEl) {
   }
 }
 // Show success toast
-export function showSuccessToast(message) {
+export function showSuccessToast(message, dom) {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#2ecc71");
 }
 // Show error toast
-export function showErrorToast(message) {
+export function showErrorToast(message, dom) {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#e74c3c");
 }
 // Show info toast
-export function showInfoToast(message) {
+export function showInfoToast(message, dom) {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#3498db");
 }
 // Show warning toast
-export function showWarningToast(message) {
+export function showWarningToast(message, dom) {
+  if (dom?.textBelow) {
+    dom.textBelow.textContent = message;
+    return;
+  }
   showToast(message, "#f39c12");
 }
 //# sourceMappingURL=practice-ui.js.map

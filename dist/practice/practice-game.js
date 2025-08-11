@@ -197,7 +197,7 @@ export function makeMove(fromSquare, toSquare, gameState, dom) {
             isCorrect: true,
             isWhite,
         });
-        showSuccessToast("Correct move!");
+        showSuccessToast("Correct move!", dom);
         addMoveToHistory(dom.moveHistory, moveNotation, true);
         // Re-render the board with the new FEN
         renderBoard(gameState.currentFEN);
@@ -211,11 +211,25 @@ export function makeMove(fromSquare, toSquare, gameState, dom) {
         clearAllArrows();
         // Update top moves panel for the new current position
         updateTopMovesPanelIfPresent(gameState, dom, undefined, true);
+        // Record last best context for coach prompt using previous FEN (position before this move)
+        const bestList = gameState.positionTopMoves?.get(previousFEN) || [];
+        const bestFirst = bestList[0];
+        if (bestFirst) {
+            gameState.lastBest = {
+                bestMove: bestFirst.move,
+                bestScore: bestFirst.score,
+                baseFEN: previousFEN,
+            };
+            // If the accepted move is not the best move, inform in below box
+            if (bestFirst.move !== normalizedMoveNotation) {
+                showInfoToast("Note: Accepted move was not best move in position. Most likely a locked predefined opening.", dom);
+            }
+        }
         // Check if we've reached the max human moves
         if (gameState.currentDepth >= gameState.maxDepth) {
             // Max human moves reached! Trigger confetti celebration
             triggerRainbowBurst();
-            showSuccessToast(`Max human moves (${gameState.maxDepth}) reached! Great job!`);
+            showSuccessToast(`Max human moves (${gameState.maxDepth}) reached! Great job!`, dom);
             gameState.isPracticeActive = false;
         }
         else if (availableMoves && availableMoves.length > 0) {
@@ -231,11 +245,11 @@ export function makeMove(fromSquare, toSquare, gameState, dom) {
             triggerRainbowBurst();
             // Check if there's a pinned position to restart from
             if (gameState.pinnedPosition) {
-                showInfoToast("Position completed! You can restart from pinned position or continue to next line.");
+                showInfoToast("Position completed! You can restart from pinned position or continue to next line.", dom);
                 // Don't set isPracticeActive to false yet - let user choose
             }
             else {
-                showInfoToast("Position completed!");
+                showInfoToast("Position completed!", dom);
                 gameState.isPracticeActive = false;
             }
         }
@@ -256,7 +270,20 @@ export function makeMove(fromSquare, toSquare, gameState, dom) {
                 ? `${Math.round(deltaCp / 100)}`
                 : (deltaCp / 100).toFixed(1);
             const sign = deltaCp > 0 ? "+" : "";
-            showErrorToast(`Incorrect move. It was a top-5 choice, but ${sign}${deltaStr} vs best (${best.move}).`);
+            // Determine rank of attempted move among top list
+            const rank = topList.findIndex((m) => m.move === attemptedLong) + 1;
+            const ordinal = toOrdinal(rank);
+            const fmt = (cp) => Math.abs(cp) >= 10000 ? (cp > 0 ? "#" : "-#") : (cp / 100).toFixed(2);
+            const msg = `Not the best. This was the ${ordinal} move at ${fmt(moveScore)} but best has ${fmt(bestScore)}.`;
+            showErrorToast(msg, dom);
+            // Track last mistake context for coach prompt
+            gameState.lastMistake = {
+                attempted: attemptedLong,
+                score: moveScore,
+                bestMove: best.move,
+                bestScore: bestScore,
+                baseFEN: previousFEN,
+            };
             // Highlight the matching score chip in tomato
             const panel = getElementByIdOrThrow("practice-top-moves");
             const chip = panel.querySelector(`.practice-score-chip[data-move="${attemptedLong}"]`);
@@ -266,7 +293,7 @@ export function makeMove(fromSquare, toSquare, gameState, dom) {
             }
         }
         else {
-            showErrorToast("Incorrect move! Try again.");
+            showErrorToast("Incorrect move! Try again.", dom);
         }
         // Add the incorrect move to the attempted moves section
         addMoveToHistory(dom.moveHistory, moveNotation, false);
@@ -312,7 +339,7 @@ function makeCastlingMoveDirect(castlingMove, gameState, dom) {
         isCorrect: true,
         isWhite,
     });
-    showSuccessToast("Correct move!");
+    showSuccessToast("Correct move!", dom);
     addMoveToHistory(dom.moveHistory, castlingNotation, true);
     // Re-render the board with the new FEN
     renderBoard(gameState.currentFEN);
@@ -324,11 +351,20 @@ function makeCastlingMoveDirect(castlingMove, gameState, dom) {
     gameState.validMoves = [];
     // Clear user arrows after castling move
     clearAllArrows();
+    // Inform if accepted move was not best, based on previous position
+    const bestList2 = gameState.positionTopMoves?.get(previousFEN) || [];
+    const bestFirst2 = bestList2[0];
+    if (bestFirst2) {
+        const attemptedLong = `${castlingMove.from}${castlingMove.to}`;
+        if (bestFirst2.move !== attemptedLong) {
+            showInfoToast("Note: Accepted move was not best move in position. Most likely a locked predefined opening.", dom);
+        }
+    }
     // Check if we've reached the max depth
     if (gameState.currentDepth >= gameState.maxDepth) {
         // Max depth reached! Trigger confetti celebration
         triggerRainbowBurst();
-        showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`);
+        showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`, dom);
         gameState.isPracticeActive = false;
     }
     else if (availableMoves && availableMoves.length > 0) {
@@ -344,11 +380,11 @@ function makeCastlingMoveDirect(castlingMove, gameState, dom) {
         triggerRainbowBurst();
         // Check if there's a pinned position to restart from
         if (gameState.pinnedPosition) {
-            showInfoToast("Position completed! You can restart from pinned position or continue to next line.");
+            showInfoToast("Position completed! You can restart from pinned position or continue to next line.", dom);
             // Don't set isPracticeActive to false yet - let user choose
         }
         else {
-            showInfoToast("Position completed!");
+            showInfoToast("Position completed!", dom);
             gameState.isPracticeActive = false;
         }
     }
@@ -425,18 +461,18 @@ export function makeCastlingMove(castlingNotation, gameState, dom) {
             triggerRainbowBurst();
             // Check if there's a pinned position to restart from
             if (gameState.pinnedPosition) {
-                showInfoToast("Position completed! You can restart from pinned position or continue to next line.");
+                showInfoToast("Position completed! You can restart from pinned position or continue to next line.", dom);
                 // Don't set isPracticeActive to false yet - let user choose
             }
             else {
-                showInfoToast("Position completed!");
+                showInfoToast("Position completed!", dom);
                 gameState.isPracticeActive = false;
             }
         }
         updateStatistics(dom, gameState);
     }
     else {
-        showErrorToast("Invalid castling move!");
+        showErrorToast("Invalid castling move!", dom);
     }
 }
 // Make computer move
@@ -469,7 +505,7 @@ export function makeComputerMove(gameState, dom) {
         }
         else {
             console.warn(`Invalid move format: ${selectedMove}`);
-            showErrorToast("Computer move failed");
+            showErrorToast("Computer move failed", dom);
             gameState.isPracticeActive = false;
             updateStatus(dom, gameState);
             return;
@@ -496,7 +532,7 @@ export function makeComputerMove(gameState, dom) {
                 if (gameState.currentDepth >= gameState.maxDepth) {
                     // Max depth reached! Trigger confetti celebration
                     triggerRainbowBurst();
-                    showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`);
+                    showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`, dom);
                     gameState.isPracticeActive = false;
                 }
                 else {
@@ -513,11 +549,11 @@ export function makeComputerMove(gameState, dom) {
                     else {
                         // Check if there's a pinned position to restart from
                         if (gameState.pinnedPosition) {
-                            showInfoToast("Position completed! You can restart from pinned position or continue to next line.");
+                            showInfoToast("Position completed! You can restart from pinned position or continue to next line.", dom);
                             // Don't set isPracticeActive to false yet - let user choose
                         }
                         else {
-                            showInfoToast("Position completed!");
+                            showInfoToast("Position completed!", dom);
                             gameState.isPracticeActive = false;
                         }
                     }
@@ -525,7 +561,7 @@ export function makeComputerMove(gameState, dom) {
             }
             else {
                 console.warn(`Failed to parse castling move: ${fromToSquares}`);
-                showErrorToast("Computer move failed");
+                showErrorToast("Computer move failed", dom);
                 gameState.isPracticeActive = false;
             }
         }
@@ -568,7 +604,7 @@ export function makeComputerMove(gameState, dom) {
             if (gameState.currentDepth >= gameState.maxDepth) {
                 // Max depth reached! Trigger confetti celebration
                 triggerRainbowBurst();
-                showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`);
+                showSuccessToast(`Max depth (${gameState.maxDepth}) reached! Great job!`, dom);
                 gameState.isPracticeActive = false;
             }
             else {
@@ -583,11 +619,11 @@ export function makeComputerMove(gameState, dom) {
                 else {
                     // Check if there's a pinned position to restart from
                     if (gameState.pinnedPosition) {
-                        showInfoToast("Position completed! You can restart from pinned position or continue to next line.");
+                        showInfoToast("Position completed! You can restart from pinned position or continue to next line.", dom);
                         // Don't set isPracticeActive to false yet - let user choose
                     }
                     else {
-                        showInfoToast("Position completed!");
+                        showInfoToast("Position completed!", dom);
                         gameState.isPracticeActive = false;
                     }
                 }
@@ -595,13 +631,13 @@ export function makeComputerMove(gameState, dom) {
         }
         else {
             console.warn(`Invalid from-to squares: ${fromToSquares}`);
-            showErrorToast("Computer move failed");
+            showErrorToast("Computer move failed", dom);
             gameState.isPracticeActive = false;
         }
     }
     else {
         // No moves available - position is finished
-        showInfoToast("Position completed!");
+        showInfoToast("Position completed!", dom);
         gameState.isPracticeActive = false;
     }
     updateStatus(dom, gameState);
@@ -733,15 +769,14 @@ export function selectComputerMove(availableMoves, gameState) {
     }
 }
 // Show hint
-export function showHintForCurrentPosition(gameState) {
+export function showHintForCurrentPosition(gameState, dom) {
     if (!gameState.isPracticeActive || !gameState.isHumanTurn)
         return;
     // Get available moves for current position
     const availableMoves = gameState.positionMap.get(gameState.currentFEN);
     if (availableMoves && availableMoves.length > 0) {
-        // Show a hint by highlighting the piece to move instead of the move
+        // Determine the piece to select, then apply the same visuals/state as a user selection
         const raw = availableMoves[0];
-        // If move number present, extract first token after number
         const hintMove = raw.includes(".")
             ? raw.split(/\s+/).slice(1)[0] || raw
             : raw;
@@ -751,13 +786,11 @@ export function showHintForCurrentPosition(gameState) {
             fromSquare = isWhite ? "e1" : "e8";
         }
         else {
-            // Try robust parsing to compute source square
             const parsed = parseMove(hintMove, gameState.currentFEN);
             if (parsed) {
                 fromSquare = parsed.from;
             }
             else {
-                // Fallback: normalize to long if needed and derive
                 const long = hintMove.match(/^[NBRQKP][a-h][1-8][a-h][1-8]$/)
                     ? hintMove.substring(1)
                     : hintMove;
@@ -766,16 +799,34 @@ export function showHintForCurrentPosition(gameState) {
                 }
             }
         }
-        const fromEl = document.querySelector(`[data-square="${fromSquare}"]`);
-        if (fromEl) {
-            fromEl.classList.add("hint-piece");
-            setTimeout(() => fromEl.classList.remove("hint-piece"), 1500);
+        if (fromSquare) {
+            // Clear any existing selection but keep last move indicators
+            clearBoardSelectionWithoutLastMove();
+            // Select the piece only (do not show valid moves to avoid highlighting all squares)
+            const fromPiece = getPieceAtSquareFromFEN(fromSquare, gameState.currentFEN);
+            if (fromPiece) {
+                gameState.selectedSquare = fromSquare;
+                gameState.validMoves = [];
+                highlightSquare(fromSquare);
+            }
         }
-        // Do not reveal any coordinates in the hint toast
-        showWarningToast("Hint shown");
+        // Provide actionable hint text
+        const piece = fromSquare
+            ? getPieceAtSquareFromFEN(fromSquare, gameState.currentFEN)
+            : null;
+        const names = {
+            K: "King",
+            Q: "Queen",
+            R: "Rook",
+            B: "Bishop",
+            N: "Knight",
+            P: "Pawn",
+        };
+        const pieceName = piece ? names[piece.toUpperCase()] || "piece" : "piece";
+        showWarningToast(`Move the ${pieceName} at ${fromSquare}.`, dom);
     }
     else {
-        showWarningToast("No moves available for this position");
+        showWarningToast("No moves available for this position", dom);
     }
 }
 function isPieceOfCurrentPlayer(piece, fen) {
@@ -815,5 +866,9 @@ function highlightValidMoves(moves) {
 }
 function clearSelection() {
     clearBoardSelection();
+}
+function toOrdinal(n) {
+    const s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 //# sourceMappingURL=practice-game.js.map

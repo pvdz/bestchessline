@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseFEN, coordsToSquare, toFEN } from "../utils/fen-utils.js";
+import { parseMove } from "../utils/move-parsing.js";
 import type { ChessPosition } from "../utils/types.js";
 // import { parseMove } from "../utils/move-parsing.js";
 import type { IncomingHttpHeaders } from "node:http";
@@ -43,29 +44,30 @@ function ensureCacheDir() {
     if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
   } catch {}
 }
-function normalizeFenForCache(fen: string): string {
-  const pos = parseFEN(fen);
-  const normalized = { ...pos, halfMoveClock: 0, fullMoveNumber: 1 } as any;
-  return toFEN(normalized);
+export function convertFenToCacheFileName(fen: string): string {
+  // Assumes the FEN was already validated. Just drop the move numbers, the last two "words" of the string.
+  return fen.split(" ").slice(0, -2).join(" ").replace(/\s+/g, "_");
 }
-function cacheFileForFen(fen: string): string {
-  const key = Buffer.from(fen).toString("base64url");
-  return path.join(CACHE_DIR, `${key}.json`);
+
+function cacheFileForFen(key: string): string {
+  // key is already normalized and includes suffixes; turn spaces to underscores
+  const safe = key.replace(/\s+/g, "_");
+  return path.join(CACHE_DIR, `${safe}.json`);
 }
-function readCacheFile(fen: string) {
+function readCacheFile(key: string) {
   try {
     ensureCacheDir();
-    const file = cacheFileForFen(fen);
+    const file = cacheFileForFen(key);
     if (!fs.existsSync(file)) return null;
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
     return null;
   }
 }
-function writeCacheFile(fen: string, answer: string, prompt: string) {
+function writeCacheFile(key: string, answer: string, prompt: string) {
   try {
     ensureCacheDir();
-    const file = cacheFileForFen(fen);
+    const file = cacheFileForFen(key);
     fs.writeFileSync(
       file,
       JSON.stringify({ answer, prompt, ts: Date.now() }, null, 2),
@@ -176,6 +178,22 @@ function buildPrompt(body: ExplainRequestBody): string {
     .filter(Boolean)
     .join("\n\n");
 }
+
+function toLongMoveNotation(
+  move: string | undefined,
+  fen: string,
+): string | undefined {
+  if (!move) return undefined;
+  const m = move.trim();
+  if (/^[a-h][1-8][a-h][1-8]$/.test(m)) return m; // already long
+  if (m === "O-O" || m === "O-O-O") {
+    const parsed = parseMove(m, fen);
+    if (parsed && parsed.from && parsed.to) return `${parsed.from}${parsed.to}`;
+  }
+  const parsed = parseMove(m, fen);
+  if (parsed && parsed.from && parsed.to) return `${parsed.from}${parsed.to}`;
+  return m.replace(/\s+/g, ""); // fallback (still disambiguates most)
+}
 async function callAI(
   prompt: string,
   model: string,
@@ -257,10 +275,38 @@ function genericAnswer(): string {
 export async function processExplain(
   body: ExplainRequestBody,
   headers: IncomingHttpHeaders,
-): Promise<{ answer: string; prompt?: string; cached: boolean }> {
+): Promise<{
+  answer: string;
+  prompt?: string;
+  cached: boolean;
+  cacheFile?: string;
+}> {
+  if (!isFinite(Infinity / Infinity)) {
+    // true
+    throw new Error(
+      "This needs to be improved with the normFen being the cache key already and moves neede to appended to it etc good luck here be dead code",
+    );
+  }
   const prompt = buildPrompt(body);
-  const normFen = normalizeFenForCache(body.fen);
-  const key = normFen;
+  const normFen = convertFenToCacheFileName(body.fen);
+  // Build suffix per request type
+  let suffix = "__position";
+  if (body.caseType === "move" && body.move) {
+    const mv = toLongMoveNotation(body.move, body.fen);
+    suffix = `__move_${mv}`;
+  } else if (
+    (body.caseType === "move_scored" ||
+      body.caseType === "move_scored_delta") &&
+    body.move
+  ) {
+    const mv = toLongMoveNotation(body.move, body.fen);
+    suffix = `__move_${mv}`;
+  } else if (body.caseType === "compare" && body.move && body.compareMove) {
+    const a = toLongMoveNotation(body.move, body.fen);
+    const b = toLongMoveNotation(body.compareMove, body.fen);
+    suffix = `__compare_${a}_vs_${b}`;
+  }
+  const key = `${normFen}${suffix}`;
 
   const now = Date.now();
   const mem = memoryCache.get(key);
@@ -271,6 +317,7 @@ export async function processExplain(
       answer: cached.answer,
       prompt: body.includePrompt ? cached.prompt : undefined,
       cached: true,
+      cacheFile: `${key}.json`,
     };
   }
 
@@ -283,9 +330,6 @@ export async function processExplain(
     answer,
     prompt: body.includePrompt ? prompt : undefined,
     cached: false,
+    cacheFile: `${key}.json`,
   };
-}
-
-export function health() {
-  return { ok: true };
 }
