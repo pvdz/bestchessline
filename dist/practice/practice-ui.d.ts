@@ -1,36 +1,12 @@
 import { DOMElements, GameState } from "./practice-types.js";
-export declare function updateStatistics(
-  dom: DOMElements,
-  gameState: GameState,
-): void;
-export declare function updateStatus(
-  dom: DOMElements,
-  gameState: GameState,
-): void;
-export declare function updateDepthDisplay(
-  dom: DOMElements,
-  gameState: GameState,
-): void;
-export declare function addMoveToHistory(
-  movesHistoryEl: HTMLElement,
-  move: string,
-  isCorrect: boolean,
-): void;
-export declare function updateMoveHistoryDisplay(
-  movesHistoryEl: HTMLElement,
-): void;
+export declare function updateStatistics(dom: DOMElements, gameState: GameState): void;
+export declare function updateStatus(dom: DOMElements, gameState: GameState): void;
+export declare function updateDepthDisplay(dom: DOMElements, gameState: GameState): void;
+export declare function addMoveToHistory(movesHistoryEl: HTMLElement, move: string, isCorrect: boolean): void;
+export declare function updateMoveHistoryDisplay(movesHistoryEl: HTMLElement): void;
 export declare function clearMoveHistory(movesHistoryEl: HTMLElement): void;
 export declare function removeLastMove(movesHistoryEl: HTMLElement): void;
-export declare function showSuccessToast(
-  message: string,
-  dom?: DOMElements,
-): void;
-export declare function showErrorToast(
-  message: string,
-  dom?: DOMElements,
-): void;
+export declare function showSuccessToast(message: string, dom?: DOMElements): void;
+export declare function showErrorToast(message: string, dom?: DOMElements): void;
 export declare function showInfoToast(message: string, dom?: DOMElements): void;
-export declare function showWarningToast(
-  message: string,
-  dom?: DOMElements,
-): void;
+export declare function showWarningToast(message: string, dom?: DOMElements): void;

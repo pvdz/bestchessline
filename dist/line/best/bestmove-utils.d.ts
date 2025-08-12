@@ -16,29 +16,20 @@
  */
 type CompareDirection = "asc" | "desc";
 type CompareOptions = {
-  direction: CompareDirection;
-  prioritize?: "depth" | "score";
+    direction: CompareDirection;
+    prioritize?: "depth" | "score";
 };
-export declare function compareAnalysisMoves(
-  a: {
+export declare function compareAnalysisMoves(a: {
     score: number;
     depth: number;
     mateIn: number;
-  },
-  b: {
+}, b: {
     score: number;
     depth: number;
     mateIn: number;
-  },
-  directionOrOptions?: CompareDirection | CompareOptions,
-): number;
+}, directionOrOptions?: CompareDirection | CompareOptions): number;
 /**
  * Calculate total positions with overrides
  */
-export declare function calculateTotalPositionsWithOverrides(
-  maxDepth: number,
-  responderResponses: number,
-  firstReplyOverride?: number,
-  secondReplyOverride?: number,
-): number;
+export declare function calculateTotalPositionsWithOverrides(maxDepth: number, responderResponses: number, firstReplyOverride?: number, secondReplyOverride?: number): number;
 export {};

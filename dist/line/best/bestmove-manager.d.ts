@@ -14,9 +14,7 @@ export declare function updateBestmoveResults(result: AnalysisResult): void;
 /**
  * Update results panel
  */
-export declare function actuallyUpdateBestmovePanel(
-  moves: AnalysisMove[],
-): void;
+export declare function actuallyUpdateBestmovePanel(moves: AnalysisMove[]): void;
 /**
  * Make a move from analysis results
  */

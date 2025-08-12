@@ -10,11 +10,7 @@
  * @param background The background color (default: #333)
  * @param duration How long to show (ms, default: 4000)
  */
-export declare function showToast(
-  message: string,
-  background?: string,
-  duration?: number,
-): void;
+export declare function showToast(message: string, background?: string, duration?: number): void;
 /**
  * Show error toast notification
  */
@@ -26,10 +22,7 @@ export declare function showErrorToast(message: string): void;
  * @param wait The number of milliseconds to delay
  * @returns A debounced version of the function
  */
-export declare function debounce<T extends (...args: never[]) => void>(
-  func: T,
-  wait: number,
-): (...args: Parameters<T>) => void;
+export declare function debounce<T extends (...args: never[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void;
 /**
  * Clear the initiator move input fields
  */

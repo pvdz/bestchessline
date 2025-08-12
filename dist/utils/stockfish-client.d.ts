@@ -7,11 +7,7 @@ export declare function initializeStockfish(): void;
 /**
  * Analyze position with Stockfish
  */
-export declare function analyzePosition(
-  fen: string,
-  options: StockfishOptions | undefined,
-  onUpdate: (result: AnalysisResult) => void,
-): Promise<AnalysisResult>;
+export declare function analyzePosition(fen: string, options: StockfishOptions | undefined, onUpdate: (result: AnalysisResult) => void): Promise<AnalysisResult>;
 export declare function stopAnalysis(): void;
 export declare function getCurrentAnalysisSnapshot(): AnalysisResult | null;
 /**
