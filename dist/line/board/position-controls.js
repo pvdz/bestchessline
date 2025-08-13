@@ -6,8 +6,8 @@ import { getAppState, updateAppState } from "../../line/main.js";
 import { updateButtonStates } from "../best/bestmove-config.js";
 import { log, logError } from "../../utils/logging.js";
 import { formatScoreWithMateIn } from "../../utils/formatting-utils.js";
-import * as Stockfish from "../../utils/stockfish-client.js";
 import { toFEN } from "../../utils/fen-utils.js";
+import { getTopLines } from "../fish/fish-utils.js";
 /**
  * Position Control Utility Functions
  *
@@ -156,24 +156,19 @@ export const evaluateCurrentPosition = async () => {
     try {
         // Get a proper evaluation with adequate depth and timeout
         const result = await Promise.race([
-            Stockfish.analyzePosition(currentFEN, {
-                depth: 20,
+            await getTopLines(currentFEN, 1, {
+                maxDepth: 20,
                 threads: 1,
-                multiPV: 1,
-            }, 
-            // Update the button with current depth as it grows
-            (res) => {
-                try {
+                onUpdate: (res) => {
                     const d = res.moves[0]?.depth || 0;
                     const btn = getElementByIdOrThrow("position-evaluation-btn");
                     btn.textContent = `d${d}`;
-                }
-                catch { }
+                },
             }),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Analysis timeout")), 10000)),
         ]);
-        if (result.moves.length > 0) {
-            const bestMove = result.moves[0];
+        if (result.length > 0) {
+            const bestMove = result[0];
             const score = bestMove.score;
             // Log the evaluation for debugging
             log(`Position evaluation: ${score} centipawns (${score / 100} pawns)`);

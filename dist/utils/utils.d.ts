@@ -17,3 +17,5 @@ export declare function getFENWithCorrectMoveCounter(boardFEN: string, currentMo
  * Get the starting player from a FEN string
  */
 export declare function getStartingPlayer(fen: string): PlayerColor;
+export declare function pauseUntilButton(): Promise<void>;
+export declare function unpause(): void;

@@ -30,6 +30,14 @@ export interface ChessMove {
   };
 }
 
+// This is what we cache and transfer. It goes hand in hand with a FEN.
+export interface SimpleMove {
+  move: string;
+  score: number;
+  mateIn: number;
+  draw: boolean;
+}
+
 export interface AnalysisMove {
   move: ChessMove;
   score: number;

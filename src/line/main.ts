@@ -1,9 +1,4 @@
-import {
-  ChessMove,
-  AnalysisResult,
-  AnalysisMove,
-  PLAYER_COLORS,
-} from "./types.js";
+import { ChessMove, AnalysisMove, PLAYER_COLORS } from "./types.js";
 import { setGlobalCurrentMoveIndex } from "../utils/utils.js";
 import { showToast } from "../utils/ui-utils.js";
 import { formatScoreWithMateIn } from "../utils/formatting-utils.js";
@@ -19,10 +14,7 @@ import {
   getElementByIdOrThrow,
   querySelectorOrThrow,
 } from "../utils/dom-helpers.js";
-import {
-  formatPVWithEffects,
-  updateResultsPanel,
-} from "./best/bestmove-pv-utils.js";
+import { formatPVWithEffects } from "./best/bestmove-pv-utils.js";
 import {
   updateFENInput,
   updateControlsFromPosition,
@@ -63,6 +55,7 @@ import { getLineFisherConfigFromUI } from "./fish/fish-ui-utils.js";
 import { hideMoveArrow } from "./board/arrow-utils.js";
 import { continueFishing } from "./fish/fish.js";
 import { getCurrentFishState } from "./fish/fish-state.js";
+import { unpause } from "../utils/utils.js";
 
 // ============================================================================
 // LOGGING CONFIGURATION
@@ -86,7 +79,7 @@ interface AppState {
 
   // Analysis state
   isAnalyzing: boolean;
-  currentResults: AnalysisResult | null;
+  // currentResults: AnalysisResult | null;
 
   // Branching state
   branchMoves: ChessMove[];
@@ -110,7 +103,7 @@ let appState: AppState = {
   initialFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
   currentMoveIndex: -1,
   isAnalyzing: false,
-  currentResults: null,
+  // currentResults: null,
   branchMoves: [],
   branchStartIndex: -1,
   isInBranch: false,
@@ -322,7 +315,7 @@ const initializeEventListeners = (): void => {
 
   continueLineFisherBtn.addEventListener("click", async () => {
     console.log("Continue button clicked - trying Fish continue first");
-    continueFishing();
+    unpause();
   });
 
   // Line Fisher state management controls
@@ -449,7 +442,6 @@ const initializeEventListeners = (): void => {
     // Reset analysis state
     updateAppState({
       isAnalyzing: false,
-      currentResults: null,
     });
 
     // Update position evaluation button
@@ -474,14 +466,16 @@ const initializeEventListeners = (): void => {
   notationRadios.forEach((radio: Element) => {
     radio.addEventListener("change", () => {
       updateMoveList();
-      updateResultsPanel(appState.currentResults?.moves || []);
+      console.log("TODO: fix updateResultsPanel");
+      // updateResultsPanel(appState.currentResults?.moves || []);
     });
   });
 
   pieceRadios.forEach((radio: Element) => {
     radio.addEventListener("change", () => {
       updateMoveList();
-      updateResultsPanel(appState.currentResults?.moves || []);
+      console.log("TODO: fix updateResultsPanel");
+      // updateResultsPanel(appState.currentResults?.moves || []);
     });
   });
 
@@ -496,9 +490,10 @@ const initializeEventListeners = (): void => {
       if (input) {
         input.addEventListener("change", () => {
           // Update results panel to reflect new configuration
-          if (appState.currentResults?.moves) {
-            updateResultsPanel(appState.currentResults.moves);
-          }
+          console.log("TODO: fix updateResultsPanel");
+          //   if (appState.currentResults?.moves) {
+          //     updateResultsPanel(appState.currentResults.moves);
+          //   }
         });
       }
     },
@@ -507,15 +502,7 @@ const initializeEventListeners = (): void => {
   // Update threads input based on fallback mode
   updateThreadsInputForFallbackMode();
 
-  // Debug Continue button wiring for Stockfish pause gate
-  const sfDebugBtn = document.getElementById(
-    "sf-debug-continue",
-  ) as HTMLButtonElement | null;
-  if (sfDebugBtn) {
-    sfDebugBtn.addEventListener("click", () => {
-      (window as any).__SF_DEBUG_CONTINUE__ = true;
-    });
-  }
+  // Removed: bestmove panel debug continue button (moved to fish panel)
 };
 
 /**

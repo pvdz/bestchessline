@@ -25,6 +25,12 @@ export interface ChessMove {
         capturedSquare?: string;
     };
 }
+export interface SimpleMove {
+    move: string;
+    score: number;
+    mateIn: number;
+    draw: boolean;
+}
 export interface AnalysisMove {
     move: ChessMove;
     score: number;

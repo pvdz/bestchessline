@@ -1,4 +1,4 @@
-import { ChessMove, AnalysisResult, AnalysisMove } from "./types.js";
+import { ChessMove, AnalysisMove } from "./types.js";
 /**
  * Application state interface
  */
@@ -7,7 +7,6 @@ interface AppState {
     initialFEN: string;
     currentMoveIndex: number;
     isAnalyzing: boolean;
-    currentResults: AnalysisResult | null;
     branchMoves: ChessMove[];
     branchStartIndex: number;
     isInBranch: boolean;

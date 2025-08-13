@@ -1,4 +1,4 @@
-import { PLAYER_COLORS, } from "./types.js";
+import { PLAYER_COLORS } from "./types.js";
 import { setGlobalCurrentMoveIndex } from "../utils/utils.js";
 import { showToast } from "../utils/ui-utils.js";
 import { formatScoreWithMateIn } from "../utils/formatting-utils.js";
@@ -8,7 +8,7 @@ import { moveToNotation } from "../utils/notation-utils.js";
 import { parseFEN } from "../utils/fen-utils.js";
 import { log } from "../utils/logging.js";
 import { getInputElement, getTextAreaElement, getCheckedRadioByName, getElementByIdOrThrow, querySelectorOrThrow, } from "../utils/dom-helpers.js";
-import { formatPVWithEffects, updateResultsPanel, } from "./best/bestmove-pv-utils.js";
+import { formatPVWithEffects } from "./best/bestmove-pv-utils.js";
 import { updateFENInput, updateControlsFromPosition, updatePositionFromControls, resetPositionEvaluation, initializePositionEvaluationButton, } from "./board/position-controls.js";
 import { updateNavigationButtons } from "../utils/button-utils.js";
 import { updateThreadsInputForFallbackMode } from "../utils/thread-utils.js";
@@ -23,8 +23,8 @@ import * as LineFisher from "./fish/fish.js";
 import { fish, exportFishStateToClipboard, copyFishStateToClipboard, importFishStateFromClipboard, stopFishAnalysis, resetFishAnalysis, } from "./fish/fish.js";
 import { getLineFisherConfigFromUI } from "./fish/fish-ui-utils.js";
 import { hideMoveArrow } from "./board/arrow-utils.js";
-import { continueFishing } from "./fish/fish.js";
 import { getCurrentFishState } from "./fish/fish-state.js";
+import { unpause } from "../utils/utils.js";
 /**
  * Application state instance
  */
@@ -33,7 +33,7 @@ let appState = {
     initialFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     currentMoveIndex: -1,
     isAnalyzing: false,
-    currentResults: null,
+    // currentResults: null,
     branchMoves: [],
     branchStartIndex: -1,
     isInBranch: false,
@@ -203,7 +203,7 @@ const initializeEventListeners = () => {
     });
     continueLineFisherBtn.addEventListener("click", async () => {
         console.log("Continue button clicked - trying Fish continue first");
-        continueFishing();
+        unpause();
     });
     // Line Fisher state management controls
     const exportLineFisherStateBtn = getElementByIdOrThrow("fish-export");
@@ -291,7 +291,6 @@ const initializeEventListeners = () => {
         // Reset analysis state
         updateAppState({
             isAnalyzing: false,
-            currentResults: null,
         });
         // Update position evaluation button
         const evalBtn = getElementByIdOrThrow("position-evaluation-btn");
@@ -309,13 +308,15 @@ const initializeEventListeners = () => {
     notationRadios.forEach((radio) => {
         radio.addEventListener("change", () => {
             updateMoveList();
-            updateResultsPanel(appState.currentResults?.moves || []);
+            console.log("TODO: fix updateResultsPanel");
+            // updateResultsPanel(appState.currentResults?.moves || []);
         });
     });
     pieceRadios.forEach((radio) => {
         radio.addEventListener("change", () => {
             updateMoveList();
-            updateResultsPanel(appState.currentResults?.moves || []);
+            console.log("TODO: fix updateResultsPanel");
+            // updateResultsPanel(appState.currentResults?.moves || []);
         });
     });
     // Analysis configuration controls
@@ -327,21 +328,16 @@ const initializeEventListeners = () => {
         if (input) {
             input.addEventListener("change", () => {
                 // Update results panel to reflect new configuration
-                if (appState.currentResults?.moves) {
-                    updateResultsPanel(appState.currentResults.moves);
-                }
+                console.log("TODO: fix updateResultsPanel");
+                //   if (appState.currentResults?.moves) {
+                //     updateResultsPanel(appState.currentResults.moves);
+                //   }
             });
         }
     });
     // Update threads input based on fallback mode
     updateThreadsInputForFallbackMode();
-    // Debug Continue button wiring for Stockfish pause gate
-    const sfDebugBtn = document.getElementById("sf-debug-continue");
-    if (sfDebugBtn) {
-        sfDebugBtn.addEventListener("click", () => {
-            window.__SF_DEBUG_CONTINUE__ = true;
-        });
-    }
+    // Removed: bestmove panel debug continue button (moved to fish panel)
 };
 /**
  * Initialize position controls

@@ -88,9 +88,11 @@ export async function getRandomFishLines(exec, limit) {
     return rows.map(mapRowToStoredFishLine);
 }
 export async function getFishLinesByPosition(exec, position) {
+    console.log("getFishLinesByPosition:", position);
     const rows = await exec.all(`SELECT * FROM fish_lines WHERE position=? ORDER BY updated_at DESC`, [
         position,
     ]);
+    console.log(" -->:", rows.length);
     return rows.map(mapRowToStoredFishLine);
 }
 // bool/int helpers now imported from db.ts

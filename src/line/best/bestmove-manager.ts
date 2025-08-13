@@ -8,7 +8,10 @@ import {
 import { getAppState, updateAppState, createBranch } from "../main.js";
 import { parseFEN } from "../../utils/fen-utils.js";
 import { validateMove } from "../../utils/move-validator.js";
-import { applyMoveToFEN } from "../../utils/fen-manipulation.js";
+import {
+  applyLongMoveToFEN,
+  applyMoveToFEN,
+} from "../../utils/fen-manipulation.js";
 import { moveToNotation } from "../../utils/notation-utils.js";
 import {
   getCheckedRadioByName,
@@ -37,6 +40,8 @@ import { highlightLastMove } from "../board/board-utils.js";
 import { formatScoreWithMateIn } from "../../utils/formatting-utils.js";
 import { hideMoveArrow } from "../board/arrow-utils.js";
 import { clearLastMoveHighlight } from "../../utils/chess-board.js";
+import { getTopLines } from "../fish/fish-utils.js";
+import { parseLongMove } from "../../utils/move-parser.js";
 
 /**
  * Analysis Management Utility Functions
@@ -63,24 +68,27 @@ export async function startBestmove(): Promise<void> {
   updateButtonStates();
   updatePositionEvaluationDisplay();
 
+  const options = getAnalysisOptions();
   try {
-    const result = await Stockfish.analyzePosition(
-      Board.getFEN(),
-      getAnalysisOptions(),
-      (analysisResult) => {
+    await getTopLines(Board.getFEN(), options.multiPV, {
+      maxDepth: 20,
+      threads: options.threads,
+      onUpdate: (analysisResult) => {
         updateAppState({
-          currentResults: analysisResult,
+          // currentResults: analysisResult,
           isAnalyzing: !analysisResult.completed,
         });
         updateBestmoveResults(analysisResult);
         updateButtonStates();
-        updateEnginePvTickerThrottled();
+        // TOOD: this needs to populate the lines now. in favor of the previous way
+        updateEnginePvTickerThrottled(false, analysisResult);
       },
-    );
+    });
+
     // When analysis promise resolves, briefly emphasize the PV ticker and pause UI updates
-    await emphasizePvTickerWithPause();
+    // await emphasizePvTickerWithPause();
     updateAppState({
-      currentResults: result,
+      // currentResults: result,
       isAnalyzing: false,
     });
     updateButtonStates();
@@ -91,7 +99,10 @@ export async function startBestmove(): Promise<void> {
   }
 }
 
-function updateEnginePvTickerThrottled(force: boolean = false): void {
+function updateEnginePvTickerThrottled(
+  force: boolean = false,
+  result: AnalysisResult,
+): void {
   const now = Date.now();
   if (!force && now - lastPvTickerUpdateMs < PV_TICKER_INTERVAL_MS) return;
   lastPvTickerUpdateMs = now;
@@ -99,19 +110,16 @@ function updateEnginePvTickerThrottled(force: boolean = false): void {
 
   const el = getElementByIdOrThrow("bestmove-pv-ticker");
 
-  const snapshot =
-    Stockfish.getCurrentAnalysisSnapshot?.() ||
-    (getAppState().currentResults as any);
-  if (!snapshot || !snapshot.moves || snapshot.moves.length === 0) {
+  if (!result || !result.moves || result.moves.length === 0) {
     el.textContent = "";
     return;
   }
 
-  const position = parseFEN(snapshot.position);
+  const position = parseFEN(result.position);
   const direction = position.turn === PLAYER_COLORS.BLACK ? "asc" : "desc";
 
   // Sort: mate first, then depth, then score
-  const moves = [...snapshot.moves].sort((a: AnalysisMove, b: AnalysisMove) =>
+  const moves = [...result.moves].sort((a: AnalysisMove, b: AnalysisMove) =>
     compareAnalysisMoves(a, b, direction as any),
   );
 
@@ -149,7 +157,7 @@ export function stopBestmove(): void {
   Stockfish.stopAnalysis();
   updateAppState({
     isAnalyzing: false,
-    currentResults: null,
+    // currentResults: null,
   });
   updateButtonStates();
   updateResultsPanel([]);
@@ -394,6 +402,7 @@ export function addBestmovePVClickListeners(): void {
  * Handle click on PV move
  */
 function handleBestmovePVClick(e: Event): void {
+  // TODO: this needs to read the move list from the DOM, not local/module state. When these elements are added to the DOM they will know the pv, so that's when we can add and store the moves. is fine.
   const target = e.target as HTMLElement;
 
   log("Event delegation caught click on:", target);
@@ -419,9 +428,9 @@ function handleBestmovePVClick(e: Event): void {
     // Get the PV moves from the current analysis results
     const appState = getAppState();
     log("Current appState before processing:", appState);
-    const currentResults = appState.currentResults;
+    const moves = appState.moves;
 
-    if (currentResults && currentResults.moves.length > 0) {
+    if (moves.length > 0) {
       // Find the analysis result that matches the clicked move
       const clickedIndex = parseInt(moveIndex);
       const clickedMoveFrom = target.dataset.moveFrom;
@@ -430,16 +439,16 @@ function handleBestmovePVClick(e: Event): void {
       log("Looking for analysis result:", {
         clickedIndex,
         clickedMove: `${clickedMoveFrom}${clickedMoveTo}`,
-        totalResults: currentResults.moves.length,
+        totalResults: moves.length,
       });
 
       // Find the analysis result that contains this specific move
       let matchingResult = null;
-      for (let i = 0; i < currentResults.moves.length; i++) {
-        const result = currentResults.moves[i];
-        if (result.pv && result.pv.length > clickedIndex) {
-          const pvMove = result.pv[clickedIndex];
-          if (pvMove.from === clickedMoveFrom && pvMove.to === clickedMoveTo) {
+      for (let i = 0; i < moves.length; i++) {
+        const result = moves[i];
+        const list = (target.getAttribute("data-pv") ?? "").split(" ");
+        if (list.length > clickedIndex) {
+          if (list[clickedIndex] === `${clickedMoveFrom}${clickedMoveTo}`) {
             matchingResult = result;
             break;
           }
@@ -452,13 +461,13 @@ function handleBestmovePVClick(e: Event): void {
       }
 
       // Use the PV moves from the matching result
-      const pvMoves = matchingResult.pv;
+      const pvMoves = (target.getAttribute("data-pv") ?? "").split(" ");
 
       log("Found matching result:", {
-        resultIndex: currentResults.moves.indexOf(matchingResult),
+        resultIndex: moves.indexOf(matchingResult),
         pvLength: pvMoves.length,
         clickedIndex,
-        pvMoves: pvMoves.map((m: ChessMove) => `${m.from}${m.to}`),
+        pvMoves,
       });
 
       log("PV click processing:", {
@@ -486,7 +495,7 @@ function handleBestmovePVClick(e: Event): void {
         let currentFEN = originalPosition;
         for (let i = 0; i <= validClickedIndex; i++) {
           const move = pvMoves[i];
-          currentFEN = applyMoveToFEN(currentFEN, move);
+          currentFEN = applyLongMoveToFEN(currentFEN, move);
         }
 
         // Set the board to this position
@@ -497,7 +506,10 @@ function handleBestmovePVClick(e: Event): void {
 
         // Highlight the last move in the branch
         if (validClickedIndex >= 0) {
-          highlightLastMove(pvMoves[validClickedIndex]);
+          // FIXME
+          highlightLastMove(
+            parseLongMove(pvMoves[validClickedIndex], currentFEN)!,
+          );
         }
 
         log("After all updates, final appState:", getAppState());

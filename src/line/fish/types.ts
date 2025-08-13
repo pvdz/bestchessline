@@ -1,3 +1,5 @@
+import { SimpleMove } from "../../utils/types";
+
 /**
  * Line Fisher analysis configuration
  */
@@ -11,7 +13,7 @@ export interface LineFisherConfig {
   // targetDepth removed from line app (confetti only lives in practice)
   rootFEN: string; // Root position for analysis
   baselineScore: number; // Score of the root position for delta calculations
-  baselineMoves: { move: string; score: number }[]; // Top moves from root position
+  baselineMoves: SimpleMove[]; // Top moves from root position
 }
 
 /**
@@ -57,8 +59,8 @@ export interface FishLine {
   nodeId: string; // Optional node ID for DOM element reference. Empty string when not yet created.
   sanGame: string; // Computed SAN game string (computed on demand to display only)
   pcns: string[]; // PCN notation moves in this line
-  best5Replies: { move: string; score: number }[]; // Top5 replies to last initiator move in the line ("child" lines should continue with these moves)
-  best5Alts: { move: string; score: number }[]; // Top5 moves the initiator could have made in place of the last move intiiator actually made (lines should end with best of these moves unless predefined)
+  best5Replies: SimpleMove[]; // Top5 replies to last initiator move in the line ("child" lines should continue with these moves)
+  best5Alts: SimpleMove[]; // Top5 moves the initiator could have made in place of the last move intiiator actually made (lines should end with best of these moves unless predefined)
   score: number; // Score of the last move in this line (for backward compatibility)
   position: string; // Current position FEN
   isDone: boolean; // Whether this line is complete

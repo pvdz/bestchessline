@@ -1,4 +1,5 @@
-import { analyzePosition, initializeStockfish, } from "../utils/stockfish-client.js";
+import { initializeStockfish } from "../utils/stockfish-client.js";
+import { getTopLinesTrapped } from "../line/fish/fish-utils.js";
 function levelInstructions(level) {
     switch (level) {
         case "beginner":
@@ -13,23 +14,21 @@ function levelInstructions(level) {
             return "Explain to a GM-level audience: deep evaluation, critical lines succinctly, highlight evaluation shifts, known theory branches, and subtle nuances.";
     }
 }
-function buildPrompt(fen, analysis, level, userQuestion) {
+function buildPrompt(fen, moves, level, userQuestion) {
     const levelText = levelInstructions(level);
     const header = `You are a chess coach. ${levelText}`;
     const position = `Current position (FEN): ${fen}`;
     let sfSummary = "No engine context.";
-    if (analysis && analysis.moves.length > 0) {
-        const lines = analysis.moves.map((m, i) => {
+    if (moves && moves.length > 0) {
+        const lines = moves.map((m, i) => {
             const score = Math.abs(m.score) >= 10000
                 ? m.score > 0
                     ? "+Mate"
                     : "-Mate"
                 : (m.score / 100).toFixed(2);
-            const first = `${m.move.piece}${m.move.from}${m.move.to}`;
-            const pv = m.pv
-                .slice(0, 8)
-                .map((mv) => `${mv.piece}${mv.from}${mv.to}`)
-                .join(" ");
+            const first = `${m.move}`;
+            // hmmm yes, we need to update the server side to store and return the moves too ...
+            const pv = "I AM A PV AND I NEED TO BE FIXED"; // FIXME. m.pv.slice(0, 8).join(" ");
             return `${i + 1}. ${first} (score ${score}) pv: ${pv}`;
         });
         sfSummary = `Top engine lines (truncated):\n${lines.join("\n")}`;
@@ -48,21 +47,16 @@ export async function explainCurrentPositionWithAI(gameState, cfg, opts = {}) {
     catch {
         // ignore, stockfish-client is idempotent
     }
-    let analysis = null;
-    try {
-        analysis = await analyzePosition(gameState.currentFEN, {
-            depth: cfg.depth ?? 16,
-            multiPV: cfg.maxLines ?? 5,
-            threads: 1,
-        }, 
-        // For AI context, just track minimal info to keep it light
-        () => { });
-    }
-    catch (e) {
+    let moves = await getTopLinesTrapped(gameState.currentFEN, cfg.maxLines ?? 5, {
+        maxDepth: 20,
+        threads: 1,
+        onUpdate: () => { },
+    });
+    if (!moves) {
         // Continue without engine context
-        analysis = null;
+        console.warn("Failed to get best lines from server or stockfish, moving on without them");
     }
-    const prompt = buildPrompt(gameState.currentFEN, analysis, cfg.level, opts.question);
+    const prompt = buildPrompt(gameState.currentFEN, moves, cfg.level, opts.question);
     const body = {
         model: cfg.model,
         messages: [

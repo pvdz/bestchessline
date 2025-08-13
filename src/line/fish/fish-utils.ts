@@ -1,5 +1,10 @@
+import { parseFEN } from "../../utils/fen-utils.js";
+import { analyzePosition } from "../../utils/stockfish-client.js";
+import { SimpleMove } from "../../utils/types.js";
 import { compareAnalysisMoves } from "../best/bestmove-utils.js";
-import type { AnalysisMove } from "../types.js";
+import type { AnalysisMove, AnalysisResult } from "../types.js";
+import { apiLineGet, apiLinesPut } from "./fish-remote.js";
+import { pauseUntilButton } from "../../utils/utils.js";
 
 /**
  * Generate line ID from SAN moves
@@ -25,6 +30,104 @@ export function sortPvMoves(
   return moves;
 }
 
+// Given a position, get the best lines from the server or compute them using stockfish
+export async function getTopLines(
+  fen: string,
+  targetLines: number,
+  {
+    maxDepth = 20,
+    threads = 1,
+    onUpdate,
+  }: {
+    maxDepth?: number;
+    threads?: number;
+    onUpdate?: (res: AnalysisResult) => void;
+  } = {},
+): Promise<SimpleMove[]> {
+  const known: SimpleMove[] | null = await apiLineGet(
+    fen,
+    targetLines,
+    maxDepth,
+  );
+  if (known) {
+    console.log(
+      "getTopLines(): Retrieved cached results for",
+      fen,
+      targetLines,
+      "->",
+      known,
+    );
+    await pauseUntilButton();
+    return known.slice(0, targetLines); // Server may return _more_ than requested (or less)
+  }
+
+  // - Find best five moves (from stockfish)
+  // - Record it for feedback
+  // - If there is a predefined move:
+  //   - if the move is part of the top five, use it and the recorded score
+  //   - if the move is not part of the top five, get the score for this move
+  // - If there is no predefined move:
+  //   - use the best move
+  // - Record the move and score
+  // - Throw it back in the queue to get responder moves
+
+  // An alternative search method could be to compute the score for each valid
+  // move from given position and then use the best move from the resulting set.
+  // This would work but would be very expensive. And then there's still the
+  // question mark around which scoring might be more reliable.
+  // Who knows, maybe it doesn't really matter all that much for our purpose.
+
+  // We could do this for the first two steps, as a separate table, then pull
+  // the best responses to predefined steps. First two steps leads to only 200k
+  // positions. We can easily hold that and apply a filter for predefined moves.
+
+  console.log("getTopLines(): Server had no lines, manually computing them");
+
+  // Get best moves from Stockfish
+  const analysis = await analyzePosition(
+    fen,
+    {
+      threads,
+      depth: maxDepth,
+      multiPV: targetLines,
+    },
+    onUpdate ?? (() => {}),
+  );
+
+  // White position score values positive, so order desc for white to have moves[0] be best
+  const toMove = parseFEN(fen).turn;
+  sortPvMoves(analysis.moves, toMove, maxDepth);
+
+  const sorted = sortedAnalysisMovesToSimpleMoves(
+    analysis.moves,
+    targetLines,
+    maxDepth,
+  );
+  // TODO: I guess we don't need to await this? Fire and forget...
+  await apiLinesPut(fen, sorted, targetLines, 20);
+
+  console.log("getTopLines(): Manually computed lines:", sorted);
+  await pauseUntilButton();
+  return sorted;
+}
+
+export async function getTopLinesTrapped(
+  fen: string,
+  targetLines: number,
+  options: {
+    maxDepth?: number;
+    threads?: number;
+    onUpdate?: (res: AnalysisResult) => void;
+  } = {},
+) {
+  try {
+    return await getTopLines(fen, targetLines, options);
+  } catch (e) {
+    console.warn("getTopLines failed:", e);
+    return null;
+  }
+}
+
 export function filterPvMoves(
   moves: AnalysisMove[],
   maxDepth: number = 20,
@@ -32,20 +135,15 @@ export function filterPvMoves(
   return moves.filter((m) => Math.abs(m.score) > 9000 || m.depth >= maxDepth);
 }
 
-export function top5(
+export function sortedAnalysisMovesToSimpleMoves(
   moves: AnalysisMove[],
-  into: { move: string; score: number }[],
-  firstMoveTurn: "w" | "b",
+  targetLines: number = Infinity,
   maxDepth: number = 20,
-): void {
-  if (into.length !== 0) {
-    throw new Error(
-      "top5 called with non-empty 'into' array; line.best5* should only be populated once so this is breaking an invariant somehow... good luck.",
-    );
-  }
-  sortPvMoves(moves, firstMoveTurn, maxDepth);
+): SimpleMove[] {
+  // Assumes `sortPvMoves(moves, firstMoveTurn, maxDepth);` was called on moves already
+  const simples: SimpleMove[] = [];
 
-  // Build best5 ordered by score relative to side to move, unique by move key; also record replies
+  // Build best x ordered by score relative to side to move, unique by move key; also record replies
   const uniqueTop: AnalysisMove[] = [];
   const seen = new Set<string>();
   for (const m of moves) {
@@ -54,12 +152,17 @@ export function top5(
     if (seen.has(key)) continue;
     seen.add(key);
     uniqueTop.push(m);
-    if (uniqueTop.length >= 5) break;
+    if (uniqueTop.length >= targetLines) break;
   }
+
   uniqueTop.forEach((move) => {
-    into.push({
+    simples.push({
       move: move.move.from + move.move.to,
       score: move.score,
+      mateIn: move.mateIn,
+      draw: false, // TODO
     });
   });
+
+  return simples;
 }

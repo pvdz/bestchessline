@@ -1,5 +1,6 @@
 import { createPieceTypeNotation, createColorNotation, } from "../line/types.js";
 import { parseFEN, toFEN } from "./fen-utils.js";
+import { getElementByIdOrThrow } from "./dom-helpers.js";
 export function getPieceColor(piece) {
     return piece === piece.toUpperCase()
         ? createColorNotation("w")
@@ -44,5 +45,26 @@ export function getFENWithCorrectMoveCounter(boardFEN, currentMoveIndex, castlin
 export function getStartingPlayer(fen) {
     const position = parseFEN(fen);
     return position.turn;
+}
+let paused = false;
+function setContinueButtonEnabled(enabled) {
+    const btn = getElementByIdOrThrow("fish-continue");
+    btn.disabled = !enabled;
+}
+export async function pauseUntilButton() {
+    paused = true;
+    setContinueButtonEnabled(true);
+    console.log("paused");
+    return new Promise((resolve) => {
+        setInterval(() => {
+            if (!paused)
+                resolve();
+        }, 250);
+    });
+}
+export function unpause() {
+    console.log("unpaused");
+    paused = false;
+    setContinueButtonEnabled(false);
 }
 //# sourceMappingURL=utils.js.map

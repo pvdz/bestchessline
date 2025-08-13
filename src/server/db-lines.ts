@@ -206,6 +206,7 @@ export async function getFishLinesByPosition(
   exec: DBExecutor,
   position: string,
 ): Promise<StoredFishLine[]> {
+  console.log("getFishLinesByPosition:", position);
   const rows = await exec.all<{
     id: number;
     session_id: string;
@@ -227,6 +228,7 @@ export async function getFishLinesByPosition(
   }>(`SELECT * FROM fish_lines WHERE position=? ORDER BY updated_at DESC`, [
     position,
   ]);
+  console.log(" -->:", rows.length);
   return rows.map(mapRowToStoredFishLine);
 }
 

@@ -1,9 +1,10 @@
-import { ChessPosition, ChessMove, PLAYER_COLORS } from "./types.js";
+import { ChessPosition, PLAYER_COLORS } from "./types.js";
 import {
   parseFEN,
   toFEN,
   squareToCoords,
   coordsToSquare,
+  getPieceAtSquareFromFEN,
 } from "./fen-utils.js";
 import { PIECE_TYPES } from "./notation-utils.js";
 
@@ -14,10 +15,41 @@ import { PIECE_TYPES } from "./notation-utils.js";
  * and updating position state.
  */
 
+export function applyLongMoveToFEN(fen: string, move: string): string {
+  const piece = getPieceAtSquareFromFEN(move.slice(0, 2), fen);
+  const isKing = piece.toUpperCase() === "K";
+  const from = move.slice(0, 2);
+  const to = move.slice(2, 4);
+  return applyMoveToFEN(fen, {
+    from: move.slice(0, 2),
+    to: move.slice(2, 4),
+    piece,
+    special:
+      isKing &&
+      ((from === "e1" && (to === "c1" || to === "g1")) ||
+        (from === "e8" && (to === "c8" || to === "g8")))
+        ? "castling"
+        : undefined,
+    rookFrom:
+      to === "c1" ? "a1" : to === "g1" ? "h1" : to === "c8" ? "a8" : "h8",
+    rookTo: to === "c1" ? "d1" : to === "g1" ? "f1" : to === "c8" ? "d8" : "f8",
+  });
+}
+
 /**
  * Apply a chess move to a FEN string and return the new FEN
  */
-export function applyMoveToFEN(fen: string, move: ChessMove): string {
+export function applyMoveToFEN(
+  fen: string,
+  move: {
+    from: string;
+    to: string;
+    piece: string;
+    special?: "castling" | "en-passant";
+    rookFrom?: string;
+    rookTo?: string;
+  },
+): string {
   const position = parseFEN(fen);
   const [fromRank, fromFile] = squareToCoords(move.from);
   const [toRank, toFile] = squareToCoords(move.to);

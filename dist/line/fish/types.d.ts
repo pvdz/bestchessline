@@ -1,3 +1,4 @@
+import { SimpleMove } from "../../utils/types";
 /**
  * Line Fisher analysis configuration
  */
@@ -10,10 +11,7 @@ export interface LineFisherConfig {
     defaultResponderCount: number;
     rootFEN: string;
     baselineScore: number;
-    baselineMoves: {
-        move: string;
-        score: number;
-    }[];
+    baselineMoves: SimpleMove[];
 }
 /**
  * Line Fisher result for a single line
@@ -60,14 +58,8 @@ export interface FishLine {
     nodeId: string;
     sanGame: string;
     pcns: string[];
-    best5Replies: {
-        move: string;
-        score: number;
-    }[];
-    best5Alts: {
-        move: string;
-        score: number;
-    }[];
+    best5Replies: SimpleMove[];
+    best5Alts: SimpleMove[];
     score: number;
     position: string;
     isDone: boolean;

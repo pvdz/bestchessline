@@ -18,6 +18,7 @@ const {
   convertFenToCacheFileName,
 } = require("./dist/server/ai-explain.js");
 const { health } = require("./dist/server/health.js");
+const { readLinesByPosition, writeLine } = require("./dist/server/db.js");
 
 const argv = process.argv.slice(2);
 const DISABLE_SAB = argv.includes("--no-shared-array-buffer");
@@ -243,6 +244,95 @@ async function handleExplainGet(req, res) {
   }
 }
 
+async function handleLineGet(req, res) {
+  try {
+    const url = parse(req.url || "", true);
+    const { fen, searchLineCount } = url.query || {};
+
+    if (!fen) {
+      sendJson(res, 400, { error: "Missing fen" });
+      return;
+    }
+
+    try {
+      parseFEN(String(fen));
+    } catch (_e) {
+      sendJson(res, 400, { error: "Invalid FEN" });
+      return;
+    }
+
+    const rows = await readLinesByPosition(String(fen));
+    if (!rows || rows.length === 0) {
+      sendJson(res, 200, null);
+      return;
+    }
+
+    const n = Number.isFinite(Number(searchLineCount))
+      ? Math.max(1, Math.floor(Number(searchLineCount)))
+      : 5;
+    const replies = Array.isArray(rows[0].best5Replies)
+      ? rows[0].best5Replies.slice(0, n)
+      : [];
+    // If no cached replies, signal caller to compute
+    if (!replies.length) {
+      sendJson(res, 200, null);
+      return;
+    }
+    sendJson(res, 200, replies);
+  } catch (e) {
+    console.log("500: handleLineGet failed:", e);
+    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+  }
+}
+
+async function handleLinePut(req, res) {
+  try {
+    const raw = await readBody(req);
+    const body = JSON.parse(raw || "{}");
+    const position = body && body.position;
+    const moves = (body && body.moves) || [];
+
+    if (!position || !Array.isArray(moves)) {
+      sendJson(res, 400, { error: "Missing position or moves" });
+      return;
+    }
+
+    try {
+      parseFEN(String(position));
+    } catch (_e) {
+      sendJson(res, 400, { error: "Invalid FEN" });
+      return;
+    }
+
+    // Store under a stable session/key; we query by position later
+    await writeLine({
+      sessionId: `server-cache:${String(position)}`,
+      rootFEN: String(position),
+      config: {},
+      line: {
+        lineIndex: 0,
+        pcns: [],
+        sanGame: "",
+        score: 0,
+        position: String(position),
+        isDone: true,
+        isFull: true,
+        isMate: false,
+        isStalemate: false,
+        isTransposition: false,
+        transpositionTarget: "",
+        best5Replies: Array.isArray(moves) ? moves : [],
+        best5Alts: [],
+      },
+    });
+
+    sendJson(res, 200, { ok: true });
+  } catch (e) {
+    console.log("500: handleLinePut failed:", e);
+    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+  }
+}
+
 function generateCacheKeyOrSendError(res, fen, move, compare) {
   if (!fen) {
     console.log("400: generateCacheKeyOrSendError missing fen", [
@@ -341,6 +431,18 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "PUT" && url.pathname === "/api/explain") {
     await handleExplainPut(req, res);
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/line") {
+    console.log("handleLineGet()");
+    await handleLineGet(req, res);
+    return;
+  }
+
+  if (req.method === "PUT" && url.pathname === "/api/line") {
+    console.log("handleLinePut()");
+    await handleLinePut(req, res);
     return;
   }
 
