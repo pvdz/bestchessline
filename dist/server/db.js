@@ -2,8 +2,7 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { initSchemaFish, upsertFishSession, insertOrReplaceFishLine, getFishLinesBySession, getFishLinesByPosition, } from "./db-lines.js";
-import { getRandomFishLines } from "./db-lines.js";
+import { initSchemaFish, upsertServerLine, getServerLineByPosition, getRandomServerLines, } from "./db-lines.js";
 import { initSchemaCoach, upsertCoachMessage, getCoachMessage, } from "./db-coach.js";
 export function boolToInt(value) {
     return value ? 1 : 0;
@@ -92,40 +91,20 @@ async function ensureInit() {
     }
     return defaultExec;
 }
-// High-level API: Lines
+// High-level API: Lines (ServerLine persistence)
 export async function writeLine(body) {
     const exec = await ensureInit();
-    const sessionId = body.sessionId;
-    const rootFEN = body.rootFEN;
-    const config = body.config || {};
-    const line = body.line;
-    await upsertFishSession(exec, sessionId, rootFEN, config, Date.now());
-    const id = await insertOrReplaceFishLine(exec, sessionId, line.lineIndex, {
-        lineIndex: line.lineIndex,
-        pcns: Array.isArray(line.pcns) ? line.pcns : [],
-        sanGame: typeof line.sanGame === "string" ? line.sanGame : undefined,
-        score: typeof line.score === "number" ? line.score : 0,
-        position: String(line.position || rootFEN),
-        isDone: !!line.isDone,
-        isFull: !!line.isFull,
-        isMate: !!line.isMate,
-        isStalemate: !!line.isStalemate,
-        isTransposition: !!line.isTransposition,
-        transpositionTarget: typeof line.transpositionTarget === "string"
-            ? line.transpositionTarget
-            : undefined,
-        best5Replies: Array.isArray(line.best5Replies) ? line.best5Replies : [],
-        best5Alts: Array.isArray(line.best5Alts) ? line.best5Alts : [],
-    });
+    const id = await upsertServerLine(exec, body.sessionId, body.line);
     return { ok: true, id };
 }
-export async function readLines(sessionId) {
+export async function readLinesByPosition(position, searchLineCount, maxDepth) {
     const exec = await ensureInit();
-    return getFishLinesBySession(exec, sessionId);
+    const one = await getServerLineByPosition(exec, position, searchLineCount, maxDepth);
+    return one ? [one] : [];
 }
-export async function readLinesByPosition(position) {
+export async function readLineByPosition(position, searchLineCount, maxDepth) {
     const exec = await ensureInit();
-    return getFishLinesByPosition(exec, position);
+    return getServerLineByPosition(exec, position, searchLineCount, maxDepth);
 }
 // High-level API: Coach
 export async function writeCoachMessage(msg) {
@@ -140,7 +119,34 @@ export async function readCoachMessage(key) {
 export async function readRandomLines(limit) {
     const exec = await ensureInit();
     const n = Number(limit) > 0 ? Math.floor(Number(limit)) : 10;
-    return getRandomFishLines(exec, n);
+    return getRandomServerLines(exec, n);
+}
+// Danger admin: truncate sqlite database by deleting and reinitializing the file
+export async function truncateDatabase() {
+    console.log("TRUNCATING DB");
+    const dataDir = path.join(process.cwd(), "data");
+    const dbFile = process.env.APP_DB_FILE || path.join(dataDir, "app.sqlite3");
+    try {
+        if (fs.existsSync(dbFile)) {
+            fs.unlinkSync(dbFile);
+            console.log("OK DONE HAVE A NICE DAY");
+        }
+        else {
+            console.log("db file not found anyways");
+        }
+    }
+    catch (e) {
+        console.warn("[db] Failed to remove DB file:", e);
+    }
+    // Reset singletons so next call re-creates schema
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    defaultExec = null;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    schemaInitialized = false;
+    await ensureInit();
+    return { ok: true };
 }
 // No JSON fallback. We only support sqlite3 via CLI in this environment.
 //# sourceMappingURL=db.js.map

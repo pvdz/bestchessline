@@ -24,6 +24,6 @@ export declare function isArrowDrawingActive(): boolean;
  * Check if a right-click should be handled by arrow drawing
  * This prevents square selection when starting arrow drawing
  */
-export declare function shouldHandleArrowRightClick(event: MouseEvent): boolean;
+export declare function shouldHandleArrowRightClick(_event?: MouseEvent): boolean;
 export declare function isArrowDrawing(): boolean;
 export declare function consumeRecentArrowCompleted(): boolean;

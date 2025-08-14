@@ -136,7 +136,7 @@ async function playCoachSteps(steps: CoachStep[]): Promise<void> {
   }
 }
 
-// Coach player controller
+// Coach player controller (referenced via inline wiring below)
 function openCoachPlayer(steps: CoachStep[]): void {
   let coachSteps: CoachStep[] = steps.slice(0);
   let coachIndex = 0;
@@ -186,11 +186,6 @@ function openCoachPlayer(steps: CoachStep[]): void {
   };
   // start at first step
   void render(coachIndex);
-}
-
-function buildEngineSummaryForCurrentPosition(): string {
-  // Placeholder: we could aggregate existing meta if present
-  return "";
 }
 
 function buildSanGameFromHistory(): string {
@@ -385,7 +380,7 @@ function renderCoachSections(
   wire("practice-ai-show-pitfalls", data.pitfallsSteps);
 }
 
-function buildMockCoachResponse(kind: "nf3" | "nf3_g3"): CoachResponse {
+function _buildMockCoachResponse(kind: "nf3" | "nf3_g3"): CoachResponse {
   if (kind === "nf3") {
     return {
       summary:
@@ -744,20 +739,12 @@ function initializeDOMElements(): void {
   const whyMistakeBtn = document.getElementById(
     "practice-ai-why-mistake",
   ) as HTMLButtonElement | null;
-  const modelEl = getElementByIdOrThrow(
-    "practice-ai-model",
-  ) as HTMLInputElement;
-  const levelEl = getElementByIdOrThrow(
-    "practice-ai-level",
-  ) as HTMLSelectElement;
-  // Follow-up removed; retain a stub element to avoid null references
-  const questionEl = {
-    value: "",
-  } as unknown as HTMLTextAreaElement;
+  // Read-only references for future use
+  void getElementByIdOrThrow("practice-ai-model");
+  void getElementByIdOrThrow("practice-ai-level");
+  // Follow-up removed; do not keep unused question element
   const answerEl = getElementByIdOrThrow("practice-ai-answer");
-  const apiKeyEl = getElementByIdOrThrow(
-    "practice-ai-api-key",
-  ) as HTMLInputElement;
+  void getElementByIdOrThrow("practice-ai-api-key");
 
   askBtn.addEventListener("click", async () => {
     try {
@@ -1069,60 +1056,6 @@ function initializeDOMElements(): void {
   // expose for inline handler wiring above
   // expose for debugging
   (window as any).__playCoachSteps = playCoachSteps;
-
-  // Coach player state
-  let coachSteps: CoachStep[] = [];
-  let coachIndex = 0;
-
-  function openCoachPlayer(steps: CoachStep[]): void {
-    coachSteps = steps.slice(0);
-    coachIndex = 0;
-    const panel = document.getElementById(
-      "practice-coach-player",
-    ) as HTMLElement | null;
-    const text = document.getElementById(
-      "practice-coach-text",
-    ) as HTMLElement | null;
-    const prev = document.getElementById(
-      "practice-coach-prev",
-    ) as HTMLButtonElement | null;
-    const next = document.getElementById(
-      "practice-coach-next",
-    ) as HTMLButtonElement | null;
-    const close = document.getElementById(
-      "practice-coach-close",
-    ) as HTMLButtonElement | null;
-    if (!panel || !text || !prev || !next || !close) return;
-    panel.style.display = "block";
-    const render = async (idx: number) => {
-      if (!coachSteps[idx]) return;
-      text.textContent = coachSteps[idx].text || "";
-      // Clear arrows/highlights between steps for clarity
-      clearAllArrows();
-      document
-        .querySelectorAll(
-          ".practice-square.selected,.practice-square.hint-piece",
-        )
-        .forEach((el) => {
-          el.classList.remove("selected", "hint-piece");
-        });
-      await playCoachSteps([coachSteps[idx]]);
-    };
-    prev.onclick = async () => {
-      coachIndex = Math.max(0, coachIndex - 1);
-      await render(coachIndex);
-    };
-    next.onclick = async () => {
-      coachIndex = Math.min(coachSteps.length - 1, coachIndex + 1);
-      await render(coachIndex);
-    };
-    close.onclick = () => {
-      panel.style.display = "none";
-      clearAllArrows();
-    };
-    // start at first step
-    void render(coachIndex);
-  }
 
   // Quick prompt chips
   const quick = document.getElementById("practice-ai-quick");

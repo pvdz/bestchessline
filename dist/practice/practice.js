@@ -62,7 +62,7 @@ async function playCoachSteps(steps) {
         await sleep(350);
     }
 }
-// Coach player controller
+// Coach player controller (referenced via inline wiring below)
 function openCoachPlayer(steps) {
     let coachSteps = steps.slice(0);
     let coachIndex = 0;
@@ -101,10 +101,6 @@ function openCoachPlayer(steps) {
     };
     // start at first step
     void render(coachIndex);
-}
-function buildEngineSummaryForCurrentPosition() {
-    // Placeholder: we could aggregate existing meta if present
-    return "";
 }
 function buildSanGameFromHistory() {
     try {
@@ -256,7 +252,7 @@ function renderCoachSections(data, summaryEl, sectionsEl) {
     wire("practice-ai-show-ideas-black", data.ideasBlackSteps);
     wire("practice-ai-show-pitfalls", data.pitfallsSteps);
 }
-function buildMockCoachResponse(kind) {
+function _buildMockCoachResponse(kind) {
     if (kind === "nf3") {
         return {
             summary: "1. Nf3 is a flexible Reti start that develops safely, pressures e5/d4, and keeps multiple central plans (d4/c4) and kingside fianchetto available.",
@@ -554,14 +550,12 @@ function initializeDOMElements() {
     const cacheStoreBtn = document.getElementById("practice-ai-store-cache");
     const whyBestBtn = document.getElementById("practice-ai-why-best");
     const whyMistakeBtn = document.getElementById("practice-ai-why-mistake");
-    const modelEl = getElementByIdOrThrow("practice-ai-model");
-    const levelEl = getElementByIdOrThrow("practice-ai-level");
-    // Follow-up removed; retain a stub element to avoid null references
-    const questionEl = {
-        value: "",
-    };
+    // Read-only references for future use
+    void getElementByIdOrThrow("practice-ai-model");
+    void getElementByIdOrThrow("practice-ai-level");
+    // Follow-up removed; do not keep unused question element
     const answerEl = getElementByIdOrThrow("practice-ai-answer");
-    const apiKeyEl = getElementByIdOrThrow("practice-ai-api-key");
+    void getElementByIdOrThrow("practice-ai-api-key");
     askBtn.addEventListener("click", async () => {
         try {
             askBtn.setAttribute("aria-busy", "true");
@@ -863,48 +857,6 @@ function initializeDOMElements() {
     // expose for inline handler wiring above
     // expose for debugging
     window.__playCoachSteps = playCoachSteps;
-    // Coach player state
-    let coachSteps = [];
-    let coachIndex = 0;
-    function openCoachPlayer(steps) {
-        coachSteps = steps.slice(0);
-        coachIndex = 0;
-        const panel = document.getElementById("practice-coach-player");
-        const text = document.getElementById("practice-coach-text");
-        const prev = document.getElementById("practice-coach-prev");
-        const next = document.getElementById("practice-coach-next");
-        const close = document.getElementById("practice-coach-close");
-        if (!panel || !text || !prev || !next || !close)
-            return;
-        panel.style.display = "block";
-        const render = async (idx) => {
-            if (!coachSteps[idx])
-                return;
-            text.textContent = coachSteps[idx].text || "";
-            // Clear arrows/highlights between steps for clarity
-            clearAllArrows();
-            document
-                .querySelectorAll(".practice-square.selected,.practice-square.hint-piece")
-                .forEach((el) => {
-                el.classList.remove("selected", "hint-piece");
-            });
-            await playCoachSteps([coachSteps[idx]]);
-        };
-        prev.onclick = async () => {
-            coachIndex = Math.max(0, coachIndex - 1);
-            await render(coachIndex);
-        };
-        next.onclick = async () => {
-            coachIndex = Math.min(coachSteps.length - 1, coachIndex + 1);
-            await render(coachIndex);
-        };
-        close.onclick = () => {
-            panel.style.display = "none";
-            clearAllArrows();
-        };
-        // start at first step
-        void render(coachIndex);
-    }
     // Quick prompt chips
     const quick = document.getElementById("practice-ai-quick");
     if (quick) {

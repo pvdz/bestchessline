@@ -288,7 +288,7 @@ export function isArrowDrawingActive() {
  * Check if a right-click should be handled by arrow drawing
  * This prevents square selection when starting arrow drawing
  */
-export function shouldHandleArrowRightClick(event) {
+export function shouldHandleArrowRightClick(_event) {
     // Claim RMB if we are drawing or have a primed start square.
     // This suppresses other RMB handlers from acting on the same gesture.
     if (arrowDrawingState.isDrawing)

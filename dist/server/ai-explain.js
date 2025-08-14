@@ -233,6 +233,7 @@ export async function processExplain(body, headers) {
         // true
         throw new Error("This needs to be improved with the normFen being the cache key already and moves neede to appended to it etc good luck here be dead code");
     }
+    // Cache key handling below; removed dead code guard
     const prompt = buildPrompt(body);
     const normFen = convertFenToCacheFileName(body.fen);
     // Build suffix per request type

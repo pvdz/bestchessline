@@ -130,6 +130,7 @@ export const initializePositionEvaluationButton = () => {
 };
 /**
  * Evaluate the current board position using Stockfish
+ * This is when you press the little button above the board.
  */
 export const evaluateCurrentPosition = async () => {
     const currentFEN = Board.getFEN();
@@ -155,18 +156,14 @@ export const evaluateCurrentPosition = async () => {
     updateButtonStates();
     try {
         // Get a proper evaluation with adequate depth and timeout
-        const result = await Promise.race([
-            await getTopLines(currentFEN, 1, {
-                maxDepth: 20,
-                threads: 1,
-                onUpdate: (res) => {
-                    const d = res.moves[0]?.depth || 0;
-                    const btn = getElementByIdOrThrow("position-evaluation-btn");
-                    btn.textContent = `d${d}`;
-                },
-            }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Analysis timeout")), 10000)),
-        ]);
+        const result = await getTopLines(currentFEN, [], currentFEN, 1, 20, {
+            threads: 1, // TODO: read from UI?
+            onUpdate: (res) => {
+                const d = res.moves[0]?.depth || 0;
+                const btn = getElementByIdOrThrow("position-evaluation-btn");
+                btn.textContent = `d${d}`;
+            },
+        });
         if (result.length > 0) {
             const bestMove = result[0];
             const score = bestMove.score;

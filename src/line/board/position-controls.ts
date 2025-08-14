@@ -10,11 +10,8 @@ import { getAppState, updateAppState } from "../../line/main.js";
 import { updateButtonStates } from "../best/bestmove-config.js";
 import { log, logError } from "../../utils/logging.js";
 import { formatScoreWithMateIn } from "../../utils/formatting-utils.js";
-import * as Stockfish from "../../utils/stockfish-client.js";
-import { AnalysisResult } from "../types.js";
 import { toFEN } from "../../utils/fen-utils.js";
 import { getTopLines } from "../fish/fish-utils.js";
-import { SimpleMove } from "../../utils/types.js";
 
 /**
  * Position Control Utility Functions
@@ -152,6 +149,7 @@ export const initializePositionEvaluationButton = (): void => {
 
 /**
  * Evaluate the current board position using Stockfish
+ * This is when you press the little button above the board.
  */
 export const evaluateCurrentPosition = async (): Promise<void> => {
   const currentFEN = Board.getFEN();
@@ -182,20 +180,14 @@ export const evaluateCurrentPosition = async (): Promise<void> => {
 
   try {
     // Get a proper evaluation with adequate depth and timeout
-    const result = await Promise.race([
-      await getTopLines(currentFEN, 1, {
-        maxDepth: 20,
-        threads: 1,
-        onUpdate: (res) => {
-          const d = res.moves[0]?.depth || 0;
-          const btn = getElementByIdOrThrow("position-evaluation-btn");
-          btn.textContent = `d${d}`;
-        },
-      }),
-      new Promise<SimpleMove[]>((_, reject) =>
-        setTimeout(() => reject(new Error("Analysis timeout")), 10000),
-      ),
-    ]);
+    const result = await getTopLines(currentFEN, [], currentFEN, 1, 20, {
+      threads: 1, // TODO: read from UI?
+      onUpdate: (res) => {
+        const d = res.moves[0]?.depth || 0;
+        const btn = getElementByIdOrThrow("position-evaluation-btn");
+        btn.textContent = `d${d}`;
+      },
+    });
 
     if (result.length > 0) {
       const bestMove = result[0];

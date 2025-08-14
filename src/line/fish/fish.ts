@@ -126,7 +126,7 @@ export async function fish(config: LineFisherConfig): Promise<void> {
     // Update progress and results after initial move
     updateFishProgress(getCurrentFishState());
 
-    await keepFishing((msg) => {
+    await keepFishing(getCurrentFishState().config.rootFEN, (msg: string) => {
       updateFishStatus(msg);
       // Only do expensive updates when structure changed or phase completed
       // Keep progress and live-lines in sync: update both together on any progress bump
@@ -221,17 +221,6 @@ export const exportFishStateToClipboard = async (): Promise<void> => {
     showToast("Failed to export state", "#f44336", 4000);
   }
 };
-
-export async function continueFishing() {
-  console.log("Continuing fishing with existing state");
-
-  await keepFishing((msg) => {
-    updateFishStatus(msg);
-    updateFishProgress(getCurrentFishState());
-  });
-
-  console.log("Continued fishing stopped");
-}
 
 /**
  * Copy fish state to clipboard (for copy button)

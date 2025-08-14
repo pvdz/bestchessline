@@ -2,11 +2,7 @@ import { parseFEN, coordsToSquare } from "../utils/fen-utils.js";
 import type { GameState, DOMElements } from "./practice-types";
 import { makeMove } from "./practice-game.js";
 import { getPieceAtSquareFromFEN } from "../utils/fen-utils.js";
-import {
-  consumeRecentArrowCompleted,
-  isArrowDrawing,
-  shouldHandleArrowRightClick,
-} from "./practice-arrow-utils.js";
+import { consumeRecentArrowCompleted } from "./practice-arrow-utils.js";
 import { handleSquareClick } from "./practice-game.js";
 import { clearAllArrows } from "./practice-arrow-utils.js";
 

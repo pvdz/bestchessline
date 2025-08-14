@@ -338,6 +338,60 @@ const initializeEventListeners = () => {
     // Update threads input based on fallback mode
     updateThreadsInputForFallbackMode();
     // Removed: bestmove panel debug continue button (moved to fish panel)
+    // Truncate DB danger button logic
+    const truncBtn = document.getElementById("truncate-db-button");
+    if (truncBtn) {
+        let confirmTimer = null;
+        const initialText = "TRUNC DB";
+        const confirmText = "ARE YOU SURE?";
+        const resetButton = () => {
+            truncBtn.classList.remove("confirm");
+            truncBtn.textContent = initialText;
+            document.body.classList.remove("danger-page");
+            if (confirmTimer !== null) {
+                window.clearTimeout(confirmTimer);
+                confirmTimer = null;
+            }
+        };
+        const truncateDb = async () => {
+            try {
+                // Prefer simple route as requested
+                const resp = await fetch("/api/trunc", { method: "POST" });
+                const ok = resp.ok;
+                if (!ok) {
+                    console.warn("Truncate DB failed:", await resp.text());
+                }
+            }
+            catch (e) {
+                console.warn("Truncate DB error:", e);
+            }
+            finally {
+                resetButton();
+            }
+        };
+        truncBtn.addEventListener("click", async () => {
+            if (!truncBtn.classList.contains("confirm")) {
+                // Enter confirm state and warn via page background
+                truncBtn.classList.add("confirm");
+                truncBtn.textContent = confirmText;
+                document.body.classList.add("danger-page");
+                if (confirmTimer !== null)
+                    window.clearTimeout(confirmTimer);
+                confirmTimer = window.setTimeout(() => {
+                    resetButton();
+                }, 5000);
+            }
+            else {
+                // Confirmed within timeout
+                try {
+                    await truncateDb();
+                }
+                finally {
+                    truncBtn.textContent = "OK (=";
+                }
+            }
+        });
+    }
 };
 /**
  * Initialize position controls

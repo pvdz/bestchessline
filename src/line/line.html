@@ -55,6 +55,24 @@
                   <span>Display last line updates</span>
                 </label>
               </div>
+              <div class="fish-preview-toggle">
+                <label for="fish-enable-pauses">
+                  <input type="checkbox" id="fish-enable-pauses" checked />
+                  <span>Enable pauses</span>
+                </label>
+              </div>
+              <div class="fish-preview-toggle">
+                <label for="fish-use-server-get">
+                  <input type="checkbox" id="fish-use-server-get" checked />
+                  <span>Use server GET</span>
+                </label>
+              </div>
+              <div class="fish-preview-toggle">
+                <label for="fish-use-server-put">
+                  <input type="checkbox" id="fish-use-server-put" checked />
+                  <span>Send server PUT</span>
+                </label>
+              </div>
             </div>
             <div id="fish-initiator-controls">
               <div class="initiator-moves-controls">
@@ -428,6 +446,17 @@
                 </label>
               </div>
             </div>
+          </div>
+
+          <!-- Dangerous actions -->
+          <div class="danger-controls">
+            <button
+              id="truncate-db-button"
+              class="danger-button"
+              title="Delete local DB file (requires confirmation)"
+            >
+              TRUNC DB
+            </button>
           </div>
         </div>
 

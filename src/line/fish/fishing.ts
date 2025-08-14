@@ -8,21 +8,22 @@ import {
 import { getPieceCapitalized } from "../../utils/notation-utils.js";
 import { getPieceAtSquareFromFEN, parseFEN } from "../../utils/fen-utils.js";
 import { log } from "../../utils/logging.js";
-import { compareAnalysisMoves } from "../best/bestmove-utils.js";
 import { getCurrentFishState } from "./fish-state.js";
 import { updateFishStatus, updateFishPvTickerThrottled } from "./fish-ui.js";
 import { getInputElementOrThrow } from "../../utils/dom-helpers.js";
 import { ChessMove } from "../types.js";
 import { getTopLines } from "./fish-utils.js";
-import { apiLineGet, apiLinesPut } from "./fish-remote.js";
 import { SimpleMove } from "../../utils/types.js";
 import { parseLongMove } from "../../utils/move-parser.js";
+
+const MAX_STOCKFISH_DEPTH = 20;
 
 export async function initFishing() {
   const rootFEN = getCurrentFishState().config.rootFEN;
   const threads = Number(getInputElementOrThrow("fish-threads").value);
   console.log("Fishing with", threads, "threads");
-  getCurrentFishState().config.threads = threads;
+  const { config } = getCurrentFishState();
+  config.threads = threads;
 
   // Ensure initiator color reflects the side to move at root
   try {
@@ -37,22 +38,23 @@ export async function initFishing() {
   // Get root score and update config
   let rootAnalysis;
   try {
-    // console.log(
-    //   "SF: 5 for root analysis:",
-    //   getCurrentFishState().config.threads,
-    // );
-
-    rootAnalysis = await getTopLines(rootFEN, 5, {
-      maxDepth: 20,
-      threads: getCurrentFishState().config.threads,
-      onUpdate: (res) => {
-        const minDepth = res.moves.length
-          ? Math.min(...res.moves.map((m) => m.depth))
-          : 0;
-        updateFishStatus(`Analyzing root… (min d${minDepth}/${res.depth})`);
-        updateFishPvTickerThrottled(res.moves, res.position);
+    rootAnalysis = await getTopLines(
+      rootFEN,
+      [],
+      rootFEN,
+      5,
+      MAX_STOCKFISH_DEPTH,
+      {
+        threads,
+        onUpdate: (res) => {
+          const minDepth = res.moves.length
+            ? Math.min(...res.moves.map((m) => m.depth))
+            : 0;
+          updateFishStatus(`Analyzing root… (min d${minDepth}/${res.depth})`);
+          updateFishPvTickerThrottled(res.moves, res.position);
+        },
       },
-    });
+    );
   } catch (error) {
     console.error("Error in root analysis:", error);
     throw error;
@@ -110,16 +112,24 @@ async function createInitialMove(): Promise<FishLine> {
       //   ")",
       // );
 
-      const moves = await getTopLines(fenAfterMove, 1, {
-        maxDepth: 20,
-        threads: config.threads,
-        onUpdate: (res) => {
-          updateFishStatus(
-            `Scoring predefined move… (d${res.moves[0]?.depth || 0}/${res.depth})`,
-          );
-          updateFishPvTickerThrottled(res.moves, res.position);
+      // TODO: this was broken after migration. this needs to send the predefined move to stockfish, that's not what happens right now
+      console.warn("fixme: first move is incorrectly computed now");
+      const moves = await getTopLines(
+        config.rootFEN,
+        [parsedMove.from + parsedMove.to],
+        fenAfterMove,
+        1,
+        MAX_STOCKFISH_DEPTH,
+        {
+          threads: config.threads,
+          onUpdate: (res) => {
+            updateFishStatus(
+              `Scoring predefined move… (d${res.moves[0]?.depth || 0}/${res.depth})`,
+            );
+            updateFishPvTickerThrottled(res.moves, res.position);
+          },
         },
-      });
+      );
 
       const s = moves[0]?.score || 0;
       // Normalize to initiator perspective using newFEN (opponent to move)
@@ -152,21 +162,11 @@ async function createInitialMove(): Promise<FishLine> {
     // Ask Stockfish for best move
     // console.log("SF: initial move (find best for missing a predefined move)");
 
-    const moves = await getTopLines(config.rootFEN, 1, {
-      maxDepth: 20,
-      threads: config.threads,
-      onUpdate: (res) => {
-        const d = res.moves[0]?.depth || 0;
-        updateFishStatus(`Picking best root move… (d${d}/${res.depth})`);
-        updateFishPvTickerThrottled(res.moves, res.position);
-      },
-    });
-
-    const bestMove = moves[0];
+    const bestMove = config.baselineMoves[0];
 
     if (!bestMove) {
-      log("No moves available from Stockfish");
-      throw new Error("No moves available from Stockfish. Mate? Stalemate?");
+      log("No config.baselineMoves available?");
+      throw new Error("No config.baselineMoves available?");
     }
 
     const newFEN = applyLongMoveToFEN(config.rootFEN, bestMove.move);
@@ -195,33 +195,48 @@ async function createInitialMove(): Promise<FishLine> {
   }
 }
 
-export async function keepFishing(onUpdate: (msg: string) => void) {
+export async function keepFishing(
+  rootFEN: string,
+  onUpdate: (msg: string) => void,
+) {
+  console.log("keepFishing()", getCurrentFishState());
   // Main analysis loop
-  while (
-    getCurrentFishState().wip.length > 0 &&
-    getCurrentFishState().isFishing
-  ) {
+  while (getCurrentFishState().wip.length > 0) {
+    const fishState = getCurrentFishState();
+
     // Check if analysis should be stopped
-    if (!getCurrentFishState().isFishing) {
+    if (!fishState.isFishing) {
       onUpdate("Analysis stopped by user");
       return;
     }
 
-    const pcns = getCurrentFishState().wip[0].pcns;
-    const halfMoves = pcns.length;
+    const currentLine = fishState.wip[0];
+    const halfMoves = currentLine.pcns.length;
     const isEvenHalfMoves = halfMoves % 2 === 0;
 
-    onUpdate(`Analyzing line: ${pcns.join(" ")}`);
+    // Stop expanding when we reached configured max (initiator moves define depth)
+    const maxHalfMoves = fishState.config.maxDepth * 2 + 1;
+    if (halfMoves >= maxHalfMoves) {
+      currentLine.isDone = true;
+      currentLine.isFull = true;
+      fishState.wip.shift();
+      fishState.done.push(currentLine);
+      onUpdate("Line reached target depth; marking done");
+      console.log("we stopping now?");
+      continue;
+    }
+
+    onUpdate(`Analyzing line: ${currentLine.pcns.join(" ")}`);
     // Proceed to analysis; re-queueing/done updates happen inside the step functions
 
     if (isEvenHalfMoves) {
       // Initiator move (human move in practice app) -- get best move from Stockfish
       onUpdate("Preparing initiator analysis…");
-      await findBestInitiatorMove(onUpdate);
+      await findBestInitiatorMove(rootFEN, onUpdate);
     } else {
       // Responder move - get N best moves from Stockfish
       onUpdate("Preparing responder analysis…");
-      await findNextResponseMoves(onUpdate);
+      await findNextResponseMoves(rootFEN, onUpdate);
     }
 
     // Update progress and results in UI
@@ -237,53 +252,43 @@ export async function keepFishing(onUpdate: (msg: string) => void) {
  * Process responder move - get N best moves from current position
  */
 async function findNextResponseMoves(
+  rootFEN: string,
   onUpdate?: (msg: string) => void,
 ): Promise<void> {
   // Dequeue current line for processing
-  const line = getCurrentFishState().wip[0];
+  const fishState = getCurrentFishState();
+  const { config } = fishState;
+  const line = fishState.wip[0];
 
-  const { config } = getCurrentFishState();
   const depth = Math.floor(line.pcns.length / 2);
 
   // Determine number of responses to analyze
   const responderCount =
     config.responderMoveCounts?.[depth] || config.defaultResponderCount;
+  console.log("responderCount for depth", depth, "is", responderCount);
   const searchLineCount = Math.max(5, responderCount);
 
-  const known: SimpleMove[] | null = await apiLineGet(
+  // Get N best moves from Stockfish
+  onUpdate?.(`Analyzing responder options to ${line.pcns.join(" ")}`);
+  updateFishStatus(`Analyzing responder options to ${line.pcns.join(" ")}`);
+  // console.log(`SF: ${responderCount} for findNextResponseMoves()`);
+  const moves = await getTopLines(
+    rootFEN,
+    line.pcns.map((pcn) => pcn.slice(1)), // I guess we have to convert PCN back to long moves now...
     line.position,
     searchLineCount,
-    20,
-  );
-  if (known) {
-    onUpdate?.(
-      `Fetched cached line details from server for ${line.pcns.join(" ")}`,
-    );
-    line.best5Replies = known;
-    console.log(
-      "Retrieved cached results for",
-      line.position,
-      searchLineCount,
-      "->",
-      known,
-    );
-  } else {
-    // Get N best moves from Stockfish
-    onUpdate?.(`Analyzing responder options to ${line.pcns.join(" ")}`);
-    updateFishStatus(`Analyzing responder options to ${line.pcns.join(" ")}`);
-    // console.log(`SF: ${responderCount} for findNextResponseMoves()`);
-    const moves = await getTopLines(line.position, searchLineCount, {
-      maxDepth: 20,
+    MAX_STOCKFISH_DEPTH,
+    {
       threads: config.threads,
       onUpdate: (res) => {
         // just update PV ticker; depth display handled elsewhere
         updateFishPvTickerThrottled(res.moves, res.position);
       },
-    });
-    onUpdate?.("Responder analysis complete");
+    },
+  );
+  onUpdate?.("Responder analysis complete");
 
-    line.best5Replies = moves.slice(0, 5);
-  }
+  line.best5Replies = moves.slice(0, responderCount);
 
   // Create new lines for each response
   for (const analysisMove of line.best5Replies) {
@@ -325,11 +330,18 @@ async function findNextResponseMoves(
  * Process initiator move - get best move from current position
  */
 async function findBestInitiatorMove(
+  rootFEN: string,
   onUpdate?: (msg: string) => void,
 ): Promise<void> {
   const line = getCurrentFishState().wip[0];
 
-  const bestMoves = await getTopLines(line.position, 5);
+  const bestMoves = await getTopLines(
+    rootFEN,
+    line.pcns.map((pcn) => pcn.slice(1)), // I guess we have to convert PCN back to long moves now...
+    line.position,
+    5,
+    MAX_STOCKFISH_DEPTH,
+  );
   line.best5Alts = bestMoves;
 
   // Check if there's a predefined move for this depth
@@ -382,38 +394,25 @@ async function findBestInitiatorMove(
     } else {
       // Predefined move was not one of the top five moves found by Stockfish so ask it for this one.
 
-      let best: SimpleMove | undefined = undefined;
       let bestMove: ChessMove | null = null;
-      const knownOne: SimpleMove[] | null = await apiLineGet(
-        line.position,
-        1,
-        20,
+      console.log(
+        "SF: 1 for to discover score for predefined move (",
+        predefinedLongMove,
+        ")",
       );
-      console.log("asked server, got:", knownOne);
-      best = knownOne?.[0];
-      if (best) {
-        onUpdate?.(
-          `Fetched cached line details from server for predefined initiator move ${predefinedLongMove}`,
-        );
-        console.log(
-          "Retrieved cached results for",
-          line.position,
-          1,
-          "->",
-          knownOne,
-        );
-        bestMove = parseMove(best.move, line.position);
-      } else {
-        console.log(
-          "SF: 1 for to discover score for predefined move (",
-          predefinedLongMove,
-          ")",
-        );
 
-        const fenAfterMove = applyMoveToFEN(line.position, predefinedLongMove);
-        const moves = await getTopLines(fenAfterMove, 1, {
-          maxDepth: 20,
-          threads: getCurrentFishState().config.threads,
+      console.warn(
+        "fixme: non-first predefined move is incorrectly computed now",
+      );
+      const fenAfterMove = applyMoveToFEN(line.position, predefinedLongMove);
+      const moves: SimpleMove[] = await getTopLines(
+        config.rootFEN,
+        [predefinedLongMove.from + predefinedLongMove.to],
+        fenAfterMove,
+        1,
+        MAX_STOCKFISH_DEPTH,
+        {
+          threads: config.threads,
           onUpdate: (res) => {
             const entry = res.moves.find(
               (m) =>
@@ -425,40 +424,42 @@ async function findBestInitiatorMove(
               `Forcing predefined move depth… (d${d}/${res.depth})`,
             );
             updateFishPvTickerThrottled(res.moves, res.position);
+            onUpdate?.("Progress updated");
           },
-        });
-
-        const best = moves[0];
-        if (
-          !best ||
-          best.move !== predefinedLongMove.from + predefinedLongMove.to
-        ) {
+        },
+      );
+      const bestCandidate = moves[0];
+      if (
+        !bestCandidate ||
+        bestCandidate.move !== predefinedLongMove.from + predefinedLongMove.to
+      ) {
+        console.warn(
+          `Stockfish/server did not return the predefined move ${predefinedMove}`,
+        );
+        // Use the best move instead of the predefined move
+        const bestMove = bestCandidate
+          ? parseMove(bestCandidate.move, line.position)
+          : null;
+        if (!bestMove) {
           console.warn(
-            `Stockfish/server did not return the predefined move ${predefinedMove} (got ${best.move} instead)`,
+            `Failed to parse returned best move in position ${line.position}`,
           );
-          // Use the best move instead of the predefined move
-          const bestMove = parseMove(best.move, line.position);
-          if (!bestMove) {
-            console.warn(
-              `Failed to parse move ${best.move} in position ${line.position}`,
-            );
-            return;
-          }
-          line.pcns.push(bestMove.piece + bestMove.from + bestMove.to);
-          line.score = best.score;
           return;
         }
-
-        bestMove = parseMove(best.move, line.position);
+        line.pcns.push(bestMove.piece + bestMove.from + bestMove.to);
+        line.score = bestCandidate!.score;
+        return;
       }
 
-      if (!best) {
-        console.warn(`I think best should always exist at this point`, best);
+      bestMove = parseMove(bestCandidate.move, line.position);
+
+      if (!bestCandidate) {
+        console.warn(`No best move candidate returned`);
         return;
       }
       if (!bestMove) {
         console.warn(
-          `Failed to parse move ${best.move} in position ${line.position}`,
+          `Failed to parse candidate move in position ${line.position}`,
         );
         return;
       }
@@ -469,7 +470,7 @@ async function findBestInitiatorMove(
           predefinedLongMove.from +
           predefinedLongMove.to,
       );
-      line.score = best.score;
+      line.score = bestCandidate.score;
       line.position = applyMoveToFEN(line.position, predefinedLongMove);
       const halfMovesNow = line.pcns.length;
       if (halfMovesNow >= config.maxDepth * 2 + 1) {

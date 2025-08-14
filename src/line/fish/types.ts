@@ -7,7 +7,7 @@ export interface LineFisherConfig {
   initiatorIsWhite: boolean; // Whether the initiator is the White player or Black player
   initiatorMoves: string[]; // First n moves for initiator (e.g., ["Nf3", "g3"])
   responderMoveCounts: number[]; // Number of responses for each initiator move (e.g., [2, 3])
-  maxDepth: number; // Maximum analysis depth
+  maxDepth: number; // Maximum analysis depth. Note: this is NOT stockfish depth (!)
   threads: number; // Number of CPU threads
   defaultResponderCount: number; // Default responder count for levels not specified
   // targetDepth removed from line app (confetti only lives in practice)

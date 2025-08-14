@@ -265,11 +265,7 @@ export function makeMove(fromSquare, toSquare, gameState, dom) {
         if (best && found) {
             const bestScore = best.score;
             const moveScore = found.score;
-            const deltaCp = moveScore - bestScore;
-            const deltaStr = Math.abs(deltaCp) >= 100
-                ? `${Math.round(deltaCp / 100)}`
-                : (deltaCp / 100).toFixed(1);
-            const sign = deltaCp > 0 ? "+" : "";
+            // Reserve for future display of delta values if needed
             // Determine rank of attempted move among top list
             const rank = topList.findIndex((m) => m.move === attemptedLong) + 1;
             const ordinal = toOrdinal(rank);

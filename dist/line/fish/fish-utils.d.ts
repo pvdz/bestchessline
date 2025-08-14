@@ -6,8 +6,10 @@ import type { AnalysisMove, AnalysisResult } from "../types.js";
 export declare function generateLineId(sans: string[]): string;
 export declare function getRandomProofString(): string;
 export declare function sortPvMoves(moves: AnalysisMove[], firstMoveTurn: "w" | "b", _maxDepth?: number): AnalysisMove[];
-export declare function getTopLines(fen: string, targetLines: number, { maxDepth, threads, onUpdate, }?: {
-    maxDepth?: number;
+export declare function getTopLines(rootFEN: string, // this is used to update the server for the practice app.
+moves: string[] | null, // long moves. set to null when this is unknown. this is used to update the server for the practice app.
+nowFEN: string, // fen to compute next moves from
+searchLineCount: number, maxDepth: number, { threads, onUpdate, }?: {
     threads?: number;
     onUpdate?: (res: AnalysisResult) => void;
 }): Promise<SimpleMove[]>;

@@ -1,146 +1,61 @@
-import type { DBExecutor, SqlValue } from "./db.js";
-import { boolToInt, intToBool } from "./db.js";
-import type { LineFisherConfig } from "../line/fish/types.js";
+import type { DBExecutor } from "./db.js";
+import type { ServerLine } from "./types.js";
 
-export interface PutLineBody {
-  sessionId: string;
-  rootFEN: string;
-  config?: Partial<LineFisherConfig>;
-  line: Partial<FishLineLike> & {
-    lineIndex: number;
-    pcns: string[];
-    position?: string;
-  };
-}
-
-// Domain-specific types and SQL helpers for fish
-export interface MoveScorePair {
-  move: string;
-  score: number;
-}
-
-export interface FishLineLike {
-  lineIndex: number;
-  pcns: string[];
-  sanGame?: string;
-  score: number;
-  position: string;
-  isDone: boolean;
-  isFull: boolean;
-  isMate: boolean;
-  isStalemate: boolean;
-  isTransposition: boolean;
-  transpositionTarget?: string;
-  best5Replies: MoveScorePair[];
-  best5Alts: MoveScorePair[];
-}
-
-export interface StoredFishLine extends FishLineLike {
-  id: number;
-  sessionId: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
+// Create a simple table to store server-returned lines keyed by position
 export async function initSchemaFish(exec: DBExecutor): Promise<void> {
   await exec.run(
-    `CREATE TABLE IF NOT EXISTS fish_sessions (
-      session_id TEXT PRIMARY KEY,
-      root_fen TEXT NOT NULL,
-      config_json TEXT NOT NULL,
-      created_at INTEGER NOT NULL
-    )`,
-  );
-  await exec.run(
-    `CREATE TABLE IF NOT EXISTS fish_lines (
+    `CREATE TABLE IF NOT EXISTS server_lines (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL,
-      line_index INTEGER NOT NULL,
-      pcns_json TEXT NOT NULL,
-      san_game TEXT,
-      score INTEGER NOT NULL,
+      root_fen TEXT NOT NULL,
+      moves_json TEXT,
       position TEXT NOT NULL,
-      is_done INTEGER NOT NULL,
-      is_full INTEGER NOT NULL,
-      is_mate INTEGER NOT NULL,
-      is_stalemate INTEGER NOT NULL,
-      is_transposition INTEGER NOT NULL,
-      transposition_target TEXT,
-      best5_replies_json TEXT NOT NULL,
-      best5_alts_json TEXT NOT NULL,
+      best_moves_json TEXT NOT NULL,
+      search_line_count INTEGER NOT NULL,
+      max_depth INTEGER NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      UNIQUE(session_id, line_index),
-      FOREIGN KEY(session_id) REFERENCES fish_sessions(session_id) ON DELETE CASCADE
+      UNIQUE(position)
     )`,
   );
   await exec.run(
-    `CREATE INDEX IF NOT EXISTS idx_fish_lines_session ON fish_lines(session_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_server_lines_position ON server_lines(position)`,
   );
   await exec.run(
-    `CREATE INDEX IF NOT EXISTS idx_fish_lines_position ON fish_lines(position)`,
+    `CREATE INDEX IF NOT EXISTS idx_search_line_count ON server_lines(search_line_count)`,
+  );
+  await exec.run(
+    `CREATE INDEX IF NOT EXISTS idx_max_depth ON server_lines(max_depth)`,
   );
 }
 
-export async function upsertFishSession(
+export async function upsertServerLine(
   exec: DBExecutor,
   sessionId: string,
-  rootFEN: string,
-  config: Partial<LineFisherConfig>,
-  createdAt: number,
-): Promise<void> {
-  await exec.run(
-    `INSERT INTO fish_sessions (session_id, root_fen, config_json, created_at)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(session_id) DO UPDATE SET
-       root_fen=excluded.root_fen,
-       config_json=excluded.config_json`,
-    [sessionId, rootFEN, JSON.stringify(config || {}), createdAt],
-  );
-}
-
-export async function insertOrReplaceFishLine(
-  exec: DBExecutor,
-  sessionId: string,
-  lineIndex: number,
-  line: FishLineLike,
+  line: ServerLine,
 ): Promise<number> {
   const now = Date.now();
   const res = await exec.run(
-    `INSERT INTO fish_lines (
-       session_id, line_index, pcns_json, san_game, score, position,
-       is_done, is_full, is_mate, is_stalemate, is_transposition, transposition_target,
-       best5_replies_json, best5_alts_json, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(session_id, line_index) DO UPDATE SET
-       pcns_json=excluded.pcns_json,
-       san_game=excluded.san_game,
-       score=excluded.score,
-       position=excluded.position,
-       is_done=excluded.is_done,
-       is_full=excluded.is_full,
-       is_mate=excluded.is_mate,
-       is_stalemate=excluded.is_stalemate,
-       is_transposition=excluded.is_transposition,
-       transposition_target=excluded.transposition_target,
-       best5_replies_json=excluded.best5_replies_json,
-       best5_alts_json=excluded.best5_alts_json,
+    `INSERT INTO server_lines (
+       session_id, root_fen, moves_json, position, best_moves_json,
+       search_line_count, max_depth, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(position) DO UPDATE SET
+       session_id=excluded.session_id,
+       root_fen=excluded.root_fen,
+       moves_json=excluded.moves_json,
+       best_moves_json=excluded.best_moves_json,
+       search_line_count=excluded.search_line_count,
+       max_depth=excluded.max_depth,
        updated_at=excluded.updated_at`,
     [
       sessionId,
-      lineIndex,
-      JSON.stringify(line.pcns || []),
-      line.sanGame ?? null,
-      line.score,
+      line.root,
+      JSON.stringify(line.moves || []),
       line.position,
-      boolToInt(line.isDone),
-      boolToInt(line.isFull),
-      boolToInt(line.isMate),
-      boolToInt(line.isStalemate),
-      boolToInt(line.isTransposition),
-      line.transpositionTarget ?? null,
-      JSON.stringify(line.best5Replies || []),
-      JSON.stringify(line.best5Alts || []),
+      JSON.stringify(line.bestMoves || []),
+      line.searchLineCount,
+      line.maxDepth,
       now,
       now,
     ],
@@ -148,155 +63,83 @@ export async function insertOrReplaceFishLine(
   return typeof res.lastID === "number" ? res.lastID : -1;
 }
 
-export async function getFishLinesBySession(
-  exec: DBExecutor,
-  sessionId: string,
-): Promise<StoredFishLine[]> {
-  const rows = await exec.all<{
-    id: number;
-    session_id: string;
-    line_index: number;
-    pcns_json: string;
-    san_game: string | null;
-    score: number;
-    position: string;
-    is_done: number;
-    is_full: number;
-    is_mate: number;
-    is_stalemate: number;
-    is_transposition: number;
-    transposition_target: string | null;
-    best5_replies_json: string;
-    best5_alts_json: string;
-    created_at: number;
-    updated_at: number;
-  }>(`SELECT * FROM fish_lines WHERE session_id=? ORDER BY line_index ASC`, [
-    sessionId,
-  ]);
-  return rows.map(mapRowToStoredFishLine);
-}
-
-export async function getRandomFishLines(
-  exec: DBExecutor,
-  limit: number,
-): Promise<StoredFishLine[]> {
-  const rows = await exec.all<{
-    id: number;
-    session_id: string;
-    line_index: number;
-    pcns_json: string;
-    san_game: string | null;
-    score: number;
-    position: string;
-    is_done: number;
-    is_full: number;
-    is_mate: number;
-    is_stalemate: number;
-    is_transposition: number;
-    transposition_target: string | null;
-    best5_replies_json: string;
-    best5_alts_json: string;
-    created_at: number;
-    updated_at: number;
-  }>(`SELECT * FROM fish_lines ORDER BY RANDOM() LIMIT ?`, [limit]);
-  return rows.map(mapRowToStoredFishLine);
-}
-
-export async function getFishLinesByPosition(
+export async function getServerLineByPosition(
   exec: DBExecutor,
   position: string,
-): Promise<StoredFishLine[]> {
-  console.log("getFishLinesByPosition:", position);
-  const rows = await exec.all<{
-    id: number;
+  searchLineCount: number,
+  maxDepth: number,
+): Promise<ServerLine | null> {
+  const row = await exec.get<{
     session_id: string;
-    line_index: number;
-    pcns_json: string;
-    san_game: string | null;
-    score: number;
+    root_fen: string;
+    moves_json: string | null;
     position: string;
-    is_done: number;
-    is_full: number;
-    is_mate: number;
-    is_stalemate: number;
-    is_transposition: number;
-    transposition_target: string | null;
-    best5_replies_json: string;
-    best5_alts_json: string;
+    best_moves_json: string;
+    search_line_count: number;
+    max_depth: number;
     created_at: number;
     updated_at: number;
-  }>(`SELECT * FROM fish_lines WHERE position=? ORDER BY updated_at DESC`, [
-    position,
-  ]);
-  console.log(" -->:", rows.length);
-  return rows.map(mapRowToStoredFishLine);
+  }>(
+    `SELECT * FROM server_lines WHERE position=? AND search_line_count=? AND max_depth=?`,
+    [position, searchLineCount, maxDepth],
+  );
+  if (!row) {
+    return null;
+  }
+  return mapRowToServerLine(row);
 }
 
-// bool/int helpers now imported from db.ts
+export async function getRandomServerLines(
+  exec: DBExecutor,
+  limit: number,
+): Promise<ServerLine[]> {
+  const rows = await exec.all<{
+    session_id: string;
+    root_fen: string;
+    moves_json: string | null;
+    position: string;
+    best_moves_json: string;
+    search_line_count: number;
+    max_depth: number;
+    created_at: number;
+    updated_at: number;
+  }>(`SELECT * FROM server_lines ORDER BY RANDOM() LIMIT ?`, [limit]);
+  return rows.map(mapRowToServerLine);
+}
 
-function mapRowToStoredFishLine(row: {
-  id: number;
+function mapRowToServerLine(row: {
   session_id: string;
-  line_index: number;
-  pcns_json: string;
-  san_game: string | null;
-  score: number;
+  root_fen: string;
+  moves_json: string | null;
   position: string;
-  is_done: number;
-  is_full: number;
-  is_mate: number;
-  is_stalemate: number;
-  is_transposition: number;
-  transposition_target: string | null;
-  best5_replies_json: string;
-  best5_alts_json: string;
+  best_moves_json: string;
+  search_line_count: number;
+  max_depth: number;
   created_at: number;
   updated_at: number;
-}): StoredFishLine {
-  let pcns: string[] = [];
-  let best5Replies: MoveScorePair[] = [];
-  let best5Alts: MoveScorePair[] = [];
+}): ServerLine {
+  let moves: string[] = [];
+  let bestMoves: unknown = [];
   try {
-    pcns = JSON.parse(row.pcns_json) as string[];
+    moves = row.moves_json ? (JSON.parse(row.moves_json) as string[]) : [];
   } catch (e) {
-    console.warn("[db-lines] Failed to parse pcns_json; defaulting to []:", e);
-    pcns = [];
+    console.log("Error parsing moves_json", row);
+    console.log("->", e);
+    moves = [];
   }
   try {
-    best5Replies = JSON.parse(row.best5_replies_json) as MoveScorePair[];
+    bestMoves = JSON.parse(row.best_moves_json);
   } catch (e) {
-    console.warn(
-      "[db-lines] Failed to parse best5_replies_json; defaulting to []:",
-      e,
-    );
-    best5Replies = [];
-  }
-  try {
-    best5Alts = JSON.parse(row.best5_alts_json) as MoveScorePair[];
-  } catch (e) {
-    console.warn(
-      "[db-lines] Failed to parse best5_alts_json; defaulting to []:",
-      e,
-    );
-    best5Alts = [];
+    console.log("Error parsing best_moves_json", row);
+    console.log("->", e);
+    bestMoves = [];
   }
   return {
-    id: row.id,
-    sessionId: row.session_id,
-    lineIndex: row.line_index,
-    pcns,
-    sanGame: row.san_game || undefined,
-    score: row.score,
+    root: row.root_fen,
+    moves,
     position: row.position,
-    isDone: intToBool(row.is_done),
-    isFull: intToBool(row.is_full),
-    isMate: intToBool(row.is_mate),
-    isStalemate: intToBool(row.is_stalemate),
-    isTransposition: intToBool(row.is_transposition),
-    transpositionTarget: row.transposition_target || undefined,
-    best5Replies,
-    best5Alts,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    bestMoves: bestMoves as ServerLine["bestMoves"],
+    searchLineCount: row.search_line_count,
+    maxDepth: row.max_depth,
   };
 }

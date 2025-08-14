@@ -3,8 +3,10 @@ import { analyzePosition } from "../../utils/stockfish-client.js";
 import { SimpleMove } from "../../utils/types.js";
 import { compareAnalysisMoves } from "../best/bestmove-utils.js";
 import type { AnalysisMove, AnalysisResult } from "../types.js";
+import { updateFishPvTickerThrottled } from "./fish-ui.js";
 import { apiLineGet, apiLinesPut } from "./fish-remote.js";
 import { pauseUntilButton } from "../../utils/utils.js";
+import { getElementByIdOrThrow } from "../../utils/dom-helpers.js";
 
 /**
  * Generate line ID from SAN moves
@@ -32,33 +34,46 @@ export function sortPvMoves(
 
 // Given a position, get the best lines from the server or compute them using stockfish
 export async function getTopLines(
-  fen: string,
-  targetLines: number,
+  rootFEN: string, // this is used to update the server for the practice app.
+  moves: string[] | null, // long moves. set to null when this is unknown. this is used to update the server for the practice app.
+  nowFEN: string, // fen to compute next moves from
+  searchLineCount: number,
+  maxDepth: number,
   {
-    maxDepth = 20,
     threads = 1,
     onUpdate,
   }: {
-    maxDepth?: number;
     threads?: number;
     onUpdate?: (res: AnalysisResult) => void;
   } = {},
 ): Promise<SimpleMove[]> {
-  const known: SimpleMove[] | null = await apiLineGet(
-    fen,
-    targetLines,
-    maxDepth,
-  );
-  if (known) {
-    console.log(
-      "getTopLines(): Retrieved cached results for",
-      fen,
-      targetLines,
-      "->",
-      known,
+  const useServerGet = (
+    getElementByIdOrThrow("fish-use-server-get") as HTMLInputElement
+  ).checked;
+  const useServerPut = (
+    getElementByIdOrThrow("fish-use-server-put") as HTMLInputElement
+  ).checked;
+  const usePauses = (
+    getElementByIdOrThrow("fish-enable-pauses") as HTMLInputElement
+  ).checked;
+
+  if (useServerGet) {
+    const known: SimpleMove[] | null = await apiLineGet(
+      nowFEN,
+      searchLineCount,
+      maxDepth,
     );
-    await pauseUntilButton();
-    return known.slice(0, targetLines); // Server may return _more_ than requested (or less)
+    if (known) {
+      console.log(
+        "getTopLines(): Retrieved cached results for",
+        nowFEN,
+        searchLineCount,
+        "->",
+        known,
+      );
+      if (usePauses) await pauseUntilButton();
+      return known.slice(0, searchLineCount); // Server may return _more_ than requested (or less)
+    }
   }
 
   // - Find best five moves (from stockfish)
@@ -85,29 +100,41 @@ export async function getTopLines(
 
   // Get best moves from Stockfish
   const analysis = await analyzePosition(
-    fen,
+    nowFEN,
     {
       threads,
       depth: maxDepth,
-      multiPV: targetLines,
+      multiPV: searchLineCount,
     },
-    onUpdate ?? (() => {}),
+    (res) => {
+      // Update ticker each engine update
+      updateFishPvTickerThrottled(res.moves, res.position);
+    },
   );
 
   // White position score values positive, so order desc for white to have moves[0] be best
-  const toMove = parseFEN(fen).turn;
+  const toMove = parseFEN(nowFEN).turn;
   sortPvMoves(analysis.moves, toMove, maxDepth);
 
   const sorted = sortedAnalysisMovesToSimpleMoves(
     analysis.moves,
-    targetLines,
+    searchLineCount,
     maxDepth,
   );
-  // TODO: I guess we don't need to await this? Fire and forget...
-  await apiLinesPut(fen, sorted, targetLines, 20);
+  // Optionally send results to server
+  if (useServerPut) {
+    await apiLinesPut(
+      rootFEN,
+      moves, // how do I pass this in? does line have it?
+      nowFEN,
+      sorted,
+      searchLineCount,
+      20,
+    );
+  }
 
   console.log("getTopLines(): Manually computed lines:", sorted);
-  await pauseUntilButton();
+  if (usePauses) await pauseUntilButton();
   return sorted;
 }
 
@@ -121,7 +148,14 @@ export async function getTopLinesTrapped(
   } = {},
 ) {
   try {
-    return await getTopLines(fen, targetLines, options);
+    return await getTopLines(
+      fen,
+      [],
+      fen,
+      targetLines,
+      options.maxDepth ?? 20,
+      { threads: options.threads, onUpdate: options.onUpdate },
+    );
   } catch (e) {
     console.warn("getTopLines failed:", e);
     return null;

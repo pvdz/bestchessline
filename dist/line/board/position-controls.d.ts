@@ -25,6 +25,7 @@ export declare const resetPositionEvaluation: () => void;
 export declare const initializePositionEvaluationButton: () => void;
 /**
  * Evaluate the current board position using Stockfish
+ * This is when you press the little button above the board.
  */
 export declare const evaluateCurrentPosition: () => Promise<void>;
 /**

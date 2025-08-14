@@ -4,21 +4,18 @@
 // - AI endpoints delegate to built module at 'dist/server/ai-explain.js' if available
 
 const http = require("node:http");
-const { parse, pathToFileURL } = require("node:url");
+const { parse } = require("node:url");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const {
-  parseFEN,
-  getPieceAtSquareFromFEN,
-} = require("./dist/utils/fen-utils.js");
-const { applyMoveToFEN } = require("./dist/utils/fen-manipulation.js");
-const {
-  processExplain,
-  convertFenToCacheFileName,
-} = require("./dist/server/ai-explain.js");
+const { parseFEN } = require("./dist/utils/fen-utils.js");
+const { convertFenToCacheFileName } = require("./dist/server/ai-explain.js");
 const { health } = require("./dist/server/health.js");
-const { readLinesByPosition, writeLine } = require("./dist/server/db.js");
+const {
+  readLineByPosition,
+  writeLine,
+  truncateDatabase,
+} = require("./dist/server/db.js");
 
 const argv = process.argv.slice(2);
 const DISABLE_SAB = argv.includes("--no-shared-array-buffer");
@@ -180,7 +177,10 @@ async function handleHealth(_req, res) {
   try {
     sendJson(res, 200, health());
   } catch (e) {
-    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+    sendJson(res, 500, {
+      ok: false,
+      error: e && e.message ? e.message : String(e),
+    });
   }
 }
 
@@ -192,7 +192,7 @@ async function handleExplainPut(req, res) {
 
     if (!payload) {
       console.log("400: handleExplainPut missing payload");
-      sendJson(res, 400, { error: "Missing payload" });
+      sendJson(res, 400, { ok: false, error: "Missing payload" });
       return;
     }
 
@@ -206,7 +206,10 @@ async function handleExplainPut(req, res) {
     sendJson(res, 200, { ok: true, key });
   } catch (e) {
     console.log("500: handleExplainPut failed:", e);
-    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+    sendJson(res, 500, {
+      ok: false,
+      error: e && e.message ? e.message : String(e),
+    });
   }
 }
 
@@ -237,17 +240,20 @@ async function handleExplainGet(req, res) {
     }
 
     console.log("404: no cache, no api key");
-    sendJson(res, 404, { ok: false, body: "Not cached. No API key." });
+    sendJson(res, 404, { ok: false, error: "Not cached. No API key." });
   } catch (e) {
     console.log("500: handleExplainGet failed:", e);
-    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+    sendJson(res, 500, {
+      ok: false,
+      error: e && e.message ? e.message : String(e),
+    });
   }
 }
 
 async function handleLineGet(req, res) {
   try {
     const url = parse(req.url || "", true);
-    const { fen, searchLineCount } = url.query || {};
+    const { fen, searchLineCount, maxDepth } = url.query || {};
 
     if (!fen) {
       sendJson(res, 400, { error: "Missing fen" });
@@ -261,27 +267,31 @@ async function handleLineGet(req, res) {
       return;
     }
 
-    const rows = await readLinesByPosition(String(fen));
-    if (!rows || rows.length === 0) {
-      sendJson(res, 200, null);
+    const row = await readLineByPosition(fen, searchLineCount, maxDepth);
+    if (!row) {
+      sendJson(res, 404, { ok: false, error: "No line found" });
       return;
     }
 
     const n = Number.isFinite(Number(searchLineCount))
       ? Math.max(1, Math.floor(Number(searchLineCount)))
       : 5;
-    const replies = Array.isArray(rows[0].best5Replies)
-      ? rows[0].best5Replies.slice(0, n)
-      : [];
-    // If no cached replies, signal caller to compute
-    if (!replies.length) {
-      sendJson(res, 200, null);
+    const best = Array.isArray(row.bestMoves) ? row.bestMoves : [];
+    if (!best.length) {
+      sendJson(res, 404, { ok: false, error: "No best moves found" });
       return;
     }
-    sendJson(res, 200, replies);
+
+    sendJson(res, 200, {
+      ok: true,
+      data: { ...row, bestMoves: best.slice(0, n) },
+    });
   } catch (e) {
     console.log("500: handleLineGet failed:", e);
-    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+    sendJson(res, 500, {
+      ok: false,
+      error: e && e.message ? e.message : String(e),
+    });
   }
 }
 
@@ -289,47 +299,61 @@ async function handleLinePut(req, res) {
   try {
     const raw = await readBody(req);
     const body = JSON.parse(raw || "{}");
+    const rootFEN = body && body.root;
+    const moves = (body && body.moves) || null;
     const position = body && body.position;
-    const moves = (body && body.moves) || [];
+    const best = body && (body.bestMoves || body.best);
+    const searchLineCount = body && body.searchLineCount;
+    const maxDepth = body && body.maxDepth;
 
-    if (!position || !Array.isArray(moves)) {
-      sendJson(res, 400, { error: "Missing position or moves" });
+    if (!position || !best || !searchLineCount || !maxDepth) {
+      sendJson(res, 400, {
+        ok: false,
+        error: "Missing position, best/bestMoves, searchLineCount, or maxDepth",
+      });
       return;
     }
 
     try {
       parseFEN(String(position));
     } catch (_e) {
-      sendJson(res, 400, { error: "Invalid FEN" });
+      sendJson(res, 400, { ok: false, error: "Invalid FEN" });
       return;
     }
 
     // Store under a stable session/key; we query by position later
     await writeLine({
-      sessionId: `server-cache:${String(position)}`,
-      rootFEN: String(position),
-      config: {},
+      sessionId: `server-cache:${String(position)}:${searchLineCount}:${maxDepth}`,
       line: {
-        lineIndex: 0,
-        pcns: [],
-        sanGame: "",
-        score: 0,
+        root: String(rootFEN || position),
+        moves: Array.isArray(moves) ? moves.map(String) : [],
         position: String(position),
-        isDone: true,
-        isFull: true,
-        isMate: false,
-        isStalemate: false,
-        isTransposition: false,
-        transpositionTarget: "",
-        best5Replies: Array.isArray(moves) ? moves : [],
-        best5Alts: [],
+        bestMoves: best,
+        searchLineCount: Number(searchLineCount),
+        maxDepth: Number(maxDepth),
       },
     });
 
-    sendJson(res, 200, { ok: true });
+    sendJson(res, 200, { ok: true, data: "update written" });
   } catch (e) {
     console.log("500: handleLinePut failed:", e);
-    sendJson(res, 500, { error: e && e.message ? e.message : String(e) });
+    sendJson(res, 500, {
+      ok: false,
+      error: e && e.message ? e.message : String(e),
+    });
+  }
+}
+
+async function handleTrunc(_req, res) {
+  try {
+    await truncateDatabase();
+    sendJson(res, 200, { ok: true, data: "truncated" });
+  } catch (e) {
+    console.log("500: handleTrunc failed:", e);
+    sendJson(res, 500, {
+      ok: false,
+      error: e && e.message ? e.message : String(e),
+    });
   }
 }
 
@@ -340,7 +364,7 @@ function generateCacheKeyOrSendError(res, fen, move, compare) {
       move,
       compare,
     ]);
-    sendJson(res, 400, { error: "Missing fen" });
+    sendJson(res, 400, { ok: false, error: "Missing fen" });
     return;
   }
   try {
@@ -352,7 +376,7 @@ function generateCacheKeyOrSendError(res, fen, move, compare) {
       move,
       compare,
     ]);
-    sendJson(res, 400, { error: "Invalid FEN" });
+    sendJson(res, 400, { ok: false, error: "Invalid FEN" });
     return;
   }
 
@@ -363,6 +387,7 @@ function generateCacheKeyOrSendError(res, fen, move, compare) {
       compare,
     ]);
     sendJson(res, 400, {
+      ok: false,
       error: "Invalid long best move, expecting two square ids",
     });
     return;
@@ -375,6 +400,7 @@ function generateCacheKeyOrSendError(res, fen, move, compare) {
       compare,
     ]);
     sendJson(res, 400, {
+      ok: false,
       error: "Invalid long compare move, expecting two square ids",
     });
     return;
@@ -395,6 +421,7 @@ function generateCacheKeyOrSendError(res, fen, move, compare) {
       compare,
     ]);
     sendJson(res, 400, {
+      ok: false,
       error: "If a compare move is given then a best move must be given",
     });
     return;
@@ -408,6 +435,7 @@ function generateCacheKeyOrSendError(res, fen, move, compare) {
       compare,
     ]);
     sendJson(res, 500, {
+      ok: false,
       error: "Validation should have led to valid cache key but it didn't",
     });
     return;
@@ -443,6 +471,11 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "PUT" && url.pathname === "/api/line") {
     console.log("handleLinePut()");
     await handleLinePut(req, res);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/trunc") {
+    await handleTrunc(req, res);
     return;
   }
 

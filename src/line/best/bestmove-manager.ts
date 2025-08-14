@@ -70,10 +70,9 @@ export async function startBestmove(): Promise<void> {
 
   const options = getAnalysisOptions();
   try {
-    await getTopLines(Board.getFEN(), options.multiPV, {
-      maxDepth: 20,
+    await getTopLines(Board.getFEN(), [], Board.getFEN(), options.multiPV, 20, {
       threads: options.threads,
-      onUpdate: (analysisResult) => {
+      onUpdate: (analysisResult: AnalysisResult) => {
         updateAppState({
           // currentResults: analysisResult,
           isAnalyzing: !analysisResult.completed,
@@ -133,22 +132,7 @@ function updateEnginePvTickerThrottled(
   el.textContent = lines.join("\n");
 }
 
-async function emphasizePvTickerWithPause(): Promise<void> {
-  const el = getElementByIdOrThrow("bestmove-pv-ticker");
-
-  const prevWeight = el.style.fontWeight;
-  const prevOpacity = el.style.opacity;
-  // Freeze updates visually by bolding and dimming other UI slightly
-  el.style.fontWeight = "bold";
-  try {
-    // Pause further ticker updates for 3s
-    lastPvTickerUpdateMs = Date.now();
-    await new Promise((r) => setTimeout(r, 3000));
-  } finally {
-    el.style.fontWeight = prevWeight || "";
-    el.style.opacity = prevOpacity || "";
-  }
-}
+// Removed: emphasizePvTickerWithPause (unused)
 
 /**
  * Stop analysis

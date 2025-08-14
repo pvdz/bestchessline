@@ -23,7 +23,6 @@ export declare const importFishStateFromClipboard: () => Promise<void>;
  * Serialize current state, copy to clipboard, and show success notification
  */
 export declare const exportFishStateToClipboard: () => Promise<void>;
-export declare function continueFishing(): Promise<void>;
 /**
  * Copy fish state to clipboard (for copy button)
  * Copy current analysis state to clipboard in plain text format.

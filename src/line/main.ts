@@ -53,7 +53,6 @@ import {
 } from "./fish/fish.js";
 import { getLineFisherConfigFromUI } from "./fish/fish-ui-utils.js";
 import { hideMoveArrow } from "./board/arrow-utils.js";
-import { continueFishing } from "./fish/fish.js";
 import { getCurrentFishState } from "./fish/fish-state.js";
 import { unpause } from "../utils/utils.js";
 
@@ -503,6 +502,61 @@ const initializeEventListeners = (): void => {
   updateThreadsInputForFallbackMode();
 
   // Removed: bestmove panel debug continue button (moved to fish panel)
+
+  // Truncate DB danger button logic
+  const truncBtn = document.getElementById(
+    "truncate-db-button",
+  ) as HTMLButtonElement | null;
+  if (truncBtn) {
+    let confirmTimer: number | null = null;
+    const initialText = "TRUNC DB";
+    const confirmText = "ARE YOU SURE?";
+
+    const resetButton = () => {
+      truncBtn.classList.remove("confirm");
+      truncBtn.textContent = initialText;
+      document.body.classList.remove("danger-page");
+      if (confirmTimer !== null) {
+        window.clearTimeout(confirmTimer);
+        confirmTimer = null;
+      }
+    };
+
+    const truncateDb = async () => {
+      try {
+        // Prefer simple route as requested
+        const resp = await fetch("/api/trunc", { method: "POST" });
+        const ok = resp.ok;
+        if (!ok) {
+          console.warn("Truncate DB failed:", await resp.text());
+        }
+      } catch (e) {
+        console.warn("Truncate DB error:", e);
+      } finally {
+        resetButton();
+      }
+    };
+
+    truncBtn.addEventListener("click", async () => {
+      if (!truncBtn.classList.contains("confirm")) {
+        // Enter confirm state and warn via page background
+        truncBtn.classList.add("confirm");
+        truncBtn.textContent = confirmText;
+        document.body.classList.add("danger-page");
+        if (confirmTimer !== null) window.clearTimeout(confirmTimer);
+        confirmTimer = window.setTimeout(() => {
+          resetButton();
+        }, 5000);
+      } else {
+        // Confirmed within timeout
+        try {
+          await truncateDb();
+        } finally {
+          truncBtn.textContent = "OK (=";
+        }
+      }
+    });
+  }
 };
 
 /**
