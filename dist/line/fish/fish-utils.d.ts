@@ -9,9 +9,10 @@ export declare function sortPvMoves(moves: AnalysisMove[], firstMoveTurn: "w" | 
 export declare function getTopLines(rootFEN: string, // this is used to update the server for the practice app.
 moves: string[] | null, // long moves. set to null when this is unknown. this is used to update the server for the practice app.
 nowFEN: string, // fen to compute next moves from
-searchLineCount: number, maxDepth: number, { threads, onUpdate, }?: {
+searchLineCount: number, maxDepth: number, { threads, onUpdate, targetMove, }?: {
     threads?: number;
     onUpdate?: (res: AnalysisResult) => void;
+    targetMove?: string;
 }): Promise<SimpleMove[]>;
 export declare function getTopLinesTrapped(fen: string, targetLines: number, options?: {
     maxDepth?: number;

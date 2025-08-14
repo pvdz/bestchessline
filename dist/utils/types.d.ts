@@ -52,6 +52,7 @@ export interface StockfishOptions {
     threads?: number;
     multiPV?: number;
     searchMoves?: string[];
+    targetMove?: string;
 }
 export interface AnalysisConfig {
     maxDepth: number;

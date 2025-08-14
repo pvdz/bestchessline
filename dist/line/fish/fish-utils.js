@@ -23,11 +23,13 @@ export function sortPvMoves(moves, firstMoveTurn, _maxDepth = 20) {
 export async function getTopLines(rootFEN, // this is used to update the server for the practice app.
 moves, // long moves. set to null when this is unknown. this is used to update the server for the practice app.
 nowFEN, // fen to compute next moves from
-searchLineCount, maxDepth, { threads = 1, onUpdate, } = {}) {
+searchLineCount, maxDepth, { threads = 1, onUpdate, targetMove, } = {}) {
     const useServerGet = getElementByIdOrThrow("fish-use-server-get").checked;
     const useServerPut = getElementByIdOrThrow("fish-use-server-put").checked;
     const usePauses = getElementByIdOrThrow("fish-enable-pauses").checked;
-    if (useServerGet) {
+    if (targetMove)
+        console.warn("Skipping server GET");
+    if (useServerGet && !targetMove) {
         const known = await apiLineGet(nowFEN, searchLineCount, maxDepth);
         if (known) {
             console.log("getTopLines(): Retrieved cached results for", nowFEN, searchLineCount, "->", known);
@@ -58,7 +60,8 @@ searchLineCount, maxDepth, { threads = 1, onUpdate, } = {}) {
     const analysis = await analyzePosition(nowFEN, {
         threads,
         depth: maxDepth,
-        multiPV: searchLineCount,
+        multiPV: targetMove ? 1 : searchLineCount,
+        targetMove,
     }, (res) => {
         // Update ticker each engine update
         updateFishPvTickerThrottled(res.moves, res.position);
@@ -68,7 +71,7 @@ searchLineCount, maxDepth, { threads = 1, onUpdate, } = {}) {
     sortPvMoves(analysis.moves, toMove, maxDepth);
     const sorted = sortedAnalysisMovesToSimpleMoves(analysis.moves, searchLineCount, maxDepth);
     // Optionally send results to server
-    if (useServerPut) {
+    if (useServerPut && !targetMove) {
         await apiLinesPut(rootFEN, moves, // how do I pass this in? does line have it?
         nowFEN, sorted, searchLineCount, 20);
     }

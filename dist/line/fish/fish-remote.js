@@ -25,9 +25,7 @@ nowFEN, best, searchLineCount, maxDepth) {
         method: "PUT",
         body: JSON.stringify(obj),
     });
-    console.log("response", response);
     const body = await response.json();
-    console.log("and the body is:", body);
     return body;
 }
 function validateServerLine(obj) {

@@ -42,9 +42,11 @@ export async function getTopLines(
   {
     threads = 1,
     onUpdate,
+    targetMove,
   }: {
     threads?: number;
     onUpdate?: (res: AnalysisResult) => void;
+    targetMove?: string;
   } = {},
 ): Promise<SimpleMove[]> {
   const useServerGet = (
@@ -57,7 +59,8 @@ export async function getTopLines(
     getElementByIdOrThrow("fish-enable-pauses") as HTMLInputElement
   ).checked;
 
-  if (useServerGet) {
+  if (targetMove) console.warn("Skipping server GET");
+  if (useServerGet && !targetMove) {
     const known: SimpleMove[] | null = await apiLineGet(
       nowFEN,
       searchLineCount,
@@ -104,7 +107,8 @@ export async function getTopLines(
     {
       threads,
       depth: maxDepth,
-      multiPV: searchLineCount,
+      multiPV: targetMove ? 1 : searchLineCount,
+      targetMove,
     },
     (res) => {
       // Update ticker each engine update
@@ -122,7 +126,7 @@ export async function getTopLines(
     maxDepth,
   );
   // Optionally send results to server
-  if (useServerPut) {
+  if (useServerPut && !targetMove) {
     await apiLinesPut(
       rootFEN,
       moves, // how do I pass this in? does line have it?

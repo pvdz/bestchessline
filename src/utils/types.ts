@@ -61,6 +61,7 @@ export interface StockfishOptions {
   threads?: number;
   multiPV?: number;
   searchMoves?: string[]; // long notation to only consider
+  targetMove?: string; // Force search line starting with this long move (multipv=1)
 }
 
 export interface AnalysisConfig {

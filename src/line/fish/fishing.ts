@@ -401,14 +401,10 @@ async function findBestInitiatorMove(
         ")",
       );
 
-      console.warn(
-        "fixme: non-first predefined move is incorrectly computed now",
-      );
-      const fenAfterMove = applyMoveToFEN(line.position, predefinedLongMove);
       const moves: SimpleMove[] = await getTopLines(
         config.rootFEN,
-        [predefinedLongMove.from + predefinedLongMove.to],
-        fenAfterMove,
+        [],
+        line.position,
         1,
         MAX_STOCKFISH_DEPTH,
         {
@@ -426,6 +422,7 @@ async function findBestInitiatorMove(
             updateFishPvTickerThrottled(res.moves, res.position);
             onUpdate?.("Progress updated");
           },
+          targetMove: predefinedLongMove.from + predefinedLongMove.to,
         },
       );
       const bestCandidate = moves[0];
@@ -434,7 +431,7 @@ async function findBestInitiatorMove(
         bestCandidate.move !== predefinedLongMove.from + predefinedLongMove.to
       ) {
         console.warn(
-          `Stockfish/server did not return the predefined move ${predefinedMove}`,
+          `THIS IS BAD! Stockfish or server did not return the predefined move ${predefinedMove}`,
         );
         // Use the best move instead of the predefined move
         const bestMove = bestCandidate

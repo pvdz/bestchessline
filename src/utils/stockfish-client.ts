@@ -691,12 +691,21 @@ async function analyzePositionMono(
   uciCmd("ucinewgame");
   uciCmd("position fen " + fen);
   uciCmd(`setoption name Threads value ${options.threads || 1}`);
-  uciCmd(`setoption name MultiPV value ${options.multiPV || 1}`);
+  // If a targetMove is provided, force MultiPV=1 and restrict search to that move
+  const forceSinglePv = !!options.targetMove;
+  const multiPvValue = forceSinglePv ? 1 : options.multiPV || 1;
+  uciCmd(`setoption name MultiPV value ${multiPvValue}`);
+
+  const searchmoves = options.targetMove
+    ? [`searchmoves ${options.targetMove}`]
+    : options.searchMoves && options.searchMoves.length
+      ? [`searchmoves ${options.searchMoves.join(" ")}`]
+      : [];
 
   stockfishState.go = [
     "go",
     options.depth ? `depth ${options.depth}` : "",
-    options.searchMoves ? `searchmoves ${options.searchMoves.join(" ")}` : "",
+    ...searchmoves,
   ]
     .filter(Boolean)
     .join(" ");
