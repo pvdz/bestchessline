@@ -57,6 +57,41 @@ All workflows share core utilities for FEN, move parsing/formatting, and Stockfi
   - UI/preview/status: `src/line/fish/fish-ui.ts`
   - Copy/Export: per-line trailing JSON includes `alts` and `replies` for Practice to consume.
 
+## Backend API & caching (current state)
+
+- Endpoints (served by `server.js`)
+  - `GET /api/line?fen=<FEN>&searchLineCount=<N>&maxDepth=<D>`
+    - Returns a ServerLine object for the given position when cached; otherwise `null`.
+    - The server may slice `bestMoves` to at most `searchLineCount` before returning.
+  - `PUT /api/line` (body is a ServerLine payload)
+    - Upserts a cached line for a position. Used after computing fresh results client‑side.
+    - For targeted, single‑move forcing (see below), we currently do not PUT by design.
+
+- Type: ServerLine (`src/server/types.ts`)
+  - `{ root: string; moves: string[]; position: string; bestMoves: SimpleMove[]; searchLineCount: number; maxDepth: number }`
+
+- Storage
+  - Implemented in `src/server/db-lines.ts` using a single `server_lines` table keyed by `position`.
+  - Read/write helpers: `upsertServerLine()`, `getServerLineByPosition()`, `getRandomServerLines()`.
+
+## Fisher behavior updates (current state)
+
+- Depth and termination
+  - Lines stop exactly after the requested number of initiator moves. We do not expand a responder branch once the target initiator depth is reached.
+  - Safety guard also prevents expansion beyond `maxDepth * 2 + 1` half‑moves.
+
+- Live ticker
+  - The fisher’s PV ticker is driven by the Stockfish `onUpdate` stream during analysis in `getTopLines()`.
+
+- Targeted move forcing (predefined move not in top‑N)
+  - When a predefined initiator move is not in the top responses, we force Stockfish to analyze the line that starts with that exact long move.
+  - Implementation: `getTopLines(..., { targetMove: "e2e4" })` plumbs through to the engine as `MultiPV=1` plus `go searchmoves e2e4`.
+  - For now we do not PUT this targeted result to the server (follow‑up task).
+
+- Server usage in fisher
+  - On each request for responder moves, fisher first tries `GET /api/line` for cached `bestMoves`.
+  - If absent, computes locally and may `PUT` the result (except for targeted move forcing).
+
 - Practice
   - Bootstrap & import: `src/practice/practice.ts`
     - Parses SAN/PCN or Fish JSON; or per‑line copy with `// { … }` metadata.
