@@ -207,11 +207,25 @@ export function updateFishProgress(state: FishState): void {
 
     // Live Stockfish stats (nps, depth, nodes, time)
     const statusBar = document.getElementById("fish-status");
+    const statDepth = document.getElementById("fish-stat-depth");
+    const statNps = document.getElementById("fish-stat-nps");
+    const statNodes = document.getElementById("fish-stat-nodes");
+    const statTime = document.getElementById("fish-stat-time");
     if (statusBar) {
       const onStats = (e: Event) => {
         const { nps, depth, nodes, time } = (e as CustomEvent).detail || {};
-        if (typeof nps === "number" && typeof depth === "number") {
-          statusBar.textContent = `Analyzing… d${depth} | ${(nps || 0).toLocaleString()} nps | ${(nodes || 0).toLocaleString()} nodes | ${time || 0}ms`;
+        if (
+          typeof depth === "number" &&
+          typeof nps === "number" &&
+          typeof nodes === "number" &&
+          typeof time === "number"
+        ) {
+          // Keep status brief and put details in dedicated fields
+          statusBar.textContent = "Analyzing…";
+          if (statDepth) statDepth.textContent = String(depth);
+          if (statNps) statNps.textContent = (nps || 0).toLocaleString();
+          if (statNodes) statNodes.textContent = (nodes || 0).toLocaleString();
+          if (statTime) statTime.textContent = `${time || 0}ms`;
         }
       };
       // Attach once; remove previous to avoid duplicates

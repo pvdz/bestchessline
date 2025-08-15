@@ -15,7 +15,10 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
  * Input can be SAN, PCN, or long notation
  */
 export function parseMove(moveText, currentFEN) {
-    log("Parsing move:", moveText, "from FEN:", currentFEN);
+    try {
+        log("Parsing move:", moveText, "from FEN:", currentFEN);
+    }
+    catch { }
     const position = parseFEN(currentFEN);
     const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
     // Handle castling
@@ -359,7 +362,11 @@ export function parseMove(moveText, currentFEN) {
             return { from: fromSquare, to: toSquare, piece };
         }
     }
-    console.trace(`[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`);
+    try {
+        // Extra debug context to trace upstream generators
+        console.trace(`[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`);
+    }
+    catch { }
     return null;
 }
 /**

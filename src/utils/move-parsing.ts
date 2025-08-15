@@ -23,7 +23,9 @@ export function parseMove(
   moveText: string,
   currentFEN: string,
 ): ChessMove | null {
-  log("Parsing move:", moveText, "from FEN:", currentFEN);
+  try {
+    log("Parsing move:", moveText, "from FEN:", currentFEN);
+  } catch {}
 
   const position = parseFEN(currentFEN);
   const isWhiteTurn = position.turn === PLAYER_COLORS.WHITE;
@@ -415,9 +417,12 @@ export function parseMove(
     }
   }
 
-  console.trace(
-    `[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
-  );
+  try {
+    // Extra debug context to trace upstream generators
+    console.trace(
+      `[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
+    );
+  } catch {}
 
   return null;
 }
