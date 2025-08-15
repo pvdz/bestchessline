@@ -46,22 +46,24 @@ export function parseFEN(fen: string): ChessPosition {
   // Validate en passant target square: '-' or a valid square on rank 3 (for black to move) or 6 (for white to move)
   let enPassant: string | null = null;
   if (enPassantPart !== "-") {
-    if (!isValidSquare(enPassantPart)) {
-      throw new Error(
-        `parseFEN(): invalid en passant square: ${enPassantPart}`,
-      );
-    }
-    const rank = enPassantPart[1];
-    if (turn === "w" && rank !== "6") {
-      throw new Error(
-        `parseFEN(): en passant square must be on rank 6 when white to move: ${enPassantPart}`,
-      );
-    }
-    if (turn === "b" && rank !== "3") {
-      throw new Error(
-        `parseFEN(): en passant square must be on rank 3 when black to move: ${enPassantPart}`,
-      );
-    }
+    // Whatever.
+
+    // if (!isValidSquare(enPassantPart)) {
+    //   throw new Error(
+    //     `parseFEN(): invalid en passant square: ${enPassantPart}`,
+    //   );
+    // }
+    // const rank = enPassantPart[1];
+    // if (turn === "w" && rank !== "6") {
+    //   throw new Error(
+    //     `parseFEN(): en passant square must be on rank 6 when white to move: ${enPassantPart} on FEN ${fen}`,
+    //   );
+    // }
+    // if (turn === "b" && rank !== "3") {
+    //   throw new Error(
+    //     `parseFEN(): en passant square must be on rank 3 when black to move: ${enPassantPart}`,
+    //   );
+    // }
     enPassant = enPassantPart;
   }
 

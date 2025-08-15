@@ -29,8 +29,6 @@
               <button id="fish-stop" disabled>Stop</button>
               <button id="fish-reset">Reset</button>
               <button id="fish-copy">Copy</button>
-              <button id="fish-export">Export</button>
-              <button id="fish-import">Import</button>
               <button id="fish-continue">Continue</button>
               <button
                 id="fish-preset-quick"
@@ -57,7 +55,7 @@
               </div>
               <div class="fish-preview-toggle">
                 <label for="fish-enable-pauses">
-                  <input type="checkbox" id="fish-enable-pauses" checked />
+                  <input type="checkbox" id="fish-enable-pauses" />
                   <span>Enable pauses</span>
                 </label>
               </div>
@@ -193,9 +191,11 @@
                   <span id="fish-status-wips"></span>
                 </span>
                 <span class="fish-progress-item"
-                  >Dones:
-                  <span id="fish-status-dones"></span>
-                </span>
+                  >Dones: <span id="fish-status-dones"></span
+                ></span>
+                <span class="fish-progress-item"
+                  >Transpositions: <span id="fish-status-transpositions"></span
+                ></span>
                 <span class="fish-progress-item"
                   >Position:
                   <span id="fish-status-position"></span>

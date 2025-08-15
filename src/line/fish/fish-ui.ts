@@ -13,8 +13,6 @@ import {
   calculateResponderNodes,
 } from "./fish-calculations.js";
 import { getCurrentFishState } from "./fish-state.js";
-// Removed unused import
-// import { getCurrentAnalysisSnapshot } from "../../utils/stockfish-client.js";
 import { compareAnalysisMoves } from "../best/bestmove-utils.js";
 import { parseFEN } from "../../utils/fen-utils.js";
 import { PLAYER_COLORS, AnalysisMove, ChessMove } from "../types.js";
@@ -147,6 +145,18 @@ export function updateFishProgress(state: FishState): void {
     const doneCount = state.done.length;
     const doneDisplay = getElementByIdOrThrow("fish-status-dones");
     doneDisplay.textContent = doneCount.toString();
+
+    // Show transposition count
+    const transpositionsEl = document.getElementById(
+      "fish-status-transpositions",
+    ) as HTMLElement | null;
+    if (transpositionsEl) {
+      const n =
+        typeof state.transpositionCount === "number"
+          ? state.transpositionCount
+          : 0;
+      transpositionsEl.textContent = String(n);
+    }
 
     // Calculate totals (line-based progress)
     const totalLines = calculateResponderNodes(state.config) + 1;
@@ -557,8 +567,6 @@ export const updateLineFisherButtonStates = (
     "fish-continue",
   ) as HTMLButtonElement;
   const copyBtn = getElementByIdOrThrow("fish-copy") as HTMLButtonElement;
-  const exportBtn = getElementByIdOrThrow("fish-export") as HTMLButtonElement;
-  const importBtn = getElementByIdOrThrow("fish-import") as HTMLButtonElement;
   const startFish2Btn = getElementByIdOrThrow(
     "fish-start",
   ) as HTMLButtonElement;
@@ -570,7 +578,5 @@ export const updateLineFisherButtonStates = (
   resetBtn.disabled = isAnalyzing || isFishing;
   continueBtn.disabled = isAnalyzing || isFishing || !hasResults;
   copyBtn.disabled = false; // Copy should always work
-  exportBtn.disabled = false; // Export should always work
-  importBtn.disabled = isAnalyzing || isFishing;
   startFish2Btn.disabled = isAnalyzing || isFishing;
 };

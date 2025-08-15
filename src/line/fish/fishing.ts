@@ -6,7 +6,11 @@ import {
   applyMoveToFEN,
 } from "../../utils/fen-manipulation.js";
 import { getPieceCapitalized } from "../../utils/notation-utils.js";
-import { getPieceAtSquareFromFEN, parseFEN } from "../../utils/fen-utils.js";
+import {
+  getPieceAtSquareFromFEN,
+  parseFEN,
+  toFEN,
+} from "../../utils/fen-utils.js";
 import { log } from "../../utils/logging.js";
 import { getCurrentFishState } from "./fish-state.js";
 import { updateFishStatus, updateFishPvTickerThrottled } from "./fish-ui.js";
@@ -260,6 +264,23 @@ async function findNextResponseMoves(
   const { config } = fishState;
   const line = fishState.wip[0];
 
+  // Transposition check at responder step
+  const key = line.position.split(" ").slice(0, -2).join(" ");
+  if (fishState.transposedPositions?.has(key)) {
+    line.isTransposition = true;
+    line.transpositionTarget = key;
+    line.isDone = true;
+    fishState.wip.shift();
+    fishState.done.push(line);
+    if (typeof fishState.transpositionCount === "number") {
+      fishState.transpositionCount += 1;
+    } else {
+      fishState.transpositionCount = 1;
+    }
+    onUpdate?.("Detected transposition; finalizing line");
+    return;
+  }
+
   const depth = Math.floor(line.pcns.length / 2);
 
   // Determine number of responses to analyze
@@ -321,8 +342,15 @@ async function findNextResponseMoves(
 
   // Parent line has been expanded: mark as done (not necessarily full)
   line.isDone = true;
-  getCurrentFishState().wip.shift(); // _now_ remove it.
-  getCurrentFishState().done.push(line);
+  // Record normalized FEN for transposition detection
+  try {
+    const pos = parseFEN(line.position);
+    const norm = { ...pos, halfMoveClock: 0, fullMoveNumber: 1 } as any;
+    const key = toFEN(norm);
+    fishState.transposedPositions?.set(key, true);
+  } catch {}
+  fishState.wip.shift(); // _now_ remove it.
+  fishState.done.push(line);
   onUpdate?.("Expanded responder line");
 }
 
@@ -333,7 +361,26 @@ async function findBestInitiatorMove(
   rootFEN: string,
   onUpdate?: (msg: string) => void,
 ): Promise<void> {
-  const line = getCurrentFishState().wip[0];
+  const fishState = getCurrentFishState();
+  const { config } = fishState;
+  const line = fishState.wip[0];
+
+  // Transposition check at initiator step
+  const key = line.position.split(" ").slice(0, -2).join(" ");
+  if (fishState.transposedPositions?.has(key)) {
+    line.isTransposition = true;
+    line.transpositionTarget = key;
+    line.isDone = true;
+    fishState.wip.shift();
+    fishState.done.push(line);
+    if (typeof fishState.transpositionCount === "number") {
+      fishState.transpositionCount += 1;
+    } else {
+      fishState.transpositionCount = 1;
+    }
+    onUpdate?.("Detected transposition; finalizing line");
+    return;
+  }
 
   const bestMoves = await getTopLines(
     rootFEN,
@@ -345,7 +392,6 @@ async function findBestInitiatorMove(
   line.best5Alts = bestMoves;
 
   // Check if there's a predefined move for this depth
-  const { config } = getCurrentFishState();
   const depth = Math.floor(line.pcns.length / 2);
   const hasPredefined = depth < config.initiatorMoves.length;
   const predefinedMove = hasPredefined

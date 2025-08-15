@@ -78,4 +78,6 @@ export interface FishState {
     wip: FishLine[];
     done: FishLine[];
     config: LineFisherConfig;
+    transposedPositions?: Map<string, true>;
+    transpositionCount?: number;
 }

@@ -80,4 +80,8 @@ export interface FishState {
   wip: FishLine[]; // Lines currently being worked on
   done: FishLine[]; // Completed lines
   config: LineFisherConfig;
+  // Map of normalized FENs (without half/fullmove counters) seen in completed lines
+  transposedPositions?: Map<string, true>;
+  // Number of detected transpositions during this session
+  transpositionCount?: number;
 }

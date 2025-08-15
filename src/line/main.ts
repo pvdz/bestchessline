@@ -45,9 +45,7 @@ import { validateMove } from "../utils/move-validator.js";
 import * as LineFisher from "./fish/fish.js";
 import {
   fish,
-  exportFishStateToClipboard,
   copyFishStateToClipboard,
-  importFishStateFromClipboard,
   stopFishAnalysis,
   resetFishAnalysis,
 } from "./fish/fish.js";
@@ -318,27 +316,12 @@ const initializeEventListeners = (): void => {
   });
 
   // Line Fisher state management controls
-  const exportLineFisherStateBtn = getElementByIdOrThrow(
-    "fish-export",
-  ) as HTMLButtonElement;
   const copyLineFisherStateBtn = getElementByIdOrThrow(
     "fish-copy",
   ) as HTMLButtonElement;
-  const importLineFisherStateBtn = getElementByIdOrThrow(
-    "fish-import",
-  ) as HTMLButtonElement;
-
-  exportLineFisherStateBtn.addEventListener("click", async () => {
-    await exportFishStateToClipboard();
-  });
 
   copyLineFisherStateBtn.addEventListener("click", async () => {
     await copyFishStateToClipboard();
-  });
-
-  importLineFisherStateBtn.addEventListener("click", async () => {
-    console.log("Import button clicked - trying Fish state first");
-    await importFishStateFromClipboard();
   });
 
   // Quick preset button: responder=2, overrides empty, depth=4

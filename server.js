@@ -269,7 +269,7 @@ async function handleLineGet(req, res) {
 
     const row = await readLineByPosition(fen, searchLineCount, maxDepth);
     if (!row) {
-      sendJson(res, 404, { ok: false, error: "No line found" });
+      sendJson(res, 200, { ok: false, data: null });
       return;
     }
 
@@ -278,7 +278,7 @@ async function handleLineGet(req, res) {
       : 5;
     const best = Array.isArray(row.bestMoves) ? row.bestMoves : [];
     if (!best.length) {
-      sendJson(res, 404, { ok: false, error: "No best moves found" });
+      sendJson(res, 200, { ok: false, data: null });
       return;
     }
 

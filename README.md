@@ -2,6 +2,20 @@
 
 A comprehensive web-based chess analysis application that provides interactive board manipulation, Stockfish engine integration, game import/navigation, real-time analysis capabilities, enhanced move validation with effect detection, and a tree digger for deep position analysis.
 
+##
+
+TODO
+
+- server should cut the move counters from the FEN and normalize the FEN to reflect the moves made so far when returning it. this helps with cache hits. we dont care about move counts.
+- we dont recognize transpositions currently. with the current server approach it's not a huge deal except it will fully expand both lines of a transposition even though they should finish identically from that intersection onward. so we should put the fen Map back to identify reached positions and stop a line as transposition.
+- we dont recognize a stalemate so we need to my chess engine to do proper move checking when pruning PV's
+- practice app needs checking to confirm it still works after server rework. i guess we need to set the first N predefined moves there. user can configure it. then server takes over after that.
+- fisher should be able to continue after it finishes and config gets updated. clear list and start over. server cache should make that easy to go back where it was
+- convert the PCN stuff back to long moves
+- show the SAN moves in UI?
+- prevent the 404 in console
+-
+
 ## Features
 
 ### Core Features

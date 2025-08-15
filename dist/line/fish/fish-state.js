@@ -11,6 +11,8 @@ function createFishState(config) {
         wip: [],
         done: [],
         config,
+        transposedPositions: new Map(),
+        transpositionCount: 0,
     };
     return state;
 }

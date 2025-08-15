@@ -14,6 +14,8 @@ function createFishState(config: LineFisherConfig): FishState {
     wip: [],
     done: [],
     config,
+    transposedPositions: new Map<string, true>(),
+    transpositionCount: 0,
   };
 
   return state;

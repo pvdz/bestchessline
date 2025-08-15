@@ -16,13 +16,6 @@ export declare const stopFishAnalysis: () => void;
  *    - Mark lines as done when max depth reached
  */
 export declare function fish(config: LineFisherConfig): Promise<void>;
-export declare const importFishStateFromClipboard: () => Promise<void>;
-/**
- * Export fish state to clipboard
- * Export current analysis state to clipboard in JSON format for import.
- * Serialize current state, copy to clipboard, and show success notification
- */
-export declare const exportFishStateToClipboard: () => Promise<void>;
 /**
  * Copy fish state to clipboard (for copy button)
  * Copy current analysis state to clipboard in plain text format.

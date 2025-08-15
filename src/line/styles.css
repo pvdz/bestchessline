@@ -1851,23 +1851,6 @@ input.error:focus {
   background: #138496;
 }
 
-#fish-export {
-  background: #ffc107;
-  color: #212529;
-}
-
-#fish-export:hover:not(:disabled) {
-  background: #e0a800;
-}
-
-#fish-import {
-  background: #fd7e14;
-}
-
-#fish-import:hover:not(:disabled) {
-  background: #e8690b;
-}
-
 #fish-continue {
   background: #20c997;
 }

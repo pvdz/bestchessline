@@ -3,7 +3,6 @@ import { getElementByIdOrThrow } from "../../utils/dom-helpers.js";
 import { showToast } from "../../utils/ui-utils.js";
 import { initFishing, initInitialMove, keepFishing } from "./fishing.js";
 import { getCurrentFishState } from "./fish-state.js";
-import { importFishState } from "./fish-state.js";
 import { updateFishConfigDisplay, updateFishStatus, updateFishProgress, updateFishRootScore, updateLineFisherButtonStates, } from "./fish-ui.js";
 // import { getRandomProofString, generateLineId } from "./fish-utils.js";
 const lineAppState = {
@@ -119,63 +118,6 @@ export async function fish(config) {
         throw error;
     }
 }
-export const importFishStateFromClipboard = async () => {
-    console.log("Importing fish state from clipboard");
-    try {
-        // Read from clipboard
-        const clipboardText = await navigator.clipboard.readText();
-        if (!clipboardText) {
-            showToast("No text found in clipboard", "#FF9800", 3000);
-            return;
-        }
-        let importedState;
-        try {
-            importedState = JSON.parse(clipboardText);
-        }
-        catch {
-            showToast("Data in clipboard was Invalid JSON", "#FF9800", 3000);
-            return;
-        }
-        if (!importedState) {
-            showToast("No data found in clipboard", "#FF9800", 3000);
-            return;
-        }
-        const ok = importFishState(importedState);
-        if (ok) {
-            console.log("Fish state import completed successfully");
-        }
-        else {
-            showToast("Failed to import fish state", "#f44336", 4000);
-        }
-    }
-    catch (error) {
-        console.error("Error importing fish state:", error);
-        showToast("Failed to import fish state", "#f44336", 4000);
-    }
-};
-/**
- * Export fish state to clipboard
- * Export current analysis state to clipboard in JSON format for import.
- * Serialize current state, copy to clipboard, and show success notification
- */
-export const exportFishStateToClipboard = async () => {
-    try {
-        // Create exportable state object
-        const exportState = getCurrentFishState();
-        // Convert to JSON and copy to clipboard
-        const jsonState = JSON.stringify(exportState, null, 2);
-        await navigator.clipboard.writeText(jsonState);
-        // Show success notification
-        const wipCount = exportState.wip.length;
-        const doneCount = exportState.done.length;
-        showToast(`Exported ${wipCount + doneCount} lines to clipboard (wip: ${wipCount}x, done: ${doneCount}x)`, "#4CAF50", 3000);
-        console.log("Fish state exported to clipboard successfully");
-    }
-    catch (error) {
-        console.error("Error exporting fish state:", error);
-        showToast("Failed to export state", "#f44336", 4000);
-    }
-};
 /**
  * Copy fish state to clipboard (for copy button)
  * Copy current analysis state to clipboard in plain text format.
