@@ -136,7 +136,8 @@ export function updateFishStatus(message: string): void {
  * Update fish progress display
  * Non-blocking UI update with error handling
  */
-export function updateFishProgress(state: FishState): void {
+export function updateFishProgress(state: FishState): boolean {
+  let failure = false;
   try {
     const wipCount = state.wip.length;
     const wipDisplay = getElementByIdOrThrow("fish-status-wips");
@@ -169,9 +170,16 @@ export function updateFishProgress(state: FishState): void {
     const positionDisplay = getElementByIdOrThrow("fish-status-position");
     const currentLine = state.wip[0];
     if (currentLine) {
-      const sanGame =
-        currentLine.sanGame ||
-        computeSanGameFromPCN(currentLine.pcns, state.config.rootFEN);
+      let sanGame = currentLine.sanGame;
+      if (!sanGame) {
+        try {
+          sanGame = computeSanGameFromPCN(currentLine.pcns, state.config.rootFEN);
+        } catch (e) {
+          console.warn("computeSanGameFromPCN failed; using empty SAN", e);
+          failure = true;
+          sanGame = "";
+        }
+      }
       positionDisplay.textContent = sanGame || "Root position";
     } else {
       positionDisplay.textContent = "Complete";
@@ -243,6 +251,7 @@ export function updateFishProgress(state: FishState): void {
   } catch (error) {
     console.error("Failed to update fish progress:", error);
   }
+  return failure;
 }
 
 // ---------------------------------------------------------
@@ -316,11 +325,6 @@ export function updateFishPvTickerThrottled(
   while (linesArr.length < 5) linesArr.push("");
   el.textContent = linesArr.join("\n");
 }
-
-// Emphasize the fish PV ticker briefly after finalization
-window.addEventListener("stockfish-ready", async () => {
-  // noop
-});
 
 function isLiveLinesEnabled(): boolean {
   const checkbox = document.getElementById(
