@@ -1,10 +1,8 @@
 import { LineFisherConfig, LineMetadata } from "./types.js";
-// import { formatPCNLineWithMoveNumbers } from "../../utils/pcn-utils.js";
 import { getElementByIdOrThrow } from "../../utils/dom-helpers.js";
 import { showToast } from "../../utils/ui-utils.js";
 import { initFishing, initInitialMove, keepFishing } from "./fishing.js";
 import { getCurrentFishState } from "./fish-state.js";
-import { importFishState } from "./fish-state.js";
 import {
   updateFishConfigDisplay,
   updateFishStatus,
@@ -12,7 +10,6 @@ import {
   updateFishRootScore,
   updateLineFisherButtonStates,
 } from "./fish-ui.js";
-// import { getRandomProofString, generateLineId } from "./fish-utils.js";
 
 const lineAppState: {
   isFishAnalysisRunning: boolean;
@@ -113,7 +110,9 @@ export async function fish(config: LineFisherConfig): Promise<void> {
   try {
     updateFishConfigDisplay(state.config);
     updateFishStatus("Starting root score analysis...");
-    updateFishProgress(getCurrentFishState());
+    if (updateFishProgress(getCurrentFishState())) {
+      throw new Error("initial state failure?");
+    }
 
     await initFishing();
 
@@ -124,7 +123,9 @@ export async function fish(config: LineFisherConfig): Promise<void> {
     await initInitialMove();
 
     // Update progress and results after initial move
-    updateFishProgress(getCurrentFishState());
+    if (updateFishProgress(getCurrentFishState())) {
+      throw new Error("initial move failure?");
+    }
 
     await keepFishing(getCurrentFishState().config.rootFEN, (msg: string) => {
       updateFishStatus(msg);
@@ -136,8 +137,9 @@ export async function fish(config: LineFisherConfig): Promise<void> {
         msg.endsWith("complete")
       ) {
         const state = getCurrentFishState();
-        updateFishProgress(state);
+        return updateFishProgress(state);
       }
+      return true;
     });
 
     // Update button states - enable start, disable stop
