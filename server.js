@@ -474,6 +474,47 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Mark cached lines as bad so server can drop/review them
+  if (req.method === "POST" && url.pathname === "/api/line/mark-bad") {
+    console.log("handleLineMarkBad()");
+    try {
+      const raw = await readBody(req);
+      const body = JSON.parse(raw || "{}");
+      const position = body && body.position;
+      const searchLineCount = body && body.searchLineCount;
+      const maxDepth = body && body.maxDepth;
+      if (!position || !searchLineCount || !maxDepth) {
+        sendJson(res, 400, { ok: false, error: "Missing position, searchLineCount, or maxDepth" });
+        return;
+      }
+      console.log("[server] mark-bad:", position, searchLineCount, maxDepth);
+      // Best-effort: drop cached line by upserting an empty bestMoves array
+      try {
+        await writeLine({
+          sessionId: `server-cache:${String(position)}:${searchLineCount}:${maxDepth}:mark-bad`,
+          line: {
+            root: String(position),
+            moves: [],
+            position: String(position),
+            bestMoves: [],
+            searchLineCount: Number(searchLineCount),
+            maxDepth: Number(maxDepth),
+          },
+        });
+      } catch (e) {
+        console.log("[server] mark-bad write failed:", e);
+      }
+      sendJson(res, 200, { ok: true });
+    } catch (e) {
+      console.log("crash:", e);
+      sendJson(res, 500, {
+        ok: false,
+        error: e && e.message ? e.message : String(e),
+      });
+    }
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/trunc") {
     await handleTrunc(req, res);
     return;
