@@ -52,6 +52,31 @@ export async function apiLinesPut(
   return body;
 }
 
+export async function apiLineMarkBad(
+  position: string, // FEN
+  searchLineCount: number,
+  maxDepth: number,
+): Promise<void> {
+  console.log(
+    "apiLineMarkBad(): Invalidating lines from server:",
+    position,
+    searchLineCount,
+    maxDepth,
+  );
+
+  await fetch(
+    `/api/line/mark-bad`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        position,
+        searchLineCount,
+        maxDepth,
+      }),
+    },
+  );
+}
+
 function validateServerLine(obj: Record<string, unknown>): obj is ServerLine {
   return (
     obj &&
