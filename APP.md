@@ -32,6 +32,8 @@ All workflows share core utilities for FEN, move parsing/formatting, and Stockfi
   - `main.ts` – analysis page bootstrap and orchestration
 - `src/practice/` – practice app (board, parser, UI, game flow)
 - `src/utils/` – Stockfish client, FEN/move/notation helpers, DOM/status/buttons/formatting
+  - `fen-manipulation.ts`: `applyMoveToFEN()` normalizes castling and handles en‑passant capture by removing the captured pawn behind the destination.
+  - `pcn-utils.ts`: `computeSanGameFromPCN()` constructs moves directly from PCN (including long moves), validates with `analyzeMove`, then applies with `applyMoveToFEN(..., { assert: false })`.
 - `dist/` – built artifacts and Stockfish workers
 
 ## Core modules (what to read first)
@@ -42,6 +44,7 @@ All workflows share core utilities for FEN, move parsing/formatting, and Stockfi
   - Streams “info … pv …” updates (depth, score, mate, PV) to a typed callback.
   - Resolves with a typed `AnalysisResult` on `bestmove`.
   - `getCurrentAnalysisSnapshot()` exposes a stable snapshot for tickers.
+  - PV replay starts from the original `analyzePosition(fen)` input to avoid desync; if our validator rejects a PV move we HARD‑STOP and log full context (fen, pv, offending move).
 
 - Bestmove (Next Best Moves)
   - `src/line/best/bestmove-manager.ts` – start/stop, render best lines, status, PV click‑to‑apply, mate‑aware sort.
@@ -106,6 +109,7 @@ All workflows share core utilities for FEN, move parsing/formatting, and Stockfi
 ## Key terms & data shapes
 
 - FEN – Forsyth–Edwards Notation; we index metadata by FEN and step positions via `applyMoveToFEN()`.
+  - En‑passant target is set only on double pawn pushes; en‑passant capture removes the pawn behind the destination square.
 - Move notations
   - SAN – e.g., `Nf3`, `O-O` (user facing)
   - PCN – e.g., `Ng1f3` (internal clarity)
@@ -120,6 +124,7 @@ All workflows share core utilities for FEN, move parsing/formatting, and Stockfi
 
 - Scores are normalized to White’s perspective. When Black to move, invert for comparison.
 - Comparator `compareAnalysisMoves()` is mate‑aware and supports prioritizing depth or score (bestmove favors mate/depth, fisher top‑5 often favors score per side‑to‑move).
+  - PV validation normalizes castling moves (`e1g1`, `e8g8`, etc.) before applying.
 
 ## UI conventions
 

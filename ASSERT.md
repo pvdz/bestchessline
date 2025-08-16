@@ -42,18 +42,30 @@ This document is a compressed, high‑signal brain dump of the current debugging
 ### Engine PV (info line) guardrails
 
 - For each Stockfish `info` PV message:
-  - First PV move side-to-move must match FEN; if not, drop the info line.
+  - We start PV validation from the exact FEN passed to `analyzePosition` (not a later snapshot) to avoid desync.
+  - First PV move side-to-move must match FEN; otherwise we skip the info line.
   - Normalize castling for validation (e.g., `e1g1` => special castling with `rookFrom/rookTo`).
-  - Validate each PV move non‑throwingly with `analyzeMove` and advance a local FEN.
-  - If any PV move is invalid, we log once:
-    - `stockfish-info: dropping PV due to invalid move {fen, moveStr, index, error}`
-  - We DO NOT assert or add partial PV results.
+  - Validate each PV move with `analyzeMove` and advance a local FEN using `applyMoveToFEN(..., { assert: false })`.
+  - If any PV move is invalid, we HARD‑STOP fishing immediately and log full context:
+    - `stockfish-info: HARD-STOP — validator rejected engine PV move { fen, moveStr, index, error, pv }`
+    - The assertion context is emitted with the same data for post‑mortem.
 
 ### UI / formatting safety
 
 - All UI and formatting move applications call `applyMoveToFEN(..., { assert: false })`.
 - Validation in formatting paths is silent (for logs only); no assertions.
 - `computeSanGameFromPCN` is wrapped in try/catch; logs and continues on failure.
+
+### FEN application updates (critical correctness)
+
+- `applyMoveToFEN` now correctly handles en‑passant captures:
+  - EP capture is detected prior to board mutation when a pawn moves diagonally to an empty destination matching `position.enPassant`.
+  - The captured pawn behind the destination square is cleared after the move is placed.
+- King two‑square slides auto‑normalize castling using separate file indices to avoid off‑by bugs.
+
+### PCN ↔ SAN safety
+
+- `computeSanGameFromPCN` no longer reparses SAN for legality when replaying; it constructs moves directly from PCN (including long moves), normalizes castling, validates with `analyzeMove`, and applies with `applyMoveToFEN(..., { assert: false })`.
 
 ## Event hooks
 
