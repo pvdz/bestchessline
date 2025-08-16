@@ -180,14 +180,16 @@ export const evaluateCurrentPosition = async (): Promise<void> => {
 
   try {
     // Get a proper evaluation with adequate depth and timeout
-    const result = await getTopLines(currentFEN, [], currentFEN, 1, 20, {
-      threads: 1, // TODO: read from UI?
-      onUpdate: (res) => {
-        const d = res.moves[0]?.depth || 0;
-        const btn = getElementByIdOrThrow("position-evaluation-btn");
-        btn.textContent = `d${d}`;
-      },
-    });
+    const result = (
+      await getTopLines(currentFEN, [], currentFEN, 1, 20, {
+        threads: 1, // TODO: read from UI?
+        onUpdate: (res) => {
+          const d = res.moves[0]?.depth || 0;
+          const btn = getElementByIdOrThrow("position-evaluation-btn");
+          btn.textContent = `d${d}`;
+        },
+      })
+    ).moves;
 
     if (result.length > 0) {
       const bestMove = result[0];

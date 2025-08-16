@@ -7,10 +7,7 @@ import {
   getPieceAtSquareFromFEN,
 } from "./fen-utils.js";
 import { PIECE_TYPES } from "./notation-utils.js";
-import {
-  ASSERT,
-  assertFenParsable,
-} from "./assert-utils.js";
+import { ASSERT, assertFenParsable } from "./assert-utils.js";
 
 /**
  * FEN Manipulation Functions
@@ -36,20 +33,25 @@ export function applyLongMoveToFEN(
       "applyLongMoveToFEN: invalid long move format",
       { fen, move },
     );
-  return applyMoveToFEN(fen, {
-    from: move.slice(0, 2),
-    to: move.slice(2, 4),
-    piece,
-    special:
-      isKing &&
-      ((from === "e1" && (to === "c1" || to === "g1")) ||
-        (from === "e8" && (to === "c8" || to === "g8")))
-        ? "castling"
-        : undefined,
-    rookFrom:
-      to === "c1" ? "a1" : to === "g1" ? "h1" : to === "c8" ? "a8" : "h8",
-    rookTo: to === "c1" ? "d1" : to === "g1" ? "f1" : to === "c8" ? "d8" : "f8",
-  }, opts);
+  return applyMoveToFEN(
+    fen,
+    {
+      from: move.slice(0, 2),
+      to: move.slice(2, 4),
+      piece,
+      special:
+        isKing &&
+        ((from === "e1" && (to === "c1" || to === "g1")) ||
+          (from === "e8" && (to === "c8" || to === "g8")))
+          ? "castling"
+          : undefined,
+      rookFrom:
+        to === "c1" ? "a1" : to === "g1" ? "h1" : to === "c8" ? "a8" : "h8",
+      rookTo:
+        to === "c1" ? "d1" : to === "g1" ? "f1" : to === "c8" ? "d8" : "f8",
+    },
+    opts,
+  );
 }
 
 /**
@@ -197,7 +199,8 @@ export function applyMoveToFEN(
   if (opts?.assert !== false) {
     try {
       const expectedEp: string | null = (() => {
-        const isPawn = move.piece && move.piece.toUpperCase() === PIECE_TYPES.PAWN;
+        const isPawn =
+          move.piece && move.piece.toUpperCase() === PIECE_TYPES.PAWN;
         if (!isPawn) return null;
         const [fr, ff] = squareToCoords(move.from);
         const [tr, tf] = squareToCoords(move.to);
@@ -211,7 +214,7 @@ export function applyMoveToFEN(
       const gotEp = newPosition.enPassant;
       if ((expectedEp || null) !== (gotEp || null)) {
         throw new Error(
-          `En-passant mismatch: expected ${expectedEp || '-'} but got ${gotEp || '-'}`,
+          `En-passant mismatch: expected ${expectedEp || "-"} but got ${gotEp || "-"}`,
         );
       }
       // If ep is set, ensure the target square is empty in the new position
@@ -222,7 +225,9 @@ export function applyMoveToFEN(
         }
       }
     } catch (e) {
-      throw new Error(`applyMoveToFEN: en-passant inconsistency: ${(e as Error)?.message}`);
+      throw new Error(
+        `applyMoveToFEN: en-passant inconsistency: ${(e as Error)?.message}`,
+      );
     }
   }
   return outFEN;

@@ -1917,6 +1917,44 @@ input.error:focus {
   border: 1px solid #e9ecef;
 }
 
+/* Stable layout for live Stockfish engine stats */
+#fish-engine-stats {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-variant-numeric: tabular-nums; /* fixed-width digits */
+  white-space: nowrap;
+}
+
+#fish-engine-stats .fish-stat-item {
+  color: #495057;
+  font-size: 12px;
+}
+
+/* The numeric value spans get a fixed width so they don't cause layout shifts */
+#fish-engine-stats .fish-stat-item > span {
+  display: inline-block;
+  text-align: right;
+  padding-left: 4px;
+}
+
+/* Tune widths per field to accommodate typical ranges without wrapping */
+#fish-stat-depth {
+  min-width: 3ch; /* depths like 1..99 */
+}
+
+#fish-stat-nps,
+#fish-stat-nodes {
+  min-width: 12ch; /* e.g., 12,345,678 */
+}
+
+#fish-stat-time {
+  min-width: 8ch; /* e.g., 12,345ms */
+}
+
 .any-pv-ticker {
   margin: 8px 0 12px 0;
   padding: 8px 10px;

@@ -13,7 +13,6 @@ import { updateFENInput, updateControlsFromPosition, updatePositionFromControls,
 import { updateNavigationButtons } from "../utils/button-utils.js";
 import { updateThreadsInputForFallbackMode } from "../utils/thread-utils.js";
 import { getAnalysisOptions } from "./best/bestmove-config.js";
-// import { updateLineFisherStatus } from "../utils/status-management.js";
 import { addMove, importGame, previousMove, nextMove, updateMoveList, } from "./board/game-navigation.js";
 import { startBestmove, stopBestmove, addBestmovePVClickListeners, handleMakeBestmove, } from "./best/bestmove-manager.js";
 import * as Board from "../utils/chess-board.js";

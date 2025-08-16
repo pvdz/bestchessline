@@ -2,9 +2,12 @@ import { parseFEN } from "../../utils/fen-utils.js";
 import { analyzePosition } from "../../utils/stockfish-client.js";
 import { compareAnalysisMoves } from "../best/bestmove-utils.js";
 import { updateFishPvTickerThrottled } from "./fish-ui.js";
-import { apiLineGet, apiLinesPut } from "./fish-remote.js";
+import { apiLineGet, apiLineMarkBad, apiLinesPut } from "./fish-remote.js";
 import { pauseUntilButton } from "../../utils/utils.js";
 import { getElementByIdOrThrow } from "../../utils/dom-helpers.js";
+import { parseLongMove } from "../../utils/move-parser.js";
+import { assertLongMoveExpensive, assertMoveExpensive, } from "../../utils/move-validator.js";
+import { getCurrentFishState } from "./fish-state.js";
 /**
  * Generate line ID from SAN moves
  */
@@ -19,23 +22,55 @@ export function sortPvMoves(moves, firstMoveTurn, _maxDepth = 20) {
     moves.sort((a, b) => compareAnalysisMoves(a, b, { direction, prioritize: "score" }));
     return moves;
 }
+// Track the origin of the last getTopLines() result for a FEN
+const lastTopLinesOrigin = new Map();
+export function getLastTopLinesOrigin(fen) {
+    return lastTopLinesOrigin.get(fen);
+}
+// Global switch to disable server cache usage temporarily (e.g., after assertion)
+let cacheDisabledUntil = 0;
+export function disableServerCacheFor(ms) {
+    cacheDisabledUntil = Math.max(cacheDisabledUntil, Date.now() + Math.max(0, ms));
+}
+function isServerCacheDisabled() {
+    return Date.now() < cacheDisabledUntil;
+}
 // Given a position, get the best lines from the server or compute them using stockfish
 export async function getTopLines(rootFEN, // this is used to update the server for the practice app.
 moves, // long moves. set to null when this is unknown. this is used to update the server for the practice app.
 nowFEN, // fen to compute next moves from
-searchLineCount, maxDepth, { threads = 1, onUpdate, targetMove, } = {}) {
+searchLineCount, maxDepth, { threads = 1, onUpdate, targetMove, forceFresh, } = {}) {
     const useServerGet = getElementByIdOrThrow("fish-use-server-get").checked;
     const useServerPut = getElementByIdOrThrow("fish-use-server-put").checked;
     const usePauses = getElementByIdOrThrow("fish-enable-pauses").checked;
+    // Validate cached results; if invalid, compute fresh instead of using cache
+    let cacheIsValid = true;
     if (targetMove)
         console.warn("Skipping server GET");
-    if (useServerGet && !targetMove) {
+    if (useServerGet && !targetMove && !forceFresh && !isServerCacheDisabled()) {
         const known = await apiLineGet(nowFEN, searchLineCount, maxDepth);
         if (known) {
             console.log("getTopLines(): Retrieved cached results for", nowFEN, searchLineCount, "->", known);
-            if (usePauses)
-                await pauseUntilButton();
-            return known.slice(0, searchLineCount); // Server may return _more_ than requested (or less)
+            // IMPORTANT: never throw or emit assertion events here. If cache fails validation,
+            // we will fall back to fresh Stockfish results silently.
+            for (const m of known) {
+                if (!assertLongMoveExpensive(nowFEN, m.move, false)) {
+                    cacheIsValid = false;
+                    console.warn("Cached move could not be parsed for FEN; invalidating cache on server, then running stockfish directly", {
+                        nowFEN,
+                        move: m.move,
+                    });
+                    await apiLineMarkBad(nowFEN, searchLineCount, maxDepth);
+                    break;
+                }
+            }
+            if (cacheIsValid) {
+                lastTopLinesOrigin.set(nowFEN, "cache");
+                if (usePauses)
+                    await pauseUntilButton();
+                return { cached: true, moves: known.slice(0, searchLineCount) }; // Server may return _more_ than requested (or less)
+            }
+            // Else: fall through and compute fresh (forceFresh=true)
         }
     }
     // - Find best five moves (from stockfish)
@@ -55,7 +90,8 @@ searchLineCount, maxDepth, { threads = 1, onUpdate, targetMove, } = {}) {
     // We could do this for the first two steps, as a separate table, then pull
     // the best responses to predefined steps. First two steps leads to only 200k
     // positions. We can easily hold that and apply a filter for predefined moves.
-    console.log("getTopLines(): Server had no lines, manually computing them");
+    if (cacheIsValid)
+        console.log("getTopLines(): Server had no lines, manually computing them for", nowFEN);
     // Get best moves from Stockfish
     const analysis = await analyzePosition(nowFEN, {
         threads,
@@ -66,23 +102,35 @@ searchLineCount, maxDepth, { threads = 1, onUpdate, targetMove, } = {}) {
         // Update ticker each engine update
         updateFishPvTickerThrottled(res.moves, res.position);
     });
+    analysis.moves.forEach((m) => {
+        const mv = parseLongMove(m.move.from + m.move.to, nowFEN);
+        if (!mv || !assertMoveExpensive(nowFEN, mv, false)) {
+            getCurrentFishState().isFishing = false;
+            throw `Stockfish analysis returned invalid moves: ${nowFEN} ${m.move}`;
+        }
+    });
     // White position score values positive, so order desc for white to have moves[0] be best
     const toMove = parseFEN(nowFEN).turn;
     sortPvMoves(analysis.moves, toMove, maxDepth);
     const sorted = sortedAnalysisMovesToSimpleMoves(analysis.moves, searchLineCount, maxDepth);
+    console.log("sorted moves:", sorted);
     // Optionally send results to server
     if (useServerPut && !targetMove) {
         await apiLinesPut(rootFEN, moves, // how do I pass this in? does line have it?
         nowFEN, sorted, searchLineCount, 20);
     }
     console.log("getTopLines(): Manually computed lines:", sorted);
+    lastTopLinesOrigin.set(nowFEN, "fresh");
     if (usePauses)
         await pauseUntilButton();
-    return sorted;
+    return { cached: false, moves: sorted };
 }
 export async function getTopLinesTrapped(fen, targetLines, options = {}) {
     try {
-        return await getTopLines(fen, [], fen, targetLines, options.maxDepth ?? 20, { threads: options.threads, onUpdate: options.onUpdate });
+        return (await getTopLines(fen, [], fen, targetLines, options.maxDepth ?? 20, {
+            threads: options.threads,
+            onUpdate: options.onUpdate,
+        })).moves;
     }
     catch (e) {
         console.warn("getTopLines failed:", e);

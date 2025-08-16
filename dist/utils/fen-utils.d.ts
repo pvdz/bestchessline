@@ -29,3 +29,15 @@ export declare function isValidSquare(square: string): square is Square;
  * Get piece at a specific square from FEN string
  */
 export declare function getPieceAtSquareFromFEN(square: string, fen: string): string;
+/**
+ * Verify FEN encoding invariants (lightweight):
+ * - Correct 6 fields and basic syntax (delegates to parseFEN)
+ * - En-passant square is either '-' or empty and on the correct rank
+ * - Optional: if en-passant set, there exists a capturable pawn scenario
+ */
+export declare function verifyFenEncoding(fen: string, options?: {
+    strictEnPassant?: boolean;
+}): {
+    ok: boolean;
+    errors: string[];
+};

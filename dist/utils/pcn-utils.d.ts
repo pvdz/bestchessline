@@ -39,4 +39,4 @@ export declare function formatPCNLineWithMoveNumbers(pcns: string[]): string;
  * @param rootFEN - Starting FEN position
  * @returns SAN game string
  */
-export declare function computeSanGameFromPCN(pcns: string[], rootFEN: string): string;
+export declare function computeSanGameFromPCN(pcns: string[], rootFEN: string, justThrow?: boolean): string;

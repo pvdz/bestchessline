@@ -28,6 +28,18 @@ nowFEN, best, searchLineCount, maxDepth) {
     const body = await response.json();
     return body;
 }
+export async function apiLineMarkBad(position, // FEN
+searchLineCount, maxDepth) {
+    console.log("apiLineMarkBad(): Invalidating lines from server:", position, searchLineCount, maxDepth);
+    await fetch(`/api/line/mark-bad`, {
+        method: "POST",
+        body: JSON.stringify({
+            position,
+            searchLineCount,
+            maxDepth,
+        }),
+    });
+}
 function validateServerLine(obj) {
     return (obj &&
         Object.keys(obj).every((key) => {

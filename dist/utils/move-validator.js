@@ -1,6 +1,9 @@
 import { createPieceTypeNotation, createPieceNotation, getPieceTypeFromNotation, getColorFromNotation, PLAYER_COLORS, } from "../line/types.js";
 import { getPieceColor, getPieceType } from "./utils.js";
 import { parseFEN, squareToCoords, coordsToSquare, isValidSquare, } from "./fen-utils.js";
+import { applyMoveToFEN } from "./fen-manipulation.js";
+import { computeSanGameFromPCN } from "./pcn-utils.js";
+import { parseLongMove } from "./move-parser.js";
 // Constants for piece types
 export const PIECES = {
     WHITE_KING: createPieceNotation("K"),
@@ -685,7 +688,7 @@ function isCheckMate(position, color) {
     return true;
 }
 /**
- * Validates a move and returns detailed information about its effects
+ * Parse FEN and validate move against it
  */
 export function analyzeMove(fen, move) {
     const position = parseFEN(fen);
@@ -721,5 +724,76 @@ export function getLegalMoves(position) {
         }
     }
     return moves;
+}
+export function assertLongMoveExpensive(fen, longMove, canThrow = false) {
+    if (!/^[a-h][1-8][a-h][1-8]$/.test(longMove)) {
+        console.warn("assertLongMoveExpensive: long move is not a long move", [
+            longMove,
+        ]);
+        if (canThrow)
+            throw new Error(`assertLongMoveExpensive: long move is not a long move: "${longMove}"`);
+        return false;
+    }
+    const mv = parseLongMove(longMove, fen);
+    if (!mv) {
+        console.warn("assertLongMoveExpensive: parseLongMove(): failed to parse long move", { fen, longMove });
+        if (canThrow)
+            throw new Error("assertLongMoveExpensive: parseLongMove failed");
+        return false;
+    }
+    return assertMoveExpensive(fen, mv, canThrow);
+}
+export function assertMoveExpensive(fen, move, canThrow = false) {
+    // Normalize castling if king moves two files on same rank
+    let m = move;
+    const fromFile = move.from.charCodeAt(0) - "a".charCodeAt(0);
+    const toFile = move.to.charCodeAt(0) - "a".charCodeAt(0);
+    const fromRank = move.from.charCodeAt(1);
+    const toRank = move.to.charCodeAt(1);
+    const isKing = move.piece && move.piece.toUpperCase() === "K";
+    if (isKing && fromRank === toRank && Math.abs(toFile - fromFile) === 2) {
+        const isWhite = move.piece === move.piece.toUpperCase();
+        const isKingside = toFile > fromFile;
+        m = {
+            ...move,
+            special: "castling",
+            rookFrom: isWhite ? (isKingside ? "h1" : "a1") : isKingside ? "h8" : "a8",
+            rookTo: isWhite ? (isKingside ? "f1" : "d1") : isKingside ? "f8" : "d8",
+        };
+    }
+    // Validate non-throwing; drop this info line if invalid
+    const vr = analyzeMove(fen, m);
+    if (!vr.isValid) {
+        console.warn("assertMoveExpensive: analyzeMove(): invalid move", {
+            fen,
+            move: m,
+            error: vr.error,
+        });
+        if (canThrow)
+            return false;
+        return false;
+    }
+    // Advance validation FEN
+    try {
+        applyMoveToFEN(fen, m, { assert: false });
+    }
+    catch (e) {
+        console.warn("assertMoveExpensive: applyMoveToFEN(): failed to apply PV move", { move: m, fen, error: e?.message });
+        if (canThrow)
+            return false;
+        return false;
+    }
+    // Skip computeSanGameFromPCN sanity when the move is castling-like and rook is absent;
+    // rely on analyzeMove + applyMoveToFEN already done above.
+    try {
+        computeSanGameFromPCN([m.piece + m.from + m.to], fen, true);
+    }
+    catch (e) {
+        console.warn("assertMoveExpensive: computeSanGameFromPCN(): failed to compute SAN game", { move: m, fen, error: e?.message });
+        if (canThrow)
+            throw new Error("assertMoveExpensive: computeSanGameFromPCN failed");
+        return false;
+    }
+    return true;
 }
 //# sourceMappingURL=move-validator.js.map

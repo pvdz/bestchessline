@@ -484,7 +484,10 @@ const server = http.createServer(async (req, res) => {
       const searchLineCount = body && body.searchLineCount;
       const maxDepth = body && body.maxDepth;
       if (!position || !searchLineCount || !maxDepth) {
-        sendJson(res, 400, { ok: false, error: "Missing position, searchLineCount, or maxDepth" });
+        sendJson(res, 400, {
+          ok: false,
+          error: "Missing position, searchLineCount, or maxDepth",
+        });
         return;
       }
       console.log("[server] mark-bad:", position, searchLineCount, maxDepth);

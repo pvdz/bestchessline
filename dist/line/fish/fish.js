@@ -1,10 +1,8 @@
-// import { formatPCNLineWithMoveNumbers } from "../../utils/pcn-utils.js";
 import { getElementByIdOrThrow } from "../../utils/dom-helpers.js";
 import { showToast } from "../../utils/ui-utils.js";
 import { initFishing, initInitialMove, keepFishing } from "./fishing.js";
 import { getCurrentFishState } from "./fish-state.js";
 import { updateFishConfigDisplay, updateFishStatus, updateFishProgress, updateFishRootScore, updateLineFisherButtonStates, } from "./fish-ui.js";
-// import { getRandomProofString, generateLineId } from "./fish-utils.js";
 const lineAppState = {
     isFishAnalysisRunning: false,
     shouldStopFishAnalysis: false,
@@ -88,14 +86,18 @@ export async function fish(config) {
     try {
         updateFishConfigDisplay(state.config);
         updateFishStatus("Starting root score analysis...");
-        updateFishProgress(getCurrentFishState());
+        if (updateFishProgress(getCurrentFishState())) {
+            throw new Error("initial state failure?");
+        }
         await initFishing();
         // Update root score in UI
         updateFishRootScore(getCurrentFishState().config.baselineScore);
         updateFishStatus(`Creating initial move`);
         await initInitialMove();
         // Update progress and results after initial move
-        updateFishProgress(getCurrentFishState());
+        if (updateFishProgress(getCurrentFishState())) {
+            throw new Error("initial move failure?");
+        }
         await keepFishing(getCurrentFishState().config.rootFEN, (msg) => {
             updateFishStatus(msg);
             // Only do expensive updates when structure changed or phase completed
@@ -104,8 +106,9 @@ export async function fish(config) {
                 msg.startsWith("Expanded") ||
                 msg.endsWith("complete")) {
                 const state = getCurrentFishState();
-                updateFishProgress(state);
+                return updateFishProgress(state);
             }
+            return true;
         });
         // Update button states - enable start, disable stop
         updateFishButtonStates(false);

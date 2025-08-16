@@ -23,7 +23,7 @@ import { assertFenParsable } from "./assert-utils.js";
 export function parseMove(
   moveText: string,
   currentFEN: string,
-  justThrow = false
+  justThrow = false,
 ): ChessMove | null {
   try {
     log("Parsing move:", moveText, "from FEN:", currentFEN);
@@ -425,7 +425,10 @@ export function parseMove(
   }
 
   // Extra debug context to trace upstream generators
-  if (justThrow) throw new Error(`Failed to parse move: ${moveText} from FEN: ${currentFEN}`);
+  if (justThrow)
+    throw new Error(
+      `Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
+    );
   console.trace(
     `[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
   );

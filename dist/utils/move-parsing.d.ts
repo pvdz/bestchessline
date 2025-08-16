@@ -9,7 +9,7 @@ import { ChessMove } from "./types.js";
  * Parse individual move string
  * Input can be SAN, PCN, or long notation
  */
-export declare function parseMove(moveText: string, currentFEN: string): ChessMove | null;
+export declare function parseMove(moveText: string, currentFEN: string, justThrow?: boolean): ChessMove | null;
 /**
  * Parse game notation into moves
  */

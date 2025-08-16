@@ -14,7 +14,7 @@ export declare function updateFishStatus(message: string): void;
  * Update fish progress display
  * Non-blocking UI update with error handling
  */
-export declare function updateFishProgress(state: FishState): void;
+export declare function updateFishProgress(state: FishState): boolean;
 export declare function updateFishPvTickerThrottled(moves: AnalysisMove[], fen: string, force?: boolean): void;
 export declare function updateLiveLinesPreview(): void;
 /**

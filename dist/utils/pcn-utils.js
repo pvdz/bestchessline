@@ -1,5 +1,8 @@
 import { parseMove } from "./move-parsing.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
+import { assertFenParsable } from "./assert-utils.js";
+import { analyzeMove } from "./move-validator.js";
+import { getPieceAtSquareFromFEN, parseFEN } from "./fen-utils.js";
 /**
  * Convert a line of SAN moves to PCN (Piece Coordinate Notation)
  * @param sanMoves - Array of SAN moves (e.g., ["Nf3", "Nf6", "d4"])
@@ -7,6 +10,9 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
  * @returns String with PCN moves (e.g., "1. Ng1f3 g8f6 2. d2d4 d7d5")
  */
 export function convertSANLineToPCN(sanMoves, startingFEN) {
+    assertFenParsable("pcn.convertSANLineToPCN(start)", startingFEN, {
+        sanMoves,
+    });
     let currentFEN = startingFEN;
     const pcnMoves = [];
     let moveNumber = 1;
@@ -35,7 +41,11 @@ export function convertSANLineToPCN(sanMoves, startingFEN) {
                 // Apply castling move to FEN
                 const parsedMove = parseMove(move, currentFEN);
                 if (parsedMove) {
-                    currentFEN = applyMoveToFEN(currentFEN, parsedMove);
+                    // Validate but do not assert on apply; UI helper path
+                    currentFEN = applyMoveToFEN(currentFEN, parsedMove, {
+                        assert: false,
+                    });
+                    // Skip output FEN assert here as this is UI formatting-only
                 }
                 continue;
             }
@@ -59,7 +69,8 @@ export function convertSANLineToPCN(sanMoves, startingFEN) {
                     moveNumber++;
                     whiteMove = "";
                 }
-                currentFEN = applyMoveToFEN(currentFEN, parsedMove);
+                currentFEN = applyMoveToFEN(currentFEN, parsedMove, { assert: false });
+                // Skip output FEN assert; formatting-only
             }
             else {
                 console.warn(`convertSANLineToPCN: Failed to parse move: ${move}`, "starting at", [startingFEN], "step", i, " while applying this line:", sanMoves);
@@ -139,7 +150,9 @@ export function convertPCNLineToSAN(pcnLine, startingFEN) {
                 // Update FEN for next move by parsing the SAN move
                 const parsedMove = parseMove(sanMove, currentFEN);
                 if (parsedMove) {
-                    currentFEN = applyMoveToFEN(currentFEN, parsedMove);
+                    currentFEN = applyMoveToFEN(currentFEN, parsedMove, {
+                        assert: false,
+                    });
                 }
             }
         }
@@ -214,19 +227,146 @@ export function formatPCNLineWithMoveNumbers(pcns) {
  * @param rootFEN - Starting FEN position
  * @returns SAN game string
  */
-export function computeSanGameFromPCN(pcns, rootFEN) {
+export function computeSanGameFromPCN(pcns, rootFEN, justThrow = false) {
     let currentFEN = rootFEN;
     const sanMoves = [];
     for (const pcn of pcns) {
+        // Convert to SAN for display
         const sanMove = convertPCNToSAN(pcn, currentFEN);
-        if (sanMove) {
+        if (sanMove)
             sanMoves.push(sanMove);
-            // Update FEN for next move
-            const parsedMove = parseMove(sanMove, currentFEN);
-            if (parsedMove) {
-                currentFEN = applyMoveToFEN(currentFEN, parsedMove);
-            }
+        // Derive the concrete move directly from PCN to avoid SAN parsing ambiguity
+        let moveObj = null;
+        if (pcn === "O-O" || pcn === "O-O-O") {
+            // Build castling move explicitly based on side to move
+            const isWhiteTurn = parseFEN(currentFEN).turn === "w";
+            const isKingside = pcn === "O-O";
+            moveObj = {
+                from: isWhiteTurn ? "e1" : "e8",
+                to: isWhiteTurn ? (isKingside ? "g1" : "c1") : isKingside ? "g8" : "c8",
+                piece: isWhiteTurn ? "K" : "k",
+                special: "castling",
+                rookFrom: isWhiteTurn
+                    ? isKingside
+                        ? "h1"
+                        : "a1"
+                    : isKingside
+                        ? "h8"
+                        : "a8",
+                rookTo: isWhiteTurn
+                    ? isKingside
+                        ? "f1"
+                        : "d1"
+                    : isKingside
+                        ? "f8"
+                        : "d8",
+            };
         }
+        else if (/^[NBRQKP][a-h][1-8][a-h][1-8]$/.test(pcn)) {
+            const from = pcn.substring(1, 3);
+            const to = pcn.substring(3, 5);
+            const boardPiece = getPieceAtSquareFromFEN(from, currentFEN);
+            if (!boardPiece) {
+                const msg = `computeSanGameFromPCN: no piece at ${from} for move ${pcn} in ${currentFEN}`;
+                if (justThrow)
+                    throw new Error(msg);
+                else
+                    continue;
+            }
+            const isKing = boardPiece.toUpperCase() === "K";
+            const fromFile = from.charCodeAt(0) - "a".charCodeAt(0);
+            const toFile = to.charCodeAt(0) - "a".charCodeAt(0);
+            const sameRank = from[1] === to[1];
+            const isCastlingLike = isKing && sameRank && Math.abs(toFile - fromFile) === 2;
+            moveObj = {
+                from,
+                to,
+                piece: boardPiece,
+                ...(isCastlingLike
+                    ? {
+                        special: "castling",
+                        rookFrom: boardPiece === boardPiece.toUpperCase()
+                            ? toFile > fromFile
+                                ? "h1"
+                                : "a1"
+                            : toFile > fromFile
+                                ? "h8"
+                                : "a8",
+                        rookTo: boardPiece === boardPiece.toUpperCase()
+                            ? toFile > fromFile
+                                ? "f1"
+                                : "d1"
+                            : toFile > fromFile
+                                ? "f8"
+                                : "d8",
+                    }
+                    : {}),
+            };
+        }
+        else if (/^[a-h][1-8][a-h][1-8]$/.test(pcn)) {
+            // Long move (from-to) without piece letter
+            const from = pcn.substring(0, 2);
+            const to = pcn.substring(2, 4);
+            const boardPiece = getPieceAtSquareFromFEN(from, currentFEN);
+            if (!boardPiece) {
+                const msg = `computeSanGameFromPCN: no piece at ${from} for long move ${pcn} in ${currentFEN}`;
+                if (justThrow)
+                    throw new Error(msg);
+                else
+                    continue;
+            }
+            const isKing = boardPiece.toUpperCase() === "K";
+            const fromFile = from.charCodeAt(0) - "a".charCodeAt(0);
+            const toFile = to.charCodeAt(0) - "a".charCodeAt(0);
+            const sameRank = from[1] === to[1];
+            const isCastlingLike = isKing && sameRank && Math.abs(toFile - fromFile) === 2;
+            moveObj = {
+                from,
+                to,
+                piece: boardPiece,
+                ...(isCastlingLike
+                    ? {
+                        special: "castling",
+                        rookFrom: boardPiece === boardPiece.toUpperCase()
+                            ? toFile > fromFile
+                                ? "h1"
+                                : "a1"
+                            : toFile > fromFile
+                                ? "h8"
+                                : "a8",
+                        rookTo: boardPiece === boardPiece.toUpperCase()
+                            ? toFile > fromFile
+                                ? "f1"
+                                : "d1"
+                            : toFile > fromFile
+                                ? "f8"
+                                : "d8",
+                    }
+                    : {}),
+            };
+        }
+        else {
+            // Fallback to SAN parsing if PCN format wasn't matched (shouldn't happen)
+            moveObj = parseMove(sanMove || pcn, currentFEN, justThrow);
+        }
+        if (!moveObj) {
+            const msg = `computeSanGameFromPCN: could not build move for ${pcn} (SAN: ${sanMove || "?"}) in ${currentFEN}`;
+            if (justThrow)
+                throw new Error(msg);
+            else
+                continue;
+        }
+        // Validate concretely against current FEN
+        const result = analyzeMove(currentFEN, moveObj);
+        if (!result.isValid) {
+            const msg = `computeSanGameFromPCN: invalid move ${pcn} (SAN: ${sanMove || "?"}) in ${currentFEN}: ${result.error}`;
+            if (justThrow)
+                throw new Error(msg);
+            else
+                continue;
+        }
+        // Apply without assertions (formatting/validation context)
+        currentFEN = applyMoveToFEN(currentFEN, moveObj, { assert: false });
     }
     return sanMoves.join(" ");
 }

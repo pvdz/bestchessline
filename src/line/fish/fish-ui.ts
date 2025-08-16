@@ -173,7 +173,10 @@ export function updateFishProgress(state: FishState): boolean {
       let sanGame = currentLine.sanGame;
       if (!sanGame) {
         try {
-          sanGame = computeSanGameFromPCN(currentLine.pcns, state.config.rootFEN);
+          sanGame = computeSanGameFromPCN(
+            currentLine.pcns,
+            state.config.rootFEN,
+          );
         } catch (e) {
           console.warn("computeSanGameFromPCN failed; using empty SAN", e);
           failure = true;

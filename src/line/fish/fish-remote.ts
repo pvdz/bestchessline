@@ -64,17 +64,14 @@ export async function apiLineMarkBad(
     maxDepth,
   );
 
-  await fetch(
-    `/api/line/mark-bad`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        position,
-        searchLineCount,
-        maxDepth,
-      }),
-    },
-  );
+  await fetch(`/api/line/mark-bad`, {
+    method: "POST",
+    body: JSON.stringify({
+      position,
+      searchLineCount,
+      maxDepth,
+    }),
+  });
 }
 
 function validateServerLine(obj: Record<string, unknown>): obj is ServerLine {

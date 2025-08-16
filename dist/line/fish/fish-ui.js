@@ -93,6 +93,7 @@ export function updateFishStatus(message) {
  * Non-blocking UI update with error handling
  */
 export function updateFishProgress(state) {
+    let failure = false;
     try {
         const wipCount = state.wip.length;
         const wipDisplay = getElementByIdOrThrow("fish-status-wips");
@@ -116,8 +117,17 @@ export function updateFishProgress(state) {
         const positionDisplay = getElementByIdOrThrow("fish-status-position");
         const currentLine = state.wip[0];
         if (currentLine) {
-            const sanGame = currentLine.sanGame ||
-                computeSanGameFromPCN(currentLine.pcns, state.config.rootFEN);
+            let sanGame = currentLine.sanGame;
+            if (!sanGame) {
+                try {
+                    sanGame = computeSanGameFromPCN(currentLine.pcns, state.config.rootFEN);
+                }
+                catch (e) {
+                    console.warn("computeSanGameFromPCN failed; using empty SAN", e);
+                    failure = true;
+                    sanGame = "";
+                }
+            }
             positionDisplay.textContent = sanGame || "Root position";
         }
         else {
@@ -182,6 +192,7 @@ export function updateFishProgress(state) {
     catch (error) {
         console.error("Failed to update fish progress:", error);
     }
+    return failure;
 }
 // ---------------------------------------------------------
 // PV ticker below fish-status (throttled) - explicit updates only
@@ -246,10 +257,6 @@ export function updateFishPvTickerThrottled(moves, fen, force = false) {
         linesArr.push("");
     el.textContent = linesArr.join("\n");
 }
-// Emphasize the fish PV ticker briefly after finalization
-window.addEventListener("stockfish-ready", async () => {
-    // noop
-});
 function isLiveLinesEnabled() {
     const checkbox = document.getElementById("fish-lines-toggle");
     return !!(checkbox && checkbox.checked);

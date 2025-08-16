@@ -220,3 +220,77 @@ export function getPieceAtSquareFromFEN(square: string, fen: string): string {
   const [rank, file] = squareToCoords(square);
   return position.board[rank][file];
 }
+
+/**
+ * Verify FEN encoding invariants (lightweight):
+ * - Correct 6 fields and basic syntax (delegates to parseFEN)
+ * - En-passant square is either '-' or empty and on the correct rank
+ * - Optional: if en-passant set, there exists a capturable pawn scenario
+ */
+export function verifyFenEncoding(
+  fen: string,
+  options: { strictEnPassant?: boolean } = {},
+): { ok: boolean; errors: string[] } {
+  const errors: string[] = [];
+  let pos: ChessPosition;
+  try {
+    pos = parseFEN(fen);
+  } catch (e) {
+    errors.push((e as Error)?.message || String(e));
+    return { ok: false, errors };
+  }
+
+  // En-passant basic rank/location rule
+  const ep = pos.enPassant;
+  if (ep && ep !== "-") {
+    if (!isValidSquare(ep)) {
+      errors.push(`En-passant square '${ep}' is not a valid square`);
+    } else {
+      const [er, ef] = squareToCoords(ep);
+      const epRank = 8 - Number(ep[1]);
+      // White to move => black just moved => ep must be on rank 6 (from white POV => ep[1] === '6')
+      // Black to move => white just moved => ep rank should be 3
+      const expectedRank = pos.turn === "w" ? "6" : "3";
+      if (ep[1] !== expectedRank) {
+        errors.push(
+          `En-passant '${ep}' has unexpected rank for turn '${pos.turn}' (expected rank ${expectedRank})`,
+        );
+      }
+      // EP square must be empty
+      if (pos.board[er][ef] !== "") {
+        errors.push(`En-passant target square '${ep}' is not empty`);
+      }
+      if (options.strictEnPassant) {
+        // There should be an opponent pawn that just advanced two and a side-to-move pawn adjacent that can capture
+        // Identify the pawn that moved (behind ep square from mover's perspective)
+        // When white to move: black pawn moved from rank 7 to 5; ep target is on rank 6; pawn stands on rank 5 at same file
+        const movedPawnRank = pos.turn === "w" ? epRank + 1 : epRank - 1;
+        const movedPawnSquare: Square = coordsToSquare(
+          movedPawnRank,
+          ef,
+        ) as Square;
+        const movedPawn = pos.board[movedPawnRank][ef];
+        const expectedPawn = pos.turn === "w" ? "p" : "P";
+        if (movedPawn !== expectedPawn) {
+          errors.push(
+            `Strict EP: expected moved pawn ${expectedPawn} at ${movedPawnSquare}, found '${movedPawn || ""}'`,
+          );
+        }
+        // Check there is a side-to-move pawn adjacent that can capture onto ep square
+        const sidePawn = pos.turn === "w" ? "P" : "p";
+        const candidateFiles = [ef - 1, ef + 1].filter((f) => f >= 0 && f < 8);
+        const capturerExists = candidateFiles.some((f) => {
+          const [cr, cf] = pos.turn === "w" ? [er + 1, f] : [er - 1, f];
+          if (cr < 0 || cr > 7) return false;
+          return pos.board[cr][cf] === sidePawn;
+        });
+        if (!capturerExists) {
+          errors.push(
+            `Strict EP: no ${sidePawn} adjacent pawn can capture onto '${ep}'`,
+          );
+        }
+      }
+    }
+  }
+  return { ok: errors.length === 0, errors };
+}

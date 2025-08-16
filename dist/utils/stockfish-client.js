@@ -2,10 +2,13 @@ import { PLAYER_COLORS, } from "../line/types.js";
 import { showErrorToast } from "./ui-utils.js";
 import { compareAnalysisMoves } from "../line/best/bestmove-utils.js";
 import { parseFEN } from "./fen-utils.js";
+import { analyzeMove } from "./move-validator.js";
+import { ASSERT, assertFenParsable } from "./assert-utils.js";
 import { log, logError } from "./logging.js";
 import { querySelectorHTMLElement, querySelectorButton, } from "./dom-helpers.js";
 import { isSharedArrayBufferSupported, getStockfishWorkerUrlThreaded, getStockfishWorkerUrlFallback, } from "./stockfish-utils.js";
 import { parseLongMove } from "./move-parser.js";
+import { applyMoveToFEN } from "./fen-manipulation.js";
 /**
  * Stockfish state instance
  */
@@ -433,22 +436,108 @@ function parseInfoMessage(message) {
     }
     // Normalize score to always be from white's perspective
     // When it's black's turn, Stockfish returns scores from black's perspective
-    const fen = stockfishState.currentAnalysis?.position || "";
+    // Use the original FEN passed to analyzePosition; do not depend on currentAnalysis snapshot
+    const fen = stockfishState.fen || "";
+    assertFenParsable("stockfish-info(position)", fen, { message });
     // TOFIX: which fen is this getting? is this even getting a fen at all?
     const position = fen && parseFEN(fen);
     let isBlack = !!(position && position.turn === PLAYER_COLORS.BLACK);
     if (isBlack) {
         score = -score;
     }
-    // Convert PV moves to ChessMove objects
+    // Convert PV moves to ChessMove objects, validating sequentially from fen
     const pvMoves = [];
-    for (const moveStr of pv) {
-        const move = parseLongMove(moveStr, fen);
-        if (move) {
-            pvMoves.push(move);
+    let validateFen = fen;
+    for (let idx = 0; idx < pv.length; idx++) {
+        const moveStr = pv[idx];
+        const move = parseLongMove(moveStr, validateFen);
+        if (!move) {
+            console.warn("stockfish-info: failed to parse PV move", {
+                moveStr,
+                validateFen,
+            });
+            // If PV looks corrupt (parse failed), stop ongoing analysis to avoid cascading
+            return; // skip this info update entirely
         }
+        // For the first move, sanity check side-to-move matches
+        if (idx === 0) {
+            const pos0 = parseFEN(validateFen);
+            const isWhitePiece = move.piece === move.piece.toUpperCase();
+            const shouldBeWhite = pos0.turn === PLAYER_COLORS.WHITE;
+            if (isWhitePiece !== shouldBeWhite) {
+                console.warn("stockfish-info: PV[0] does not match side-to-move; skipping info line", {
+                    fen: validateFen,
+                    moveStr,
+                    piece: move.piece,
+                    turn: pos0.turn,
+                });
+                return; // skip this info update
+            }
+        }
+        // Normalize castling for validation (king two files on same rank)
+        // Note: we don't validate it, just assert that if the king moves two spaces, it must be castling
+        if ((move.from === "e1" && move.to === "g1" && move.piece === "K") ||
+            (move.from === "e1" && move.to === "c1" && move.piece === "K") ||
+            (move.from === "e8" && move.to === "g8" && move.piece === "k") ||
+            (move.from === "e8" && move.to === "c8" && move.piece === "k")) {
+            move.special = "castling";
+            move.rookFrom =
+                move.to === "g1"
+                    ? "h1"
+                    : move.to === "c1"
+                        ? "a1"
+                        : move.to === "g8"
+                            ? "h8"
+                            : "a8";
+            move.rookTo =
+                move.to === "g1"
+                    ? "f1"
+                    : move.to === "c1"
+                        ? "d1"
+                        : move.to === "g8"
+                            ? "f8"
+                            : "d8";
+        }
+        // Validate move; if invalid, HARD STOP fishing for investigation
+        const vr = analyzeMove(validateFen, move);
+        if (!vr.isValid) {
+            console.error("stockfish-info: HARD-STOP — validator rejected engine PV move", {
+                fen: validateFen,
+                moveStr,
+                index: idx,
+                error: vr.error,
+                pv,
+            });
+            // Trigger global assertion failure to stop fishing immediately
+            ASSERT(false, "Engine PV move rejected by validator", {
+                source: "stockfish-info",
+                fen: validateFen,
+                moveStr,
+                index: idx,
+                error: vr.error,
+                pv,
+            });
+            return;
+        }
+        pvMoves.push(move);
+        validateFen = applyMoveToFEN(validateFen, move, { assert: false });
+    }
+    if (pv.length !== pvMoves.length) {
+        console.warn("stockfish-info: PV length mismatch", [message], [pv], [pvMoves], {
+            fen,
+            pvLength: pv.length,
+            pvMovesLength: pvMoves.length,
+        });
+        return;
     }
     const firstMove = pvMoves[0];
+    if (!firstMove) {
+        console.warn("stockfish-info: dropping PV because no valid moves remained", [message], [pv], {
+            fen,
+            pvLength: pv.length,
+        });
+        return;
+    }
     const analysisMove = {
         move: firstMove,
         score,
@@ -461,6 +550,7 @@ function parseInfoMessage(message) {
     };
     // Add new variation
     log(`Adding new move ${firstMove.from}${firstMove.to} (multipv=${multipv}) at depth ${depth}, isBlack=${isBlack}, moves=${stockfishState.currentAnalysis.moves.map((m) => m.move.from + m.move.to).join(", ")}`);
+    ASSERT(analysisMove.move != null, "stockfish-info: analysisMove.move missing", { analysisMove });
     stockfishState.currentAnalysis.moves.push(analysisMove);
     // Broadcast live stats for interested UIs (e.g., Fisher)
     try {

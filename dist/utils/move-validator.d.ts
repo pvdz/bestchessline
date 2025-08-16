@@ -39,10 +39,12 @@ export interface ValidationResult {
  */
 export declare function validateMove(position: ChessPosition, move: ChessMove): ValidationResult;
 /**
- * Validates a move and returns detailed information about its effects
+ * Parse FEN and validate move against it
  */
 export declare function analyzeMove(fen: string, move: ChessMove): ValidationResult;
 /**
  * Gets all legal moves for a position (simplified)
  */
 export declare function getLegalMoves(position: ChessPosition): ChessMove[];
+export declare function assertLongMoveExpensive(fen: string, longMove: string, canThrow?: boolean): boolean;
+export declare function assertMoveExpensive(fen: string, move: ChessMove, canThrow?: boolean): boolean;
