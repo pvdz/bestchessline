@@ -7,6 +7,7 @@ import {
 import { validateMove, PIECES } from "./move-validator.js";
 import { log } from "./logging.js";
 import { applyMoveToFEN } from "./fen-manipulation.js";
+import { assertFenParsable } from "./assert-utils.js";
 
 /**
  * Move Parsing Utility Functions
@@ -22,6 +23,7 @@ import { applyMoveToFEN } from "./fen-manipulation.js";
 export function parseMove(
   moveText: string,
   currentFEN: string,
+  justThrow = false
 ): ChessMove | null {
   try {
     log("Parsing move:", moveText, "from FEN:", currentFEN);
@@ -279,17 +281,23 @@ export function parseMove(
     }
   }
 
-  // Handle piece moves
+  // Handle piece moves (SAN like 'Nd7', 'Bxe4', with optional disambiguation)
   const pieceMatch = moveText.match(
     /^([KQRBNPkqrbnp])([a-h]?[1-8]?)?x?([a-h][1-8])([+#])?$/,
   );
   if (pieceMatch) {
-    const pieceType = pieceMatch[1];
+    const rawPieceType = pieceMatch[1];
     const disambiguation = pieceMatch[2] || "";
     const toSquare = pieceMatch[3];
 
-    // Try the piece as written first
-    let pieceNotation = createPieceNotation(pieceType);
+    // SAN uses uppercase letters for both colors; color is determined by side to move.
+    // Normalize type to uppercase and then set case by turn.
+    const normalizedType = rawPieceType.toUpperCase();
+    const pieceNotation = createPieceNotation(
+      isWhiteTurn ? normalizedType : normalizedType.toLowerCase(),
+    );
+
+    // Try to find a matching piece from this side that can reach the square with optional disambiguation
     let fromSquare = findFromSquareWithDisambiguation(
       pieceNotation,
       toSquare,
@@ -297,25 +305,24 @@ export function parseMove(
       currentFEN,
     );
 
-    // If that fails, try the opposite case
-    if (!fromSquare) {
-      const oppositeCase =
-        pieceType === pieceType.toUpperCase()
-          ? pieceType.toLowerCase()
-          : pieceType.toUpperCase();
-      pieceNotation = createPieceNotation(oppositeCase);
+    // As a fallback, try the opposite case only if input explicitly provided lowercase/uppercase mismatching SAN conventions
+    if (!fromSquare && rawPieceType !== normalizedType) {
+      const oppositeNotation = createPieceNotation(
+        isWhiteTurn ? normalizedType.toLowerCase() : normalizedType,
+      );
       fromSquare = findFromSquareWithDisambiguation(
-        pieceNotation,
+        oppositeNotation,
         toSquare,
         disambiguation,
         currentFEN,
       );
+      if (fromSquare) {
+        return { from: fromSquare, to: toSquare, piece: oppositeNotation };
+      }
     }
 
     if (fromSquare) {
-      // Use the piece notation that actually worked
-      const piece = pieceNotation;
-      return { from: fromSquare, to: toSquare, piece };
+      return { from: fromSquare, to: toSquare, piece: pieceNotation };
     }
   }
 
@@ -417,11 +424,21 @@ export function parseMove(
     }
   }
 
+  // Extra debug context to trace upstream generators
+  if (justThrow) throw new Error(`Failed to parse move: ${moveText} from FEN: ${currentFEN}`);
+  console.trace(
+    `[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
+  );
+
+  // Emit a global event so higher-level logic can backtrack (e.g., bypass cache)
   try {
-    // Extra debug context to trace upstream generators
-    console.trace(
-      `[parseMove] Failed to parse move: ${moveText} from FEN: ${currentFEN}`,
-    );
+    if (typeof window !== "undefined" && window.dispatchEvent) {
+      window.dispatchEvent(
+        new CustomEvent("move-parse-failed", {
+          detail: { move: moveText, fen: currentFEN },
+        }),
+      );
+    }
   } catch {}
 
   return null;
